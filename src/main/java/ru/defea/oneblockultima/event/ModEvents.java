@@ -334,19 +334,6 @@ public final class ModEvents
         registry.remove(event.getPos());
         spawnMobOnBlockBreak(world, event.getPos(), entry);
 
-        if (entry.generatorPos != null)
-        {
-            TileEntity tileEntity = world.getTileEntity(entry.generatorPos);
-            if (tileEntity instanceof TileEntityOneBlockGenerator)
-            {
-                ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
-            }
-            else
-            {
-                world.scheduleUpdate(entry.generatorPos, ModBlocks.ONE_BLOCK_GENERATOR, 1);
-            }
-        }
-
         EntityPlayer player = event.getPlayer();
         if (player != null)
         {
@@ -359,7 +346,7 @@ public final class ModEvents
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onHarvestDrops(BlockEvent.HarvestDropsEvent event)
     {
         if (event.getWorld().isRemote)
@@ -380,15 +367,115 @@ public final class ModEvents
             return;
         }
 
+        // Получаем стандартные дропы
         java.util.List<net.minecraft.item.ItemStack> drops = new java.util.ArrayList<>(event.getDrops());
-        event.getDrops().clear();
 
+        // Проверяем, есть ли реальные дропы
+        boolean hasRealDrops = false;
         for (net.minecraft.item.ItemStack drop : drops)
         {
+            if (!drop.isEmpty())
+            {
+                hasRealDrops = true;
+                break;
+            }
+        }
+
+        // Если дропов нет - проверяем, должен ли блок дропаться вообще
+        if (!hasRealDrops)
+        {
+            net.minecraft.block.Block block = event.getState().getBlock();
+
+            // Проверяем, может ли блок быть добыт без специальных условий
+            if (block != null && block != Blocks.AIR)
+            {
+                // Список блоков, которые не должны дропаться без инструмента
+                boolean shouldDropBlock = true;
+
+                // Проверяем на траву
+                if (block == Blocks.TALLGRASS || block == Blocks.DOUBLE_PLANT || block == Blocks.DEADBUSH)
+                {
+                    // Трава не дропается без ножниц
+                    // Проверяем, есть ли у игрока ножницы
+                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
+                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+                    {
+                        shouldDropBlock = false;
+                    }
+                }
+
+                // Проверяем на листья
+                if (block == Blocks.LEAVES || block == Blocks.LEAVES2)
+                {
+                    // Листья дропаются только с ножницами или если есть шанс на саженец
+                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
+                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+                    {
+                        // Если нет ножниц, проверяем, есть ли дропы (саженцы)
+                        boolean hasSapling = false;
+                        for (net.minecraft.item.ItemStack drop : drops)
+                        {
+                            if (!drop.isEmpty() && drop.getItem() == net.minecraft.init.Items.DYE)
+                            {
+                                hasSapling = true;
+                                break;
+                            }
+                        }
+                        if (!hasSapling)
+                        {
+                            shouldDropBlock = false;
+                        }
+                    }
+                }
+
+                // Проверяем на цветы
+                if (block == Blocks.RED_FLOWER || block == Blocks.YELLOW_FLOWER)
+                {
+                    // Цветы всегда дропаются
+                    shouldDropBlock = true;
+                }
+
+                // Проверяем на паутину
+                if (block == Blocks.WEB)
+                {
+                    // Паутина дропается только с ножницами
+                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
+                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+                    {
+                        shouldDropBlock = false;
+                    }
+                }
+
+                if (shouldDropBlock)
+                {
+                    net.minecraft.item.Item item = net.minecraft.item.Item.getItemFromBlock(block);
+                    if (item != null && item != net.minecraft.init.Items.AIR)
+                    {
+                        net.minecraft.item.ItemStack blockStack = new net.minecraft.item.ItemStack(item, 1, block.getMetaFromState(event.getState()));
+                        drops.add(blockStack);
+                    }
+                }
+            }
+        }
+
+        // Очищаем все дропы
+        event.getDrops().clear();
+
+        // Добавляем дропы в инвентарь игрока
+        for (net.minecraft.item.ItemStack drop : drops)
+        {
+            if (drop.isEmpty()) continue;
+
             net.minecraft.item.ItemStack remaining = drop.copy();
             if (!player.inventory.addItemStackToInventory(remaining))
             {
-                net.minecraft.entity.item.EntityItem entityItem = new net.minecraft.entity.item.EntityItem(event.getWorld(), event.getPos().getX() + 0.5D, event.getPos().getY() + 0.5D, event.getPos().getZ() + 0.5D, remaining);
+                net.minecraft.entity.item.EntityItem entityItem = new net.minecraft.entity.item.EntityItem(
+                        event.getWorld(),
+                        event.getPos().getX() + 0.5D,
+                        event.getPos().getY() + 0.5D,
+                        event.getPos().getZ() + 0.5D,
+                        remaining
+                );
                 event.getWorld().spawnEntity(entityItem);
             }
         }
@@ -404,13 +491,19 @@ public final class ModEvents
 
         World world = event.getWorld();
         BlockPos pos = event.getPos();
-        if (pos == GENERATED_BLOCK_POS)
+
+        // Проверяем только блок над генератором
+        if (!pos.equals(GENERATOR_POS.up()))
         {
-            IBlockState state = world.getBlockState(pos);
-            if (state.getBlock() != Blocks.AIR)
-            {
-                processingBlocks.put(pos, false);
-            }
+            return;
+        }
+
+        // Проверяем, не AIR ли теперь блок
+        IBlockState state = world.getBlockState(pos);
+        if (state.getBlock() != Blocks.AIR)
+        {
+            // Блок существует
+            processingBlocks.put(pos, false);
         }
     }
 
