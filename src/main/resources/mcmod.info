@@ -1,0 +1,18 @@
+[
+{
+  "modid": "oneblockultima",
+  "name": "OneBlock Ultima",
+  "description": "OneBlock Ultima adds a customizable One Block challenge with unlockable block sets, in-game JSON config editing, and automatic set selection.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "https://github.com/XZSt4nce/OneBlockUltima",
+  "updateUrl": "https://github.com/XZSt4nce/OneBlockUltima/releases",
+  "authorList": ["XZSt4nce"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": [
+    "required-after:forge@[14.23.5.2859,)"
+  ]
+}
+]

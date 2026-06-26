@@ -1,0 +1,75 @@
+tile.one_block_generator.name=One Block Generator
+generator.one_block=One block
+
+gui.oneblockultima.select=Select
+gui.oneblockultima.upgrade=Upgrade
+gui.oneblockultima.balance=Balance
+gui.oneblockultima.active_set=Active set
+gui.oneblockultima.possible_blocks=Possible blocks
+gui.oneblockultima.mobs=Mobs
+gui.oneblockultima.unlock_cost=Unlock cost
+gui.oneblockultima.upgrade_cost=Upgrade cost
+gui.oneblockultima.max_level=Max level reached
+gui.oneblockultima.locked=Locked
+gui.oneblockultima.selected=Selected
+gui.oneblockultima.unlock=Unlock
+gui.oneblockultima.max=Max
+gui.oneblockultima.chance=Chance
+gui.oneblockultima.lv=Lv.
+
+gui.oneblockultima.set.classic=Classic
+gui.oneblockultima.set.plain=Plain
+gui.oneblockultima.set.mixed_forest=Mixed Forest
+gui.oneblockultima.set.dungeon=Dungeon
+gui.oneblockultima.set.industrial=Industrial
+gui.oneblockultima.set.nether=Nether
+gui.oneblockultima.set.end=End
+gui.oneblockultima.set.magic=Magic
+gui.oneblockultima.set.botanic=Botanic
+gui.oneblockultima.set.apiary=Apiary
+gui.oneblockultima.set.astral=Astral
+gui.oneblockultima.set.eden=Eden
+gui.oneblockultima.set.skythern=Skythern
+gui.oneblockultima.set.apalachia=Apalachia
+gui.oneblockultima.set.wildwood=Wildwood
+gui.oneblockultima.set.mortum=Mortum
+gui.oneblockultima.set.cooking=Cooking
+
+gui.oneblockultima.current_level=Current Level
+gui.oneblockultima.next_level=Next Level
+gui.oneblockultima.next_level_preview=Next level preview
+gui.oneblockultima.config.title=Blocksets Configuration
+gui.oneblockultima.config.description=registry – the block/mob/item ID/nnmeta is a subspecies of the block (a number from 0 to 15)/nnbaseLevel – at what level does a block/mob appear/nnbaseChance – base percentage of chance of occurrence/nncurrency – how much will the balance increase for destruction/nncount – the number of mobs appearing/nndropItem – the item that will drop out and be displayed in the menu
+gui.oneblockultima.config.path=Config file path:
+gui.oneblockultima.reset_default=Reset Default
+gui.oneblockultima.save=Save JSON
+gui.oneblockultima.open=Open config folder
+gui.oneblockultima.reload=Reload JSON
+gui.oneblockultima.cancel=Cancel
+
+gui.oneblockultima.status.edit_instruction=Edit the JSON and press Save to apply.
+gui.oneblockultima.status.folder_opened=Config folder opened
+gui.oneblockultima.status.desktop_not_supported=Desktop unsupported
+gui.oneblockultima.status.folder_missing=Config folder not found
+gui.oneblockultima.status.reset_success=Reset successful
+gui.oneblockultima.status.reset_failed=Reset failed
+gui.oneblockultima.status.open_failed=Open failed
+gui.oneblockultima.status.delete_failed=Delete failed
+gui.oneblockultima.status.save_failed=Failed to save JSON
+gui.oneblockultima.status.invalid_json=Invalid JSON syntax
+gui.oneblockultima.status.reloaded=Config reloaded
+gui.oneblockultima.status.reload_failed=Reload failed
+gui.oneblockultima.status.modified=Modified
+gui.oneblockultima.status.unmodified=Unmodified
+
+gui.oneblockultima.msg.need=Not enough currency! Need
+gui.oneblockultima.msg.have=Have
+gui.oneblockultima.msg.unlock_fail=Failed to unlock set!
+gui.oneblockultima.msg.upgrade_fail=Failed to upgrade set!
+gui.oneblockultima.msg.unlocked=Set unlocked!
+
+command.addUltimaBalance.usage=Usage: %s
+command.addUltimaBalance.integer=Amount must be an integer.
+command.addUltimaBalance.player=Command must be executed by a player.
+command.addUltimaBalance.no_data=Player data not available.
+command.addUltimaBalance.success=Ultima balance increased by %s. Current: %s

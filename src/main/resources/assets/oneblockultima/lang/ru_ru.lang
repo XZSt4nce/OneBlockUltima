@@ -1,0 +1,75 @@
+tile.one_block_generator.name=One Block Generator
+generator.one_block=Один блок
+
+gui.oneblockultima.select=Выбрать
+gui.oneblockultima.upgrade=Улучшить
+gui.oneblockultima.balance=Баланс
+gui.oneblockultima.active_set=Активный набор
+gui.oneblockultima.possible_blocks=Возможные блоки
+gui.oneblockultima.mobs=Мобы
+gui.oneblockultima.unlock_cost=Стоимость разблокировки
+gui.oneblockultima.upgrade_cost=Стоимость улучшения
+gui.oneblockultima.max_level=Максимальный уровень достигнут
+gui.oneblockultima.locked=Заблокирован
+gui.oneblockultima.selected=Выбран
+gui.oneblockultima.unlock=Разблокировать
+gui.oneblockultima.max=Макс
+gui.oneblockultima.chance=Шанс
+gui.oneblockultima.lv=Ур.
+
+gui.oneblockultima.set.classic=Классический
+gui.oneblockultima.set.plain=Равнина
+gui.oneblockultima.set.mixed_forest=Смешанный лес
+gui.oneblockultima.set.dungeon=Подземелье
+gui.oneblockultima.set.industrial=Индустриальный
+gui.oneblockultima.set.nether=Нижний мир
+gui.oneblockultima.set.end=Край
+gui.oneblockultima.set.magic=Магический
+gui.oneblockultima.set.botanic=Ботанический
+gui.oneblockultima.set.apiary=Пасечный
+gui.oneblockultima.set.astral=Астральный
+gui.oneblockultima.set.eden=Эдем
+gui.oneblockultima.set.skythern=Небесный терн
+gui.oneblockultima.set.apalachia=Апалачия
+gui.oneblockultima.set.wildwood=Диколесье
+gui.oneblockultima.set.mortum=Мортум
+gui.oneblockultima.set.cooking=Кулинарный
+
+gui.oneblockultima.current_level=Текущий уровень
+gui.oneblockultima.next_level=Следующий уровень
+gui.oneblockultima.next_level_preview=Превью следующего уровня
+gui.oneblockultima.config.title=Конфигурация наборов
+gui.oneblockultima.config.description=registry – идентификатор блока/моба/предмета/nnmeta – подвид блока (число от 0 до 15)/nnbaseLevel – на каком уровне появляется блок/моб/nnbaseChance – базовый процент шанса выпадения/nncurrency – на сколько повысится баланс за разрушение/nncount – количество появляемых мобов/nndropItem – предмет, который будет выпадать и отображаться в меню
+gui.oneblockultima.config.path=Путь к файлу конфигурации:
+gui.oneblockultima.reset_default=Сбросить по умолчанию
+gui.oneblockultima.save=Сохранить JSON
+gui.oneblockultima.open=Открыть папку с конфигом
+gui.oneblockultima.reload=Перезагрузить JSON
+gui.oneblockultima.cancel=Отмена
+
+gui.oneblockultima.status.edit_instruction=Отредактируйте JSON и нажмите Сохранить.
+gui.oneblockultima.status.folder_opened=Папка с конфигом открыта
+gui.oneblockultima.status.desktop_not_supported=Desktop не поддерживается
+gui.oneblockultima.status.folder_missing=Папка с конфигом не найдена
+gui.oneblockultima.status.reset_success=Сброс успешен
+gui.oneblockultima.status.reset_failed=Не удалось сбросить
+gui.oneblockultima.status.delete_failed=Не удалось удалить
+gui.oneblockultima.status.open_failed=Не удалось открыть
+gui.oneblockultima.status.save_failed=Не удалось сохранить JSON
+gui.oneblockultima.status.invalid_json=Неверный синтаксис JSON
+gui.oneblockultima.status.reloaded=Конфиг перезагружен
+gui.oneblockultima.status.reload_failed=Не удалось перезагрузить конфиг
+gui.oneblockultima.status.modified=Изменено
+gui.oneblockultima.status.unmodified=Не изменено
+
+gui.oneblockultima.msg.need=Недостаточно средств! Нужно
+gui.oneblockultima.msg.have=Имеется
+gui.oneblockultima.msg.unlock_fail=Не удалось разблокировать набор!
+gui.oneblockultima.msg.upgrade_fail=Не удалось улучшить набор!
+gui.oneblockultima.msg.unlocked=Набор разблокирован!
+
+command.addUltimaBalance.usage=Использование: %s
+command.addUltimaBalance.integer=Сумма должна быть целым числом.
+command.addUltimaBalance.player=Команда должна выполняться игроком.
+command.addUltimaBalance.no_data=Данные игрока недоступны.
+command.addUltimaBalance.success=Ultima баланс увеличен на %s. Текущий: %s
