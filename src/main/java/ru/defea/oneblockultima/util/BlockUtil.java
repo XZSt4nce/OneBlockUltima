@@ -287,10 +287,10 @@ public final class BlockUtil
                 state = block.getDefaultState();
                 OneBlockUltima.getLogger().info("[BlockUtil] Using default state for Forestry sapling: " + state);
             }
-//            else
-//            {
-//                state = block.getStateFromMeta(entry.meta);
-//            }
+            else
+            {
+                state = block.getStateFromMeta(entry.meta);
+            }
 
             if (state == null || state.getBlock() == Blocks.AIR)
             {
