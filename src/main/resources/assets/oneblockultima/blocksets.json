@@ -84,9 +84,10 @@
         { "registry": "minecraft:cobblestone", "meta": 0, "baseLevel": 1, "baseChance": 18, "currency": 2 },
         { "registry": "minecraft:coal_ore", "meta": 0, "baseLevel": 1, "baseChance": 2, "currency": 5 },
         { "registry": "minecraft:iron_ore", "meta": 0, "baseLevel": 3, "baseChance": 2, "currency": 5 },
-        { "registry": "minecraft:gold_ore", "meta": 0, "baseLevel": 4, "baseChance": 2, "currency": 10 },
-        { "registry": "minecraft:emerald_ore", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 15 },
-        { "registry": "minecraft:diamond_ore", "meta": 0, "baseLevel": 6, "baseChance": 1, "currency": 15 }
+        { "registry": "minecraft:gold_ore", "meta": 0, "baseLevel": 4, "baseChance": 2, "currency": 5 },
+        { "registry": "minecraft:redstone_ore", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 5 },
+        { "registry": "minecraft:emerald_ore", "meta": 0, "baseLevel": 6, "baseChance": 1, "currency": 15 },
+        { "registry": "minecraft:diamond_ore", "meta": 0, "baseLevel": 7, "baseChance": 1, "currency": 15 }
       ],
       "mobs": [
         { "registry": "minecraft:zombie", "baseLevel": 1, "baseChance": 10, "count": 1 },

@@ -14,6 +14,7 @@ public final class ModBlocks
     public static final BlockOneBlockGenerator ONE_BLOCK_GENERATOR = new BlockOneBlockGenerator();
     public static final BlockCustomPortalFrame CUSTOM_PORTAL_FRAME = new BlockCustomPortalFrame();
     public static final BlockCustomBedrock CUSTOM_BEDROCK = new BlockCustomBedrock();
+    public static final BlockFluidBarrier FLUID_BARRIER = new BlockFluidBarrier();
 
     private ModBlocks()
     {
@@ -25,6 +26,7 @@ public final class ModBlocks
         event.getRegistry().register(ONE_BLOCK_GENERATOR);
         event.getRegistry().register(CUSTOM_PORTAL_FRAME);
         event.getRegistry().register(CUSTOM_BEDROCK);
+        event.getRegistry().register(FLUID_BARRIER);
     }
 
     @SubscribeEvent

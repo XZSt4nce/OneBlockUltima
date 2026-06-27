@@ -68,10 +68,7 @@ public final class BlockUtil
                     for (String key : nbtTags.getKeySet())
                     {
                         NBTBase tag = nbtTags.getTag(key);
-                        if (tag != null)
-                        {
-                            tileNbt.setTag(key, tag.copy());
-                        }
+                        tileNbt.setTag(key, tag.copy());
                     }
                     
                     // Загружаем подготовленные данные в TileEntity
@@ -95,7 +92,7 @@ public final class BlockUtil
         
         // Размещаем блок
         world.setBlockState(pos, state, 3);
-        
+
         // Если есть NBT теги но блок не BlockContainer, пытаемся применить их после размещения
         if (nbtTags != null && !nbtTags.hasNoTags() && !(block instanceof net.minecraft.block.BlockContainer))
         {
@@ -173,6 +170,7 @@ public final class BlockUtil
                 for (String key : nbtTags.getKeySet())
                 {
                     NBTBase tag = nbtTags.getTag(key);
+                    // noinspection ConstantConditions
                     if (tag != null)
                     {
                         tileNbt.setTag(key, tag.copy());
@@ -213,6 +211,7 @@ public final class BlockUtil
         for (String key : source.getKeySet())
         {
             NBTBase sourceTag = source.getTag(key);
+            // noinspection ConstantConditions
             if (sourceTag == null)
             {
                 continue;
@@ -257,6 +256,7 @@ public final class BlockUtil
                     Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(entry.registry));
                     if (item instanceof ItemBlock) {
                         Block forestryBlock = ((ItemBlock) item).getBlock();
+                        // noinspection ConstantConditions
                         if (forestryBlock != null && forestryBlock != Blocks.AIR) {
                             OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry block via ItemBlock: " + forestryBlock.getRegistryName());
                             block = forestryBlock;
@@ -278,16 +278,19 @@ public final class BlockUtil
 
         try
         {
-            IBlockState state;
+            IBlockState state = null;
 
             // Для Forestry саженцев всегда используем default state (meta игнорируется)
             if (entry.registry != null && entry.registry.toLowerCase().contains("forestry") &&
-                    entry.registry.toLowerCase().contains("sapling")) {
+                    entry.registry.toLowerCase().contains("sapling"))
+            {
                 state = block.getDefaultState();
                 OneBlockUltima.getLogger().info("[BlockUtil] Using default state for Forestry sapling: " + state);
-            } else {
-                state = block.getStateFromMeta(entry.meta);
             }
+//            else
+//            {
+//                state = block.getStateFromMeta(entry.meta);
+//            }
 
             if (state == null || state.getBlock() == Blocks.AIR)
             {

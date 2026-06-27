@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima.event;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -9,6 +10,7 @@ import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
@@ -39,8 +41,12 @@ import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
 import ru.defea.oneblockultima.world.SpawnConfigData;
 
-import static ru.defea.oneblockultima.block.BlockOneBlockGenerator.GENERATED_BLOCK_POS;
-import static ru.defea.oneblockultima.block.BlockOneBlockGenerator.GENERATOR_POS;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static ru.defea.oneblockultima.block.BlockOneBlockGenerator.*;
 
 @Mod.EventBusSubscriber(modid = OneBlockUltima.MODID)
 public final class ModEvents
@@ -52,7 +58,7 @@ public final class ModEvents
     private static final java.util.Map<BlockPos, Boolean> processingBlocks = new java.util.HashMap<>();
 
     @SideOnly(Side.CLIENT)
-    private static float displayedCurrency = 0.0f;
+    private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<>();
 
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
@@ -75,9 +81,24 @@ public final class ModEvents
             return;
         }
 
+        UUID playerUUID = player.getUniqueID();
         int targetCurrency = data.getCurrency();
-        displayedCurrency += (targetCurrency - displayedCurrency) * 0.14f;
-        int currency = Math.round(displayedCurrency);
+
+        // Получаем текущее отображаемое значение для этого игрока
+        float currentDisplayed = displayedCurrencyMap.getOrDefault(playerUUID, (float) targetCurrency);
+
+        // Плавная анимация
+        float newDisplayed = currentDisplayed + (targetCurrency - currentDisplayed) * 0.14f;
+
+        // Если разница маленькая - сразу устанавливаем точное значение
+        if (Math.abs(targetCurrency - newDisplayed) < 0.01f)
+        {
+            newDisplayed = targetCurrency;
+        }
+
+        displayedCurrencyMap.put(playerUUID, newDisplayed);
+        int currency = Math.round(newDisplayed);
+
         String balanceValue = String.valueOf(currency);
         int x = event.getResolution().getScaledWidth() - 50;
         int y = 8;
@@ -86,6 +107,42 @@ public final class ModEvents
         Minecraft.getMinecraft().getTextureManager().bindTexture(new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png"));
         Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 16, 16.0F, 16.0F);
         Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + 18, y + 3, 0xFFD700);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event)
+    {
+        if (event.player.world.isRemote)
+        {
+            return;
+        }
+
+        EntityPlayerMP player = (EntityPlayerMP) event.player;
+        World world = player.world;
+        if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
+        {
+            return;
+        }
+
+        BlockPos spawnPos = new BlockPos(0, 65, 0);
+
+        // Проверяем, есть ли у игрока своя точка возрождения
+        BlockPos bedPos = player.getBedLocation(0); // 0 - dimension ID (Overworld)
+        boolean hasSpawn = player.isSpawnForced(0);
+
+        // Если у игрока нет своей точки возрождения (кровать или команда)
+        //noinspection ConstantConditions
+        if (bedPos == null || !hasSpawn)
+        {
+            world.setSpawnPoint(spawnPos);
+            player.setSpawnPoint(spawnPos, true);
+            player.setSpawnChunk(spawnPos, true, player.dimension);
+            player.setPositionAndUpdate(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D);
+            player.connection.setPlayerLocation(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D, player.rotationYaw, player.rotationPitch);
+        }
+
+        // Синхронизируем данные игрока после респавна
+        PacketSyncPlayerData.sendToPlayer(player);
     }
 
     @SubscribeEvent
@@ -107,6 +164,12 @@ public final class ModEvents
 
         if (world.getBlockState(GENERATOR_POS).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
+            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+            {
+                world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+                OneBlockUltima.getLogger().info("[Generator] BARRIER placed at {} on world load", FLUID_BARRIER_POS);
+            }
+
             TileEntity tileEntity = world.getTileEntity(GENERATOR_POS);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
@@ -129,6 +192,13 @@ public final class ModEvents
                 || world.getBlockState(GENERATOR_POS).getBlock().isAir(world.getBlockState(GENERATOR_POS), world, GENERATOR_POS))
         {
             world.setBlockState(GENERATOR_POS, ModBlocks.ONE_BLOCK_GENERATOR.getDefaultState(), 3);
+
+            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+            {
+                world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+                OneBlockUltima.getLogger().info("[Generator] BARRIER placed at {} on generator creation", FLUID_BARRIER_POS);
+            }
+
             TileEntity tileEntity = world.getTileEntity(GENERATOR_POS);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
@@ -183,29 +253,6 @@ public final class ModEvents
         }
 
         PacketSyncPlayerData.sendToPlayer(player);
-    }
-
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event)
-    {
-        if (event.player.world.isRemote)
-        {
-            return;
-        }
-
-        EntityPlayerMP player = (EntityPlayerMP) event.player;
-        World world = player.world;
-        if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
-        {
-            return;
-        }
-
-        BlockPos spawnPos = new BlockPos(0, 65, 0);
-        world.setSpawnPoint(spawnPos);
-        player.setSpawnPoint(spawnPos, true);
-        player.setSpawnChunk(spawnPos, true, player.dimension);
-        player.setPositionAndUpdate(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D);
-        player.connection.setPlayerLocation(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D, player.rotationYaw, player.rotationPitch);
     }
 
     @SubscribeEvent(priority = EventPriority.NORMAL)
@@ -310,14 +357,18 @@ public final class ModEvents
             return;
         }
 
-        if (event.getState().getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
+        if (processingBlocks.getOrDefault(event.getPos(), false))
         {
-            event.setCanceled(true);
             return;
         }
 
-        if (processingBlocks.getOrDefault(event.getPos(), false))
+        World world = event.getWorld();
+
+        if (event.getPos().equals(FLUID_BARRIER_POS))
         {
+            world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+            OneBlockUltima.getLogger().info("[Generator] BARRIER placed at {} after block break", FLUID_BARRIER_POS);
+            event.setCanceled(true);
             return;
         }
 
@@ -328,9 +379,11 @@ public final class ModEvents
             return;
         }
 
-        processingBlocks.put(event.getPos(), true);
+        if (event.getPos().equals(GENERATED_BLOCK_POS))
+        {
+            processingBlocks.put(event.getPos(), true);
+        }
 
-        World world = event.getWorld();
         registry.remove(event.getPos());
         spawnMobOnBlockBreak(world, event.getPos(), entry);
 
@@ -387,68 +440,16 @@ public final class ModEvents
             net.minecraft.block.Block block = event.getState().getBlock();
 
             // Проверяем, может ли блок быть добыт без специальных условий
+            // noinspection ConstantConditions
             if (block != null && block != Blocks.AIR)
             {
                 // Список блоков, которые не должны дропаться без инструмента
-                boolean shouldDropBlock = true;
-
-                // Проверяем на траву
-                if (block == Blocks.TALLGRASS || block == Blocks.DOUBLE_PLANT || block == Blocks.DEADBUSH)
-                {
-                    // Трава не дропается без ножниц
-                    // Проверяем, есть ли у игрока ножницы
-                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
-                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
-                    {
-                        shouldDropBlock = false;
-                    }
-                }
-
-                // Проверяем на листья
-                if (block == Blocks.LEAVES || block == Blocks.LEAVES2)
-                {
-                    // Листья дропаются только с ножницами или если есть шанс на саженец
-                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
-                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
-                    {
-                        // Если нет ножниц, проверяем, есть ли дропы (саженцы)
-                        boolean hasSapling = false;
-                        for (net.minecraft.item.ItemStack drop : drops)
-                        {
-                            if (!drop.isEmpty() && drop.getItem() == net.minecraft.init.Items.DYE)
-                            {
-                                hasSapling = true;
-                                break;
-                            }
-                        }
-                        if (!hasSapling)
-                        {
-                            shouldDropBlock = false;
-                        }
-                    }
-                }
-
-                // Проверяем на цветы
-                if (block == Blocks.RED_FLOWER || block == Blocks.YELLOW_FLOWER)
-                {
-                    // Цветы всегда дропаются
-                    shouldDropBlock = true;
-                }
-
-                // Проверяем на паутину
-                if (block == Blocks.WEB)
-                {
-                    // Паутина дропается только с ножницами
-                    net.minecraft.item.ItemStack heldItem = player.getHeldItemMainhand();
-                    if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
-                    {
-                        shouldDropBlock = false;
-                    }
-                }
+                boolean shouldDropBlock = isShouldDropBlock(block, player, drops);
 
                 if (shouldDropBlock)
                 {
                     net.minecraft.item.Item item = net.minecraft.item.Item.getItemFromBlock(block);
+                    // noinspection ConstantConditions
                     if (item != null && item != net.minecraft.init.Items.AIR)
                     {
                         net.minecraft.item.ItemStack blockStack = new net.minecraft.item.ItemStack(item, 1, block.getMetaFromState(event.getState()));
@@ -481,6 +482,61 @@ public final class ModEvents
         }
     }
 
+    private static boolean isShouldDropBlock(Block block, EntityPlayer player, List<ItemStack> drops) {
+        boolean shouldDropBlock = true;
+
+        // Проверяем на траву
+        if (block == Blocks.TALLGRASS || block == Blocks.DOUBLE_PLANT || block == Blocks.DEADBUSH)
+        {
+            // Трава не дропается без ножниц
+            // Проверяем, есть ли у игрока ножницы
+            ItemStack heldItem = player.getHeldItemMainhand();
+            // noinspection ConstantConditions
+            if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+            {
+                shouldDropBlock = false;
+            }
+        }
+
+        // Проверяем на листья
+        if (block == Blocks.LEAVES || block == Blocks.LEAVES2)
+        {
+            // Листья дропаются только с ножницами или если есть шанс на саженец
+            ItemStack heldItem = player.getHeldItemMainhand();
+            // noinspection ConstantConditions
+            if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+            {
+                // Если нет ножниц, проверяем, есть ли дропы (саженцы)
+                boolean hasSapling = false;
+                for (ItemStack drop : drops)
+                {
+                    if (!drop.isEmpty() && drop.getItem() == net.minecraft.init.Items.DYE)
+                    {
+                        hasSapling = true;
+                        break;
+                    }
+                }
+                if (!hasSapling)
+                {
+                    shouldDropBlock = false;
+                }
+            }
+        }
+
+        // Проверяем на паутину
+        if (block == Blocks.WEB)
+        {
+            // Паутина дропается только с ножницами
+            ItemStack heldItem = player.getHeldItemMainhand();
+            // noinspection ConstantConditions
+            if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
+            {
+                shouldDropBlock = false;
+            }
+        }
+        return shouldDropBlock;
+    }
+
     @SubscribeEvent
     public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event)
     {
@@ -509,23 +565,23 @@ public final class ModEvents
 
     private static void spawnMobOnBlockBreak(World world, BlockPos pos, GeneratedBlockRegistry.GeneratedBlockEntry entry)
     {
-        OneBlockUltima.getLogger().info("[Mob Spawn] Entry: setId=" + entry.setId + ", level=" + entry.level);
+        OneBlockUltima.getLogger().info("[Mob Spawn] Entry: setId={}, level={}", entry.setId, entry.level);
         BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(entry.setId);
         if (set == null)
         {
-            OneBlockUltima.getLogger().info("[Mob Spawn] Set is null for setId=" + entry.setId);
+            OneBlockUltima.getLogger().info("[Mob Spawn] Set is null for setId={}", entry.setId);
             return;
         }
 
-        OneBlockUltima.getLogger().info("[Mob Spawn] Set found: " + set.id);
+        OneBlockUltima.getLogger().info("[Mob Spawn] Set found: {}", set.id);
         BlockSetConfig.SetLevelDefinition levelDefinition = set.getLevel(entry.level);
         if (levelDefinition == null)
         {
-            OneBlockUltima.getLogger().info("[Mob Spawn] Level definition is null for level=" + entry.level);
+            OneBlockUltima.getLogger().info("[Mob Spawn] Level definition is null for level={}", entry.level);
             return;
         }
 
-        OneBlockUltima.getLogger().info("[Mob Spawn] Level definition found. Total mobs: " + (levelDefinition.mobs != null ? levelDefinition.mobs.size() : 0));
+        OneBlockUltima.getLogger().info("[Mob Spawn] Level definition found. Total mobs: {}", levelDefinition.mobs != null ? levelDefinition.mobs.size() : 0);
         BlockSetConfig.MobEntryDefinition mobEntry = levelDefinition.pickMob(world.rand);
         if (mobEntry == null || mobEntry.registry == null || mobEntry.registry.isEmpty())
         {
@@ -533,26 +589,26 @@ public final class ModEvents
             return;
         }
 
-        OneBlockUltima.getLogger().info("[Mob Spawn] Attempting to spawn mob: " + mobEntry.registry + " count=" + mobEntry.count);
+        OneBlockUltima.getLogger().info("[Mob Spawn] Attempting to spawn mob: {} count={}", mobEntry.registry, mobEntry.count);
         for (int i = 0; i < Math.max(1, mobEntry.count); i++)
         {
             Entity entity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), world);
             if (entity == null)
             {
-                OneBlockUltima.getLogger().info("[Mob Spawn] Failed to create entity for registry: " + mobEntry.registry);
+                OneBlockUltima.getLogger().info("[Mob Spawn] Failed to create entity for registry: {}", mobEntry.registry);
                 continue;
             }
 
-            OneBlockUltima.getLogger().info("[Mob Spawn] Successfully spawned mob: " + mobEntry.registry);
+            OneBlockUltima.getLogger().info("[Mob Spawn] Successfully spawned mob: {}", mobEntry.registry);
             entity.setPosition(pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D);
-            
+
             // Применяем NBT теги к мобу если они есть
             if (mobEntry.nbtTags != null && !mobEntry.nbtTags.hasNoTags())
             {
-                OneBlockUltima.getLogger().info("[Mob Spawn] Applying NBT tags to mob: " + mobEntry.nbtTags);
+                OneBlockUltima.getLogger().info("[Mob Spawn] Applying NBT tags to mob: {}", mobEntry.nbtTags);
                 ru.defea.oneblockultima.util.BlockUtil.applyNbtToEntity(entity, mobEntry.nbtTags);
             }
-            
+
             world.spawnEntity(entity);
         }
     }

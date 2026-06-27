@@ -31,6 +31,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
 {
     public static final BlockPos GENERATOR_POS = new BlockPos(0, 63, 0);
     public static final BlockPos GENERATED_BLOCK_POS = GENERATOR_POS.up();
+    public static final BlockPos FLUID_BARRIER_POS = GENERATOR_POS.up(2);
 
     private static final AxisAlignedBB COLLISION_AABB = new AxisAlignedBB(0.0D, 0.0D, 0.0D, 1.0D, 2.0D, 1.0D);
 
@@ -109,7 +110,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     }
 
     @Override
-    public boolean isFullCube(IBlockState state)
+    public boolean isFullBlock(IBlockState state)
     {
         return false;
     }
@@ -133,6 +134,14 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     {
         if (!world.isRemote)
         {
+            // Ставим барьер над генератором
+            OneBlockUltima.getLogger().info("[Generator] onBlockAdded: barrierPos=" + FLUID_BARRIER_POS + ", block=" + world.getBlockState(FLUID_BARRIER_POS).getBlock());
+            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+            {
+                world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 3);
+                OneBlockUltima.getLogger().info("[Generator] BARRIER placed at " + FLUID_BARRIER_POS);
+            }
+
             world.scheduleUpdate(pos, this, 1);
         }
         super.onBlockAdded(world, pos, state);
@@ -144,6 +153,13 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         if (world.isRemote)
         {
             return;
+        }
+
+        // Проверяем, нужно ли восстановить барьер
+        if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+        {
+            world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+            OneBlockUltima.getLogger().info("[Generator] BARRIER restored at " + FLUID_BARRIER_POS + " from updateTick");
         }
 
         TileEntity tileEntity = world.getTileEntity(pos);
@@ -167,7 +183,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
             return;
         }
 
-        if (fromPos.equals(pos.up()))
+        if (fromPos.equals(GENERATED_BLOCK_POS))
         {
             TileEntity tileEntity = world.getTileEntity(pos);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
@@ -175,12 +191,20 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
                 ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
             }
         }
+        else if (fromPos.equals(FLUID_BARRIER_POS))
+        {
+            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == ModBlocks.FLUID_BARRIER)
+            {
+                world.setBlockState(FLUID_BARRIER_POS, Blocks.AIR.getDefaultState(), 3);
+            }
+            world.setBlockState(fromPos, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+        }
     }
 
     @Override
     public void breakBlock(World world, BlockPos pos, IBlockState state)
     {
-        GeneratedBlockRegistry.get(world).remove(pos.up());
+        GeneratedBlockRegistry.get(world).remove(GENERATED_BLOCK_POS);
         super.breakBlock(world, pos, state);
     }
 }
