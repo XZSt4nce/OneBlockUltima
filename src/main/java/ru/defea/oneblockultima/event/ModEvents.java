@@ -124,14 +124,13 @@ public final class ModEvents
             return;
         }
 
-        BlockPos spawnPos = new BlockPos(0, 65, 0);
-
         // Проверяем, есть ли у игрока своя точка возрождения
         BlockPos bedPos = player.getBedLocation(0); // 0 - dimension ID (Overworld)
         boolean hasSpawn = player.isSpawnForced(0);
 
         // Если у игрока нет своей точки возрождения (кровать или команда)
         //noinspection ConstantConditions
+        BlockPos spawnPos = new BlockPos(FLUID_BARRIER_POS);
         if (bedPos == null || !hasSpawn)
         {
             world.setSpawnPoint(spawnPos);
@@ -157,7 +156,7 @@ public final class ModEvents
         SpawnConfigData data = SpawnConfigData.get(world);
         if (!data.spawnInitialized)
         {
-            world.setSpawnPoint(new BlockPos(0, 65, 0));
+            world.setSpawnPoint(new BlockPos(FLUID_BARRIER_POS));
             data.spawnInitialized = true;
             data.markDirty();
         }
@@ -174,9 +173,8 @@ public final class ModEvents
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
                 GeneratedBlockRegistry registry = GeneratedBlockRegistry.get(world);
-                BlockPos blockAbove = GENERATOR_POS.up();
 
-                if (!registry.isGenerated(blockAbove))
+                if (!registry.isGenerated(GENERATED_BLOCK_POS))
                 {
                     ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
                 }
@@ -227,7 +225,7 @@ public final class ModEvents
         }
 
         SpawnConfigData data = SpawnConfigData.get(world);
-        BlockPos spawnPos = new BlockPos(0, 65, 0);
+        BlockPos spawnPos = new BlockPos(FLUID_BARRIER_POS);
         if (!data.spawnInitialized)
         {
             world.setSpawnPoint(spawnPos);
@@ -357,6 +355,8 @@ public final class ModEvents
             return;
         }
 
+        BlockPos pos = event.getPos();
+
         if (processingBlocks.getOrDefault(event.getPos(), false))
         {
             return;
@@ -364,10 +364,10 @@ public final class ModEvents
 
         World world = event.getWorld();
 
-        if (event.getPos().equals(FLUID_BARRIER_POS))
+        if (world.getBlockState(pos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
-            OneBlockUltima.getLogger().info("[Generator] BARRIER placed at {} after block break", FLUID_BARRIER_POS);
+            world.setBlockState(pos, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+            OneBlockUltima.getLogger().info("[Generator] BARRIER placed at {} after block break", pos);
             event.setCanceled(true);
             return;
         }
@@ -379,7 +379,7 @@ public final class ModEvents
             return;
         }
 
-        if (event.getPos().equals(GENERATED_BLOCK_POS))
+        if (world.getBlockState(event.getPos()).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
             processingBlocks.put(event.getPos(), true);
         }
@@ -549,7 +549,7 @@ public final class ModEvents
         BlockPos pos = event.getPos();
 
         // Проверяем только блок над генератором
-        if (!pos.equals(GENERATOR_POS.up()))
+        if (world.getBlockState(event.getPos().down()).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
             return;
         }

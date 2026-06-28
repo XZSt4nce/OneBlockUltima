@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockCrops;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.nbt.NBTBase;
@@ -12,6 +13,9 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.storage.loot.LootContext;
+import net.minecraft.world.storage.loot.LootTable;
+import net.minecraft.world.storage.loot.LootTableManager;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.IFluidBlock;
@@ -49,6 +53,7 @@ public final class BlockUtil
         Block block = state.getBlock();
         
         // Для BlockContainer блоков с NBT тегами - создаем TileEntity ДО размещения
+        TileEntity preCreatedTileEntity = null;
         if (nbtTags != null && !nbtTags.hasNoTags() && block instanceof net.minecraft.block.BlockContainer)
         {
             try
@@ -58,24 +63,38 @@ public final class BlockUtil
                 
                 if (tileEntity != null)
                 {
-                    // Подготавливаем полный NBT для TileEntity с позицией
-                    NBTTagCompound tileNbt = new NBTTagCompound();
-                    tileNbt.setInteger("x", pos.getX());
-                    tileNbt.setInteger("y", pos.getY());
-                    tileNbt.setInteger("z", pos.getZ());
-                    
-                    // Применяем все теги из конфига (перезаписываем существующие)
                     for (String key : nbtTags.getKeySet())
                     {
                         NBTBase tag = nbtTags.getTag(key);
-                        tileNbt.setTag(key, tag.copy());
+                        tileEntity.getTileData().setTag(key, tag.copy());
                     }
-                    
-                    // Загружаем подготовленные данные в TileEntity
-                    tileEntity.readFromNBT(tileNbt);
-                    
-                    // Добавляем TileEntity в мир ДО размещения блока
+
+                    tileEntity.setPos(pos);
                     world.setTileEntity(pos, tileEntity);
+
+                    if (tileEntity instanceof IInventory) {
+                        IInventory inv = (IInventory) tileEntity;
+                        NBTTagCompound nbt = tileEntity.getTileData();
+                        String lootTableKey = "LootTable";
+
+                        if (nbt.hasKey(lootTableKey, 8)) { // 8 = TAG_String
+                            String lootTableId = nbt.getString(lootTableKey);
+                            ResourceLocation loc = new ResourceLocation(lootTableId);
+
+                            LootTableManager manager = world.getLootTableManager();
+                            LootTable table = manager.getLootTableFromLocation(loc);
+
+                            if (table != null) {
+                                LootContext.Builder contextBuilder = new LootContext.Builder((net.minecraft.world.WorldServer) world);
+                                LootContext context = contextBuilder.build();
+
+                                table.fillInventory(inv, world.rand, context);
+                                nbt.removeTag(lootTableKey);
+                                preCreatedTileEntity = tileEntity;
+                                tileEntity.markDirty();
+                            }
+                        }
+                    }
                     
                     OneBlockUltima.getLogger().info("[Generator] Pre-configured TileEntity at " + pos + " with NBT tags");
                 }
@@ -92,6 +111,15 @@ public final class BlockUtil
         
         // Размещаем блок
         world.setBlockState(pos, state, 3);
+        if (preCreatedTileEntity != null)
+        {
+            // Удаляем старый TileEntity, если есть
+            world.removeTileEntity(pos);
+            // Устанавливаем наш
+            world.setTileEntity(pos, preCreatedTileEntity);
+            preCreatedTileEntity.setPos(pos);
+            preCreatedTileEntity.markDirty();
+        }
 
         // Если есть NBT теги но блок не BlockContainer, пытаемся применить их после размещения
         if (nbtTags != null && !nbtTags.hasNoTags() && !(block instanceof net.minecraft.block.BlockContainer))

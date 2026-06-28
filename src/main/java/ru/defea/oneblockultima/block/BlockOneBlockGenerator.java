@@ -31,7 +31,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
 {
     public static final BlockPos GENERATOR_POS = new BlockPos(0, 63, 0);
     public static final BlockPos GENERATED_BLOCK_POS = GENERATOR_POS.up();
-    public static final BlockPos FLUID_BARRIER_POS = GENERATOR_POS.up(2);
+    public static final BlockPos FLUID_BARRIER_POS = GENERATED_BLOCK_POS.up();
 
     private static final AxisAlignedBB COLLISION_AABB = new AxisAlignedBB(0.0D, 0.0D, 0.0D, 1.0D, 2.0D, 1.0D);
 
@@ -135,11 +135,11 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         if (!world.isRemote)
         {
             // Ставим барьер над генератором
-            OneBlockUltima.getLogger().info("[Generator] onBlockAdded: barrierPos=" + FLUID_BARRIER_POS + ", block=" + world.getBlockState(FLUID_BARRIER_POS).getBlock());
-            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+            OneBlockUltima.getLogger().info("[Generator] onBlockAdded: barrierPos=" + pos + ", block=" + world.getBlockState(pos).getBlock());
+            if (world.getBlockState(pos).getBlock() == Blocks.AIR && world.getBlockState(pos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
             {
-                world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 3);
-                OneBlockUltima.getLogger().info("[Generator] BARRIER placed at " + FLUID_BARRIER_POS);
+                world.setBlockState(pos, ModBlocks.FLUID_BARRIER.getDefaultState(), 3);
+                OneBlockUltima.getLogger().info("[Generator] BARRIER placed at " + pos);
             }
 
             world.scheduleUpdate(pos, this, 1);
@@ -156,10 +156,10 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         }
 
         // Проверяем, нужно ли восстановить барьер
-        if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == Blocks.AIR)
+        if (world.getBlockState(pos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR && world.getBlockState(pos).getBlock() == Blocks.AIR)
         {
-            world.setBlockState(FLUID_BARRIER_POS, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
-            OneBlockUltima.getLogger().info("[Generator] BARRIER restored at " + FLUID_BARRIER_POS + " from updateTick");
+            world.setBlockState(pos, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
+            OneBlockUltima.getLogger().info("[Generator] BARRIER restored at " + pos + " from updateTick");
         }
 
         TileEntity tileEntity = world.getTileEntity(pos);
@@ -183,7 +183,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
             return;
         }
 
-        if (fromPos.equals(GENERATED_BLOCK_POS))
+        if (world.getBlockState(fromPos.down()).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
             TileEntity tileEntity = world.getTileEntity(pos);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
@@ -191,11 +191,11 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
                 ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
             }
         }
-        else if (fromPos.equals(FLUID_BARRIER_POS))
+        else if (world.getBlockState(fromPos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            if (world.getBlockState(FLUID_BARRIER_POS).getBlock() == ModBlocks.FLUID_BARRIER)
+            if (world.getBlockState(fromPos).getBlock() == ModBlocks.FLUID_BARRIER)
             {
-                world.setBlockState(FLUID_BARRIER_POS, Blocks.AIR.getDefaultState(), 3);
+                world.setBlockState(fromPos, Blocks.AIR.getDefaultState(), 3);
             }
             world.setBlockState(fromPos, ModBlocks.FLUID_BARRIER.getDefaultState(), 2);
         }
@@ -204,7 +204,10 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     @Override
     public void breakBlock(World world, BlockPos pos, IBlockState state)
     {
-        GeneratedBlockRegistry.get(world).remove(GENERATED_BLOCK_POS);
+        if (world.getBlockState(pos.down()).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
+        {
+            GeneratedBlockRegistry.get(world).remove(pos);
+        }
         super.breakBlock(world, pos, state);
     }
 }
