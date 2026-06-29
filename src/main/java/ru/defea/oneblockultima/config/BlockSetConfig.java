@@ -184,19 +184,20 @@ public final class BlockSetConfig
     {
         public String registry;
         public int meta;
-        public final int baseLevel = 1;
-        public final int baseChance = 0;
-        public final int currency = 0;
-        public final NBTTagCompound nbtTags = new NBTTagCompound();
+        public int baseLevel = 1;
+        public int baseChance = 0;
+        public int currency = 0;
+        String dropItem = null;
+        public NBTTagCompound nbtTags = new NBTTagCompound();
     }
 
     public static class MobElementDefinition
     {
         public String registry;
-        public final int baseLevel = 1;
-        public final int baseChance = 0;
-        public final int count = 1;
-        public final NBTTagCompound nbtTags = new NBTTagCompound();
+        public int baseLevel = 1;
+        public int baseChance = 0;
+        public int count = 1;
+        public NBTTagCompound nbtTags = new NBTTagCompound();
     }
 
     // internal runtime element used for unified computations of percentages
@@ -210,7 +211,7 @@ public final class BlockSetConfig
         String dropItem = null;
         int count;
         boolean isMob;
-        final NBTTagCompound nbtTags = new NBTTagCompound();
+        NBTTagCompound nbtTags = new NBTTagCompound();
     }
 
     private void buildIndex()
@@ -261,12 +262,12 @@ public final class BlockSetConfig
     public static class BlockSetDefinition
     {
         public String id;
-        public final List<String> requiredMods = new ArrayList<>();
-        public final int unlockCost = 0;
+        public List<String> requiredMods = new ArrayList<>();
+        public int unlockCost = 0;
 
         // New format: separate lists for block-elements and mob-elements
-        public final List<BlockElementDefinition> blocks = new ArrayList<>();
-        public final List<MobElementDefinition> mobs = new ArrayList<>();
+        public List<BlockElementDefinition> blocks = new ArrayList<>();
+        public List<MobElementDefinition> mobs = new ArrayList<>();
 
         // transient cache for computed levels
         private transient java.util.Map<Integer, SetLevelDefinition> computedLevels = null;
@@ -330,7 +331,7 @@ public final class BlockSetConfig
                 ie.baseLevel = be.baseLevel;
                 ie.baseChance = be.baseChance;
                 ie.currency = be.currency;
-                ie.dropItem = null;
+                ie.dropItem = be.dropItem;
                 ie.count = 1;
                 ie.isMob = false;
                 Set<String> keys = be.nbtTags.getKeySet();
@@ -669,12 +670,13 @@ public final class BlockSetConfig
 
     public static class BlockEntryDefinition
     {
+        public int id;
         public String registry;
         public int meta;
         public int chance;
         public int currency;
         public String dropItem = null;
-        public final NBTTagCompound nbtTags = new NBTTagCompound();
+        public NBTTagCompound nbtTags = new NBTTagCompound();
 
         public int getChance()
         {
@@ -749,7 +751,7 @@ public final class BlockSetConfig
         public String registry;
         public int chance;
         public int count = 1;
-        public final NBTTagCompound nbtTags = new NBTTagCompound();
+        public NBTTagCompound nbtTags = new NBTTagCompound();
 
         public int getChance()
         {

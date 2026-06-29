@@ -19,6 +19,7 @@ import net.minecraft.util.Mirror;
 import net.minecraft.util.Rotation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import ru.defea.oneblockultima.OneBlockUltima;
@@ -38,6 +39,12 @@ public class BlockCustomPortalFrame extends Block {
         this.setResistance(2000.0F);
         this.setUnlocalizedName("custom_end_portal_frame");
         this.setRegistryName(OneBlockUltima.MODID, "custom_end_portal_frame");
+    }
+
+    @Override
+    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player)
+    {
+        return Blocks.END_PORTAL_FRAME.getPickBlock(state, target, world, pos, player);
     }
 
     @Override

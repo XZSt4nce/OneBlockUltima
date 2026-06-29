@@ -9,7 +9,9 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
 
 import java.util.List;
 import java.util.Random;
@@ -22,6 +24,12 @@ public class BlockCustomBedrock extends Block {
         this.setResistance(2000.0F);
         this.setUnlocalizedName("custom_bedrock");
         this.setRegistryName("custom_bedrock");
+    }
+
+    @Override
+    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player)
+    {
+        return Blocks.BEDROCK.getPickBlock(state, target, world, pos, player);
     }
 
     @Override
