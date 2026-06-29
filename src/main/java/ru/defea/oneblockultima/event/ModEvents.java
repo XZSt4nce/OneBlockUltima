@@ -35,6 +35,7 @@ import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
+import ru.defea.oneblockultima.gui.GuiOneBlock;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
@@ -64,6 +65,18 @@ public final class ModEvents
     @SideOnly(Side.CLIENT)
     public static void onRenderGameOverlay(RenderGameOverlayEvent.Text event)
     {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.currentScreen instanceof GuiOneBlock)
+        {
+            return;
+        }
+
+        World world = mc.world;
+        if (world == null || !(world.getWorldType() instanceof OneBlockWorldType))
+        {
+            return;
+        }
+
         if (event.getType() != RenderGameOverlayEvent.ElementType.TEXT)
         {
             return;
@@ -100,13 +113,56 @@ public final class ModEvents
         int currency = Math.round(newDisplayed);
 
         String balanceValue = String.valueOf(currency);
-        int x = event.getResolution().getScaledWidth() - 50;
-        int y = 8;
+        int textWidth = mc.fontRenderer.getStringWidth(balanceValue);
+        int coinSize = 8;
+        int spaceBetween = 2;
+        int radius = 3;
+        int vMargin = 5 + radius;
+        int hMargin = 8 + radius;
+
+        int x = event.getResolution().getScaledWidth() - 40 - textWidth;
+        int y = coinSize + 12;
+
+        int bgWidth = coinSize + textWidth + spaceBetween + hMargin * 2;
+        int bgHeight = coinSize + vMargin * 2;
+        int bgX = x - hMargin;
+        int bgY = y - vMargin;
+
+        drawRoundedRect(bgX, bgY, bgWidth, bgHeight, 5, 0x99333333);
 
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         Minecraft.getMinecraft().getTextureManager().bindTexture(new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png"));
-        Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 16, 16.0F, 16.0F);
-        Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + 18, y + 3, 0xFFD700);
+        Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, coinSize, coinSize, coinSize, coinSize);
+        Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + coinSize + spaceBetween, y, 0xFFD700);
+    }
+
+    private static void drawRoundedRect(int x, int y, int width, int height, int radius, int color)
+    {
+        Gui.drawRect(x + radius, y, x + width - radius, y + height, color);
+        Gui.drawRect(x, y + radius, x + width, y + height - radius, color);
+
+        for (int i = 0; i < radius; i++)
+        {
+            for (int j = 0; j < radius; j++)
+            {
+                // Проверяем, находится ли пиксель внутри круга
+                if (i * i + j * j < radius * radius)
+                {
+                    int right = x + width - radius + i + 1;
+                    int left = x + radius - i - 1;
+                    int bottom = y + height - radius + j + 1;
+                    int top = y + radius - j - 1;
+                    // Верхний левый угол
+                    Gui.drawRect(left, top, left + 1, top + 1, color);
+                    // Верхний правый угол
+                    Gui.drawRect(right - 1, top, right, top + 1, color);
+                    // Нижний левый угол
+                    Gui.drawRect(left, bottom - 1, left + 1, bottom, color);
+                    // Нижний правый угол
+                    Gui.drawRect(right - 1, bottom - 1, right, bottom, color);
+                }
+            }
+        }
     }
 
     @SubscribeEvent
