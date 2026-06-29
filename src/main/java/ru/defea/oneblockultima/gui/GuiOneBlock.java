@@ -32,6 +32,7 @@ import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
+import ru.defea.oneblockultima.util.BlockUtil;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -896,18 +897,8 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredEntryLeft != null && hoveredEntryLeft.isFluid())
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<>();
-                
-                // Получаем имя жидкости
-                String fluidName = getFluidDisplayName(hoveredEntryLeft);
-                if (fluidName == null || fluidName.isEmpty()) {
-                    fluidName = hoveredEntryLeft.registry;
-                }
-                tooltip.add(fluidName);
-                
-                // Добавляем шанс
+                java.util.List<String> tooltip = BlockUtil.getTooltip(hoveredEntryLeft, mc.gameSettings.advancedItemTooltips ? ITooltipFlag.TooltipFlags.ADVANCED : ITooltipFlag.TooltipFlags.NORMAL);
                 tooltip.add(I18n.format("gui.oneblockultima.chance") + ": " + hoveredEntryLeft.getChance() + "%");
-                
                 drawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer);
             }
             else if (hoveredMobEntryLeft != null)
@@ -946,12 +937,7 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredEntryRight != null && hoveredEntryRight.isFluid())
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<>();
-                String fluidName = getFluidDisplayName(hoveredEntryRight);
-                if (fluidName == null || fluidName.isEmpty()) {
-                    fluidName = hoveredEntryRight.registry;
-                }
-                tooltip.add(fluidName);
+                java.util.List<String> tooltip = BlockUtil.getTooltip(hoveredEntryRight, mc.gameSettings.advancedItemTooltips ? ITooltipFlag.TooltipFlags.ADVANCED : ITooltipFlag.TooltipFlags.NORMAL);
                 tooltip.add(I18n.format("gui.oneblockultima.chance") + ": " + hoveredEntryRight.getChance() + "%");
                 drawHoveringText(tooltip, mouseX - guiLeft, mouseY - guiTop, fontRenderer);
             }

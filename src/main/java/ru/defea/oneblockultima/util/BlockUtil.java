@@ -1,21 +1,31 @@
 package ru.defea.oneblockultima.util;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockCrops;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootTable;
 import net.minecraft.world.storage.loot.LootTableManager;
+import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.IFluidBlock;
@@ -25,7 +35,11 @@ import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+
+import static net.minecraft.item.ItemStack.DECIMALFORMAT;
 
 public final class BlockUtil
 {
@@ -126,6 +140,214 @@ public final class BlockUtil
         {
             applyNbtToBlock(world, pos, nbtTags);
         }
+    }
+
+    public static String getDisplayName(Block block, NBTTagCompound nbtTagCompound)
+    {
+        NBTTagCompound nbttagcompound = nbtTagCompound != null && nbtTagCompound.hasKey("display", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getCompoundTag("display") : null;
+
+        if (nbttagcompound != null)
+        {
+            if (nbttagcompound.hasKey("Name", Constants.NBT.TAG_STRING))
+            {
+                return nbttagcompound.getString("Name");
+            }
+
+            if (nbttagcompound.hasKey("LocName", Constants.NBT.TAG_STRING))
+            {
+                return net.minecraft.util.text.translation.I18n.translateToLocal(nbttagcompound.getString("LocName"));
+            }
+        }
+
+        return net.minecraft.util.text.translation.I18n.translateToLocal(net.minecraft.util.text.translation.I18n.translateToLocal(block.getUnlocalizedName()) + ".name").trim();
+    }
+
+    public static List<String> getTooltip(BlockSetConfig.BlockEntryDefinition hoveredEntry, ITooltipFlag advanced) {
+        java.util.List<String> tooltip = new java.util.ArrayList<>();
+        Block resolvedBlock = hoveredEntry.resolveBlock();
+        boolean hasTagCompound = hoveredEntry.nbtTags != null;
+        NBTTagCompound nbtTagCompound = hasTagCompound && hoveredEntry.nbtTags.hasKey("display", Constants.NBT.TAG_COMPOUND) ? hoveredEntry.nbtTags.getCompoundTag("display") : null;
+        boolean hasDisplayName = nbtTagCompound != null && nbtTagCompound.hasKey("Name", Constants.NBT.TAG_STRING);
+
+        String s = getDisplayName(resolvedBlock, nbtTagCompound);
+        if (s == null || s.isEmpty()) {
+            s = hoveredEntry.registry;
+        }
+
+        if (advanced.isAdvanced())
+        {
+            String s1 = "";
+
+            if (!s.isEmpty())
+            {
+                s = s + " (";
+                s1 = ")";
+            }
+
+            int i = Block.getIdFromBlock(resolvedBlock);
+            int meta = hoveredEntry.meta;
+
+            if (meta > 0)
+            {
+                s = s + String.format("#%04d/%d%s", i, meta, s1);
+            }
+            else
+            {
+                s = s + String.format("#%04d%s", i, s1);
+            }
+        }
+        else if (!hasDisplayName)
+        {
+            s = s + " #" + hoveredEntry.meta;
+        }
+
+        tooltip.add(s);
+
+        int i1 = 0;
+
+        try {
+            if (nbtTagCompound.hasKey("HideFlags", Constants.NBT.TAG_ANY_NUMERIC)) {
+                i1 = nbtTagCompound.getInteger("HideFlags");
+            }
+        } catch (Exception ignored) {}
+
+        if (hasTagCompound)
+        {
+            if ((i1 & 1) == 0)
+            {
+                try {
+                    NBTTagList nbttaglist = nbtTagCompound.hasKey("ench", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getTagList("ench", Constants.NBT.TAG_COMPOUND) : new NBTTagList();
+
+                    for (int j = 0; j < nbttaglist.tagCount(); ++j)
+                    {
+                        NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(j);
+                        int k = nbttagcompound.getShort("id");
+                        int l = nbttagcompound.getShort("lvl");
+                        Enchantment enchantment = Enchantment.getEnchantmentByID(k);
+
+                        if (enchantment != null)
+                        {
+                            tooltip.add(enchantment.getTranslatedName(l));
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (hasDisplayName)
+            {
+                NBTTagCompound nbttagcompound1 = nbtTagCompound.getCompoundTag("display");
+
+                if (nbttagcompound1.hasKey("color", Constants.NBT.TAG_INT))
+                {
+                    if (advanced.isAdvanced())
+                    {
+                        tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.color", String.format("#%06X", nbttagcompound1.getInteger("color"))));
+                    }
+                    else
+                    {
+                        tooltip.add(TextFormatting.ITALIC + net.minecraft.util.text.translation.I18n.translateToLocal("block.dyed"));
+                    }
+                }
+
+                if (nbttagcompound1.getTagId("Lore") == 9)
+                {
+                    NBTTagList nbttaglist3 = nbttagcompound1.getTagList("Lore", 8);
+
+                    if (!nbttaglist3.hasNoTags())
+                    {
+                        for (int l1 = 0; l1 < nbttaglist3.tagCount(); ++l1)
+                        {
+                            tooltip.add(TextFormatting.DARK_PURPLE + "" + TextFormatting.ITALIC + nbttaglist3.getStringTagAt(l1));
+                        }
+                    }
+                }
+            }
+        }
+
+        for (EntityEquipmentSlot entityequipmentslot : EntityEquipmentSlot.values())
+        {
+            Multimap<String, AttributeModifier> multimap = getAttributeModifiers(entityequipmentslot, nbtTagCompound);
+
+            if (!multimap.isEmpty() && (i1 & 2) == 0)
+            {
+                tooltip.add("");
+                tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocal("block.modifiers." + entityequipmentslot.getName()));
+
+                for (Map.Entry<String, AttributeModifier> entry : multimap.entries())
+                {
+                    AttributeModifier attributemodifier = entry.getValue();
+                    double d0 = attributemodifier.getAmount();
+                    boolean flag = false;
+
+                    double d1;
+
+                    if (attributemodifier.getOperation() != 1 && attributemodifier.getOperation() != 2)
+                    {
+                        d1 = d0;
+                    }
+                    else
+                    {
+                        d1 = d0 * 100.0D;
+                    }
+
+                    if (flag)
+                    {
+                        tooltip.add(" " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.equals." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
+                    }
+                    else if (d0 > 0.0D)
+                    {
+                        tooltip.add(TextFormatting.BLUE + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.plus." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
+                    }
+                    else if (d0 < 0.0D)
+                    {
+                        d1 = d1 * -1.0D;
+                        tooltip.add(TextFormatting.RED + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.take." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
+                    }
+                }
+            }
+        }
+
+        if (advanced.isAdvanced())
+        {
+
+            tooltip.add(TextFormatting.DARK_GRAY + Block.REGISTRY.getNameForObject(resolvedBlock).toString());
+
+            if (hasDisplayName)
+            {
+                tooltip.add(TextFormatting.DARK_GRAY + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.nbt_tags", nbtTagCompound.getKeySet().size()));
+            }
+        }
+
+        return tooltip;
+    }
+
+    public static Multimap<String, AttributeModifier> getAttributeModifiers(EntityEquipmentSlot equipmentSlot, NBTTagCompound nbtTagCompound)
+    {
+        Multimap<String, AttributeModifier> multimap;
+        boolean hasTagCompound = nbtTagCompound != null;
+
+        if (hasTagCompound && nbtTagCompound.hasKey("AttributeModifiers", Constants.NBT.TAG_LIST))
+        {
+            multimap = HashMultimap.create();
+            NBTTagList nbttaglist = nbtTagCompound.getTagList("AttributeModifiers", Constants.NBT.TAG_LIST);
+
+            for (int i = 0; i < nbttaglist.tagCount(); ++i)
+            {
+                NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(i);
+                AttributeModifier attributemodifier = SharedMonsterAttributes.readAttributeModifierFromNBT(nbttagcompound);
+
+                if (attributemodifier != null && (!nbttagcompound.hasKey("Slot", Constants.NBT.TAG_STRING) || nbttagcompound.getString("Slot").equals(equipmentSlot.getName())) && attributemodifier.getID().getLeastSignificantBits() != 0L && attributemodifier.getID().getMostSignificantBits() != 0L)
+                {
+                    multimap.put(nbttagcompound.getString("AttributeName"), attributemodifier);
+                }
+            }
+        }
+        else
+        {
+            multimap = HashMultimap.create();
+        }
+
+        return multimap;
     }
 
     /**
