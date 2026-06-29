@@ -201,7 +201,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
             try {
                 Item item = ForgeRegistries.ITEMS.getValue(new net.minecraft.util.ResourceLocation(entry.registry));
                 if (item != null) {
-                    net.minecraft.item.ItemStack itemStack = new net.minecraft.item.ItemStack(item, 1);
+                    net.minecraft.item.ItemStack itemStack = new net.minecraft.item.ItemStack(item, 1, entry.meta);
                     if (entry.nbtTags != null && !entry.nbtTags.hasNoTags()) {
                         itemStack.setTagCompound(entry.nbtTags.copy());
                     }
