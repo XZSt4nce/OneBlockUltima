@@ -25,7 +25,7 @@ run/
 logs/
 crash-reports/
 saves/
-config/
+./config/
 options.txt
 usercache.json
 usernamecache.json
