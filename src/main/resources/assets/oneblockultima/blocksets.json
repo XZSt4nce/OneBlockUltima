@@ -111,7 +111,7 @@
     },
     {
       "id": "industrial",
-      "requiredMods": ["ic2", "appliedenergistics2", "industrialupgrade", "thermalfoundation", "lucky"],
+      "requiredMods": ["ic2", "appliedenergistics2", "industrialupgrade", "thermalfoundation"],
       "unlockCost": 300,
       "blocks": [
         { "registry": "minecraft:stone", "meta": 0, "baseLevel": 1, "baseChance": 80, "currency": 2 },
