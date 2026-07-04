@@ -128,7 +128,7 @@ public final class ModEvents
         int vMargin = 5 + radius;
         int hMargin = 8 + radius;
 
-        int x = event.getResolution().getScaledWidth() - 40 - textWidth;
+        int x = event.getResolution().getScaledWidth() - 70 - textWidth;
         int y = coinSize + 12;
 
         int bgWidth = coinSize + textWidth + spaceBetween + hMargin * 2;
