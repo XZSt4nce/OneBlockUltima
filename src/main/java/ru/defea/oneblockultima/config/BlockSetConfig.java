@@ -303,7 +303,6 @@ public final class BlockSetConfig
 
         public boolean isSatisfied(IOneBlockPlayerData data)
         {
-            OneBlockUltima.getLogger().info("[MEOW3]: {}", data.getBrokenBlocksCount());
             if (data == null)
             {
                 return false;

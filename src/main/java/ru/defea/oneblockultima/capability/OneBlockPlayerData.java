@@ -49,7 +49,13 @@ public class OneBlockPlayerData implements IOneBlockPlayerData
             return level;
         }
 
-        String defaultSetId = BlockSetConfig.get().getDefaultSetId();
+        BlockSetConfig config = BlockSetConfig.get();
+        if (config == null)
+        {
+            return 0;
+        }
+
+        String defaultSetId = config.getDefaultSetId();
         return setId != null && setId.equals(defaultSetId) ? 1 : 0;
     }
 
@@ -99,6 +105,29 @@ public class OneBlockPlayerData implements IOneBlockPlayerData
 
         brokenBlocksTotal += amount;
         brokenBlocksBySet.put(setId, getBrokenBlocksCount(setId) + amount);
+    }
+
+    @Override
+    public void copyFrom(IOneBlockPlayerData other)
+    {
+        if (other == null)
+        {
+            return;
+        }
+
+        setCurrency(other.getCurrency());
+        setBrokenBlocksTotal(other.getBrokenBlocksCount());
+
+        if (other instanceof OneBlockPlayerData)
+        {
+            OneBlockPlayerData otherData = (OneBlockPlayerData) other;
+            setBrokenBlocksBySet(otherData.getBrokenBlocksBySet());
+            getSetLevels().clear();
+            getSetLevels().putAll(otherData.getSetLevels());
+            return;
+        }
+
+        getSetLevels().clear();
     }
 
     public void setCurrency(int currency)

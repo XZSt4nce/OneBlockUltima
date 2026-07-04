@@ -258,6 +258,22 @@ public final class ModEvents
     }
 
     @SubscribeEvent
+    public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event)
+    {
+        if (event.player == null || event.player.world == null || event.player.world.isRemote)
+        {
+            return;
+        }
+
+        IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(event.player);
+        if (data instanceof ru.defea.oneblockultima.capability.OneBlockPlayerData)
+        {
+            OneBlockPlayerDataProvider.loadFromEntity(event.player, data);
+            PacketSyncPlayerData.sendToPlayer(event.player);
+        }
+    }
+
+    @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event)
     {
         if (event.player.world.isRemote)
@@ -389,6 +405,12 @@ public final class ModEvents
 
         player.setSpawnPoint(spawnPos, true);
         player.setSpawnChunk(spawnPos, true, player.dimension);
+
+        IOneBlockPlayerData playerData = OneBlockPlayerDataProvider.get(player);
+        if (playerData != null)
+        {
+            OneBlockPlayerDataProvider.loadFromEntity(player, playerData);
+        }
 
         if (!data.spawnTeleportDone)
         {
@@ -791,22 +813,18 @@ public final class ModEvents
     @SubscribeEvent
     public static void clonePlayer(net.minecraftforge.event.entity.player.PlayerEvent.Clone event)
     {
-        if (event.isWasDeath())
+        IOneBlockPlayerData oldData = OneBlockPlayerDataProvider.get(event.getOriginal());
+        IOneBlockPlayerData newData = OneBlockPlayerDataProvider.get(event.getEntityPlayer());
+        if (oldData instanceof ru.defea.oneblockultima.capability.OneBlockPlayerData
+                && newData instanceof ru.defea.oneblockultima.capability.OneBlockPlayerData)
         {
-            IOneBlockPlayerData oldData = OneBlockPlayerDataProvider.get(event.getOriginal());
-            IOneBlockPlayerData newData = OneBlockPlayerDataProvider.get(event.getEntityPlayer());
-            if (oldData instanceof ru.defea.oneblockultima.capability.OneBlockPlayerData
-                    && newData instanceof ru.defea.oneblockultima.capability.OneBlockPlayerData)
-            {
-                ru.defea.oneblockultima.capability.OneBlockPlayerData oldPlayerData =
-                        (ru.defea.oneblockultima.capability.OneBlockPlayerData) oldData;
-                ru.defea.oneblockultima.capability.OneBlockPlayerData newPlayerData =
-                        (ru.defea.oneblockultima.capability.OneBlockPlayerData) newData;
+            ru.defea.oneblockultima.capability.OneBlockPlayerData oldPlayerData =
+                    (ru.defea.oneblockultima.capability.OneBlockPlayerData) oldData;
+            ru.defea.oneblockultima.capability.OneBlockPlayerData newPlayerData =
+                    (ru.defea.oneblockultima.capability.OneBlockPlayerData) newData;
 
-                newPlayerData.setCurrency(oldPlayerData.getCurrency());
-                newPlayerData.getSetLevels().clear();
-                newPlayerData.getSetLevels().putAll(oldPlayerData.getSetLevels());
-            }
+            newPlayerData.copyFrom(oldPlayerData);
+            OneBlockPlayerDataProvider.saveToEntity(event.getEntityPlayer(), newPlayerData);
         }
     }
 }

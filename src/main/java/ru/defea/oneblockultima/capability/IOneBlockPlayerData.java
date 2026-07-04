@@ -17,4 +17,6 @@ public interface IOneBlockPlayerData
     int getBrokenBlocksCount(String setId);
 
     void addBrokenBlocks(String setId, int amount);
+
+    void copyFrom(IOneBlockPlayerData other);
 }
