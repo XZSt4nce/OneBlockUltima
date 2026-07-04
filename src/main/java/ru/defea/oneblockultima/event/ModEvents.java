@@ -18,9 +18,11 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
@@ -28,6 +30,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.Event;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -49,7 +52,12 @@ import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
 import ru.defea.oneblockultima.world.SpawnConfigData;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -317,6 +325,10 @@ public final class ModEvents
             return;
         }
 
+        String folderName = world.getSaveHandler().getWorldDirectory().getName();
+
+        createWorldIcon(folderName);
+
         SpawnConfigData data = SpawnConfigData.get(world);
         if (!data.spawnInitialized)
         {
@@ -370,6 +382,42 @@ public final class ModEvents
             {
                 world.scheduleUpdate(GENERATOR_POS, ModBlocks.ONE_BLOCK_GENERATOR, 1);
             }
+        }
+    }
+
+    private static void createWorldIcon(String worldName)
+    {
+        File worldDir = new File(Minecraft.getMinecraft().mcDataDir, "saves" + File.separator + worldName);
+        File iconFile = new File(worldDir, "icon.png");
+        OneBlockUltima.getLogger().info("[MEOW]: {} {}", worldDir, iconFile);
+
+        // Если иконка уже есть - не перезаписываем
+        if (iconFile.exists())
+        {
+            return;
+        }
+
+        try (InputStream input = ModEvents.class.getResourceAsStream("/assets/oneblockultima/textures/gui/oneblock_logo.png"))
+        {
+            if (input == null)
+            {
+                OneBlockUltima.getLogger().warn("Could not find logo texture!");
+                return;
+            }
+
+            if (!worldDir.exists() && !worldDir.mkdirs())
+            {
+                OneBlockUltima.getLogger().warn("Could not create world directory: {}", worldDir.getAbsolutePath());
+                return;
+            }
+
+            // Копируем файл
+            Files.copy(input, iconFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            OneBlockUltima.getLogger().info("Icon created for world: {}", worldName);
+        }
+        catch (IOException e)
+        {
+            OneBlockUltima.getLogger().warn("Failed to create icon.png for OneBlock world {}", worldName, e);
         }
     }
 
