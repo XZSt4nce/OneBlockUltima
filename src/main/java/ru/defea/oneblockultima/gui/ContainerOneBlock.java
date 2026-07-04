@@ -150,7 +150,11 @@ public class ContainerOneBlock extends Container
 
         System.out.println("[OneBlock] Setting selectedSetId on generator...");
         generator.setSelectedSetId(setId);
-        generator.setOwnerId(player.getUniqueID());
+        if (!generator.tryAssignOwnerIfEligible(player.getUniqueID()))
+        {
+            generator.setSelectedSetId(currentSelected);
+            return false;
+        }
 
         System.out.println("[OneBlock] Generator selectedSetId is now: " + generator.getSelectedSetId());
 
@@ -191,6 +195,8 @@ public class ContainerOneBlock extends Container
             System.out.println("[OneBlock] Set is NULL in config!");
             return false;
         }
+
+        String currentSelected = generator.getSelectedSetId();
 
         ru.defea.oneblockultima.capability.IOneBlockPlayerData data =
                 ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.get(player);
@@ -244,7 +250,11 @@ public class ContainerOneBlock extends Container
 
             // После разблокировки автоматически выбираем набор
             generator.setSelectedSetId(setId);
-            generator.setOwnerId(player.getUniqueID());
+            if (!generator.tryAssignOwnerIfEligible(player.getUniqueID()))
+            {
+                generator.setSelectedSetId(currentSelected);
+                return false;
+            }
 
             System.out.println("[OneBlock] Set unlocked and selected: " + setId);
             if (player instanceof EntityPlayerMP)
@@ -289,7 +299,11 @@ public class ContainerOneBlock extends Container
 
             // После улучшения автоматически выбираем набор
             generator.setSelectedSetId(setId);
-            generator.setOwnerId(player.getUniqueID());
+            if (!generator.tryAssignOwnerIfEligible(player.getUniqueID()))
+            {
+                generator.setSelectedSetId(currentSelected);
+                return false;
+            }
 
             System.out.println("[OneBlock] Set upgraded to level " + (currentLevel + 1) + " and selected: " + setId);
         }

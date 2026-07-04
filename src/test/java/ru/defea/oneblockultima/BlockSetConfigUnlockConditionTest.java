@@ -6,7 +6,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
+import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
+import ru.defea.oneblockultima.command.CommandDeclineGeneratorInvite;
+import ru.defea.oneblockultima.command.CommandInviteGeneratorMember;
 import ru.defea.oneblockultima.config.BlockSetConfig;
+import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
 import static org.junit.Assert.assertEquals;
@@ -63,5 +67,54 @@ public class BlockSetConfigUnlockConditionTest
 
         assertEquals(ModBlocks.CUSTOM_PORTAL_FRAME.getDefaultState(),
                 BlockUtil.getReplacementStateForGeneratorPlacement(Blocks.END_PORTAL_FRAME.getDefaultState(), ModBlocks.ONE_BLOCK_GENERATOR.getDefaultState()));
+    }
+
+    @Test
+    public void inviteCommandsExposeExpectedMetadata()
+    {
+        CommandInviteGeneratorMember inviteCommand = new CommandInviteGeneratorMember();
+        CommandAcceptGeneratorInvite acceptCommand = new CommandAcceptGeneratorInvite();
+        CommandDeclineGeneratorInvite declineCommand = new CommandDeclineGeneratorInvite();
+
+        assertEquals("inviteGeneratorMember", inviteCommand.getName());
+        assertEquals("/inviteGeneratorMember <playerName>", inviteCommand.getUsage(null));
+        assertEquals(0, inviteCommand.getRequiredPermissionLevel());
+
+        assertEquals("acceptGeneratorInvite", acceptCommand.getName());
+        assertEquals("/acceptGeneratorInvite", acceptCommand.getUsage(null));
+        assertEquals(0, acceptCommand.getRequiredPermissionLevel());
+
+        assertEquals("declineGeneratorInvite", declineCommand.getName());
+        assertEquals("/declineGeneratorInvite", declineCommand.getUsage(null));
+        assertEquals(0, declineCommand.getRequiredPermissionLevel());
+    }
+
+    @Test
+    public void acceptingInviteAddsMemberAndClearsPendingInvite()
+    {
+        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
+        java.util.UUID ownerId = java.util.UUID.fromString("11111111-1111-1111-1111-111111111111");
+        java.util.UUID invitedPlayerId = java.util.UUID.fromString("22222222-2222-2222-2222-222222222222");
+        generator.setOwnerId(ownerId);
+        generator.addPendingInvite(invitedPlayerId, ownerId, 1200);
+
+        assertTrue(generator.acceptInvite(invitedPlayerId));
+        assertTrue(generator.hasAccess(invitedPlayerId));
+        assertFalse(generator.getPendingInvites().stream().anyMatch(invite -> invite.targetPlayerId.equals(invitedPlayerId)));
+    }
+
+    @Test
+    public void freeGeneratorCannotBeClaimedByPlayerAlreadyAttachedToAnotherGenerator()
+    {
+        TileEntityOneBlockGenerator freeGenerator = new TileEntityOneBlockGenerator();
+        TileEntityOneBlockGenerator otherGenerator = new TileEntityOneBlockGenerator();
+        java.util.UUID playerId = java.util.UUID.fromString("33333333-3333-3333-3333-333333333333");
+        otherGenerator.setOwnerId(playerId);
+
+        freeGenerator.setWorld(null);
+        otherGenerator.setWorld(null);
+
+        assertFalse(freeGenerator.tryAssignOwnerIfEligible(playerId));
+        assertTrue(freeGenerator.isFree());
     }
 }

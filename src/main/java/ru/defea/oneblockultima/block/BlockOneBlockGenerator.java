@@ -52,6 +52,15 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     {
         if (!world.isRemote)
         {
+            TileEntity tileEntity = world.getTileEntity(pos);
+            if (tileEntity instanceof TileEntityOneBlockGenerator)
+            {
+                TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
+                if (!generator.hasAccess(player))
+                {
+                    return true;
+                }
+            }
             player.openGui(OneBlockUltima.instance, GuiHandler.ONE_BLOCK_GUI, world, pos.getX(), pos.getY(), pos.getZ());
         }
         return true;

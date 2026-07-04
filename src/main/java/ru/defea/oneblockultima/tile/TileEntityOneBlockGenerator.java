@@ -2,14 +2,18 @@ package ru.defea.oneblockultima.tile;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.config.BlockSetConfig;
@@ -18,6 +22,7 @@ import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -26,6 +31,9 @@ public class TileEntityOneBlockGenerator extends TileEntity
 {
     private String selectedSetId;
     private UUID ownerId;
+    private final List<UUID> memberIds = new ArrayList<>();
+    private final List<PendingInvite> pendingInvites = new ArrayList<>();
+    private boolean placedByPlayer = false;
     private boolean disableFluidGeneration = false;
     private boolean disableMobGeneration = false;
     private boolean disableChestGeneration = false;
@@ -397,6 +405,250 @@ public class TileEntityOneBlockGenerator extends TileEntity
         }
     }
 
+    public boolean hasAccess(EntityPlayer player)
+    {
+        return player != null && hasAccess(player.getUniqueID());
+    }
+
+    public boolean hasAccess(UUID playerId)
+    {
+        if (playerId == null)
+        {
+            return false;
+        }
+
+        if (ownerId != null && ownerId.equals(playerId))
+        {
+            return true;
+        }
+
+        return memberIds.contains(playerId);
+    }
+
+    public boolean isOwner(EntityPlayer player)
+    {
+        return player != null && ownerId != null && ownerId.equals(player.getUniqueID());
+    }
+
+    public boolean isFree()
+    {
+        return ownerId == null && memberIds.isEmpty();
+    }
+
+    public boolean canBeClaimedBy(UUID playerId)
+    {
+        if (playerId == null || !isFree())
+        {
+            return false;
+        }
+
+        if (world == null || world.isRemote)
+        {
+            return false;
+        }
+
+        for (TileEntity otherTile : world.loadedTileEntityList)
+        {
+            if (otherTile == this || !(otherTile instanceof TileEntityOneBlockGenerator))
+            {
+                continue;
+            }
+
+            TileEntityOneBlockGenerator otherGenerator = (TileEntityOneBlockGenerator) otherTile;
+            if (otherGenerator.hasAccess(playerId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean tryAssignOwnerIfEligible(UUID playerId)
+    {
+        if (!canBeClaimedBy(playerId))
+        {
+            return false;
+        }
+
+        setOwnerId(playerId);
+        return true;
+    }
+
+    public boolean isPlacedByPlayer()
+    {
+        return placedByPlayer;
+    }
+
+    public void setPlacedByPlayer(boolean placedByPlayer)
+    {
+        this.placedByPlayer = placedByPlayer;
+        markDirty();
+    }
+
+    public void addMember(UUID memberId)
+    {
+        if (memberId == null || memberIds.contains(memberId))
+        {
+            return;
+        }
+
+        memberIds.add(memberId);
+        markDirty();
+    }
+
+    public void addPendingInvite(UUID targetPlayerId, UUID senderPlayerId, int ticks)
+    {
+        if (targetPlayerId == null || senderPlayerId == null)
+        {
+            return;
+        }
+
+        Iterator<PendingInvite> iterator = pendingInvites.iterator();
+        while (iterator.hasNext())
+        {
+            PendingInvite invite = iterator.next();
+            if (invite.targetPlayerId.equals(targetPlayerId))
+            {
+                iterator.remove();
+            }
+        }
+
+        pendingInvites.add(new PendingInvite(targetPlayerId, senderPlayerId, ticks));
+        markDirty();
+    }
+
+    public boolean acceptInvite(UUID targetPlayerId)
+    {
+        if (targetPlayerId == null)
+        {
+            return false;
+        }
+
+        Iterator<PendingInvite> iterator = pendingInvites.iterator();
+        while (iterator.hasNext())
+        {
+            PendingInvite invite = iterator.next();
+            if (invite.targetPlayerId.equals(targetPlayerId))
+            {
+                iterator.remove();
+
+                if (world != null && !world.isRemote)
+                {
+                    for (TileEntity otherTile : world.loadedTileEntityList)
+                    {
+                        if (otherTile == this || !(otherTile instanceof TileEntityOneBlockGenerator))
+                        {
+                            continue;
+                        }
+
+                        TileEntityOneBlockGenerator otherGenerator = (TileEntityOneBlockGenerator) otherTile;
+                        if (otherGenerator.hasAccess(targetPlayerId))
+                        {
+                            otherGenerator.removeAccess(targetPlayerId);
+                        }
+                    }
+                }
+
+                if (!hasAccess(targetPlayerId))
+                {
+                    addMember(targetPlayerId);
+                }
+
+                if (ownerId == null)
+                {
+                    ownerId = invite.senderPlayerId;
+                }
+
+                markDirty();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean declineInvite(UUID targetPlayerId)
+    {
+        if (targetPlayerId == null)
+        {
+            return false;
+        }
+
+        Iterator<PendingInvite> iterator = pendingInvites.iterator();
+        while (iterator.hasNext())
+        {
+            PendingInvite invite = iterator.next();
+            if (invite.targetPlayerId.equals(targetPlayerId))
+            {
+                iterator.remove();
+                markDirty();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void tickInvites()
+    {
+        Iterator<PendingInvite> iterator = pendingInvites.iterator();
+        while (iterator.hasNext())
+        {
+            PendingInvite invite = iterator.next();
+            invite.ticksLeft--;
+            if (invite.ticksLeft <= 0)
+            {
+                iterator.remove();
+            }
+        }
+    }
+
+    public List<PendingInvite> getPendingInvites()
+    {
+        return pendingInvites;
+    }
+
+    public void removeAccess(UUID playerId)
+    {
+        if (playerId == null)
+        {
+            return;
+        }
+
+        if (ownerId != null && ownerId.equals(playerId))
+        {
+            ownerId = null;
+        }
+
+        memberIds.remove(playerId);
+        if (ownerId == null && memberIds.isEmpty())
+        {
+            placedByPlayer = false;
+        }
+        markDirty();
+    }
+
+    public void clearOwnershipAndMembers()
+    {
+        ownerId = null;
+        memberIds.clear();
+        placedByPlayer = false;
+        markDirty();
+    }
+
+    public static class PendingInvite
+    {
+        public final UUID targetPlayerId;
+        public final UUID senderPlayerId;
+        public int ticksLeft;
+
+        public PendingInvite(UUID targetPlayerId, UUID senderPlayerId, int ticksLeft)
+        {
+            this.targetPlayerId = targetPlayerId;
+            this.senderPlayerId = senderPlayerId;
+            this.ticksLeft = ticksLeft;
+        }
+    }
+
     public UUID getOwnerId()
     {
         return ownerId;
@@ -405,6 +657,10 @@ public class TileEntityOneBlockGenerator extends TileEntity
     public void setOwnerId(UUID ownerId)
     {
         this.ownerId = ownerId;
+        if (ownerId != null)
+        {
+            addMember(ownerId);
+        }
         markDirty();
     }
 
@@ -420,6 +676,33 @@ public class TileEntityOneBlockGenerator extends TileEntity
         {
             compound.setUniqueId("ownerId", ownerId);
         }
+        compound.setBoolean("placedByPlayer", placedByPlayer);
+
+        NBTTagList membersTag = new NBTTagList();
+        for (UUID memberId : memberIds)
+        {
+            if (memberId != null)
+            {
+                membersTag.appendTag(new NBTTagString(memberId.toString()));
+            }
+        }
+        compound.setTag("memberIds", membersTag);
+
+        NBTTagList invitesTag = new NBTTagList();
+        for (PendingInvite invite : pendingInvites)
+        {
+            if (invite == null || invite.targetPlayerId == null || invite.senderPlayerId == null)
+            {
+                continue;
+            }
+
+            NBTTagCompound inviteTag = new NBTTagCompound();
+            inviteTag.setUniqueId("targetPlayerId", invite.targetPlayerId);
+            inviteTag.setUniqueId("senderPlayerId", invite.senderPlayerId);
+            inviteTag.setInteger("ticksLeft", invite.ticksLeft);
+            invitesTag.appendTag(inviteTag);
+        }
+        compound.setTag("pendingInvites", invitesTag);
         return compound;
     }
 
@@ -434,6 +717,41 @@ public class TileEntityOneBlockGenerator extends TileEntity
         if (compound.hasUniqueId("ownerId"))
         {
             ownerId = compound.getUniqueId("ownerId");
+        }
+        placedByPlayer = compound.getBoolean("placedByPlayer");
+
+        memberIds.clear();
+        if (compound.hasKey("memberIds", Constants.NBT.TAG_LIST))
+        {
+            NBTTagList membersTag = compound.getTagList("memberIds", Constants.NBT.TAG_STRING);
+            for (int i = 0; i < membersTag.tagCount(); i++)
+            {
+                try
+                {
+                    memberIds.add(UUID.fromString(membersTag.getStringTagAt(i)));
+                }
+                catch (IllegalArgumentException ignored)
+                {
+                }
+            }
+        }
+
+        pendingInvites.clear();
+        if (compound.hasKey("pendingInvites", Constants.NBT.TAG_LIST))
+        {
+            NBTTagList invitesTag = compound.getTagList("pendingInvites", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < invitesTag.tagCount(); i++)
+            {
+                NBTTagCompound inviteTag = invitesTag.getCompoundTagAt(i);
+                if (inviteTag.hasUniqueId("targetPlayerId") && inviteTag.hasUniqueId("senderPlayerId"))
+                {
+                    pendingInvites.add(new PendingInvite(
+                            inviteTag.getUniqueId("targetPlayerId"),
+                            inviteTag.getUniqueId("senderPlayerId"),
+                            inviteTag.getInteger("ticksLeft")
+                    ));
+                }
+            }
         }
     }
 
