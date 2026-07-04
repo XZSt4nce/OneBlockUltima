@@ -48,12 +48,19 @@ public class PacketSyncPlayerData implements IMessage
 
         NBTTagCompound tag = new NBTTagCompound();
         tag.setInteger("currency", playerData.getCurrency());
+        tag.setInteger("brokenBlocksTotal", playerData.getBrokenBlocksCount());
         NBTTagCompound levels = new NBTTagCompound();
         for (java.util.Map.Entry<String, Integer> entry : ((OneBlockPlayerData) playerData).getSetLevels().entrySet())
         {
             levels.setInteger(entry.getKey(), entry.getValue());
         }
         tag.setTag("setLevels", levels);
+        NBTTagCompound brokenBlocksBySet = new NBTTagCompound();
+        for (java.util.Map.Entry<String, Integer> entry : ((OneBlockPlayerData) playerData).getBrokenBlocksBySet().entrySet())
+        {
+            brokenBlocksBySet.setInteger(entry.getKey(), entry.getValue());
+        }
+        tag.setTag("brokenBlocksBySet", brokenBlocksBySet);
         ModMessages.sendToPlayer(new PacketSyncPlayerData(tag), (net.minecraft.entity.player.EntityPlayerMP) player);
     }
 
@@ -79,11 +86,18 @@ public class PacketSyncPlayerData implements IMessage
                     {
                         OneBlockPlayerData playerData = (OneBlockPlayerData) data;
                         playerData.setCurrency(message.data.getInteger("currency"));
+                        playerData.setBrokenBlocksTotal(message.data.getInteger("brokenBlocksTotal"));
                         playerData.getSetLevels().clear();
                         NBTTagCompound levels = message.data.getCompoundTag("setLevels");
                         for (String key : levels.getKeySet())
                         {
                             playerData.getSetLevels().put(key, levels.getInteger(key));
+                        }
+                        playerData.getBrokenBlocksBySet().clear();
+                        NBTTagCompound brokenBlocksBySet = message.data.getCompoundTag("brokenBlocksBySet");
+                        for (String key : brokenBlocksBySet.getKeySet())
+                        {
+                            playerData.getBrokenBlocksBySet().put(key, brokenBlocksBySet.getInteger(key));
                         }
                     }
                 }

@@ -17,12 +17,18 @@ import ru.defea.oneblockultima.util.BlockUtil;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public class TileEntityOneBlockGenerator extends TileEntity
 {
     private String selectedSetId;
     private UUID ownerId;
+    private boolean disableFluidGeneration = false;
+    private boolean disableMobGeneration = false;
+    private boolean disableChestGeneration = false;
 
     public TileEntityOneBlockGenerator()
     {
@@ -69,7 +75,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
             return;
         }
 
-        BlockSetConfig.BlockEntryDefinition entry = levelDefinition.pickRandom(world.rand);
+        BlockSetConfig.BlockEntryDefinition entry = pickGenerationEntry(levelDefinition);
         if (entry == null)
         {
             OneBlockUltima.getLogger().info("[Generator] pickRandom returned null");
@@ -248,6 +254,70 @@ public class TileEntityOneBlockGenerator extends TileEntity
         registry.markGenerated(targetPos, pos, selectedSetId, entry.currency, level, entry.registry, entry.meta);
     }
 
+    private BlockSetConfig.BlockEntryDefinition pickGenerationEntry(BlockSetConfig.SetLevelDefinition levelDefinition)
+    {
+        if (levelDefinition == null || levelDefinition.blocks == null || levelDefinition.blocks.isEmpty())
+        {
+            return null;
+        }
+
+        List<BlockSetConfig.BlockEntryDefinition> allowed = new ArrayList<>();
+        int totalChance = 0;
+        for (BlockSetConfig.BlockEntryDefinition candidate : levelDefinition.blocks)
+        {
+            if (candidate == null || !isAllowedGenerationEntry(candidate))
+            {
+                continue;
+            }
+            totalChance += candidate.getChance();
+            allowed.add(candidate);
+        }
+
+        if (allowed.isEmpty())
+        {
+            return null;
+        }
+
+        int roll = world.rand.nextInt(Math.max(1, totalChance));
+        int current = 0;
+        for (BlockSetConfig.BlockEntryDefinition candidate : allowed)
+        {
+            current += candidate.getChance();
+            if (roll < current)
+            {
+                return candidate;
+            }
+        }
+        return allowed.get(allowed.size() - 1);
+    }
+
+    private boolean isAllowedGenerationEntry(BlockSetConfig.BlockEntryDefinition entry)
+    {
+        if (entry == null)
+        {
+            return false;
+        }
+        if (disableFluidGeneration && entry.isFluid())
+        {
+            return false;
+        }
+        if (disableChestGeneration && isChestEntry(entry))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isChestEntry(BlockSetConfig.BlockEntryDefinition entry)
+    {
+        if (entry == null || entry.registry == null)
+        {
+            return false;
+        }
+        String registry = entry.registry.toLowerCase(Locale.ROOT);
+        return registry.contains("chest") || registry.contains("barrel");
+    }
+
     private int resolveGenerationLevel()
     {
         if (ownerId == null)
@@ -280,6 +350,39 @@ public class TileEntityOneBlockGenerator extends TileEntity
         return selectedSetId;
     }
 
+    public void setDisableFluidGeneration(boolean disableFluidGeneration)
+    {
+        this.disableFluidGeneration = disableFluidGeneration;
+        markDirty();
+    }
+
+    public boolean isDisableFluidGeneration()
+    {
+        return disableFluidGeneration;
+    }
+
+    public void setDisableMobGeneration(boolean disableMobGeneration)
+    {
+        this.disableMobGeneration = disableMobGeneration;
+        markDirty();
+    }
+
+    public boolean isDisableMobGeneration()
+    {
+        return disableMobGeneration;
+    }
+
+    public void setDisableChestGeneration(boolean disableChestGeneration)
+    {
+        this.disableChestGeneration = disableChestGeneration;
+        markDirty();
+    }
+
+    public boolean isDisableChestGeneration()
+    {
+        return disableChestGeneration;
+    }
+
     public void setSelectedSetId(String selectedSetId)
     {
         System.out.println("[DEBUG] TileEntity setSelectedSetId: " + selectedSetId + " at pos " + pos);
@@ -310,6 +413,9 @@ public class TileEntityOneBlockGenerator extends TileEntity
     {
         super.writeToNBT(compound);
         compound.setString("selectedSetId", getSelectedSetId());
+        compound.setBoolean("disableFluidGeneration", disableFluidGeneration);
+        compound.setBoolean("disableMobGeneration", disableMobGeneration);
+        compound.setBoolean("disableChestGeneration", disableChestGeneration);
         if (ownerId != null)
         {
             compound.setUniqueId("ownerId", ownerId);
@@ -322,6 +428,9 @@ public class TileEntityOneBlockGenerator extends TileEntity
     {
         super.readFromNBT(compound);
         selectedSetId = compound.getString("selectedSetId");
+        disableFluidGeneration = compound.getBoolean("disableFluidGeneration");
+        disableMobGeneration = compound.getBoolean("disableMobGeneration");
+        disableChestGeneration = compound.getBoolean("disableChestGeneration");
         if (compound.hasUniqueId("ownerId"))
         {
             ownerId = compound.getUniqueId("ownerId");

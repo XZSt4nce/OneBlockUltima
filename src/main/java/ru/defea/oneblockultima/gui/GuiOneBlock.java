@@ -13,8 +13,8 @@ import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -27,6 +27,7 @@ import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
+import ru.defea.oneblockultima.BlockSetConfigGui;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
@@ -37,6 +38,7 @@ import ru.defea.oneblockultima.util.BlockUtil;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class GuiOneBlock extends GuiContainer
 {
@@ -44,6 +46,14 @@ public class GuiOneBlock extends GuiContainer
     private static final int BUTTON_NEXT_SET = 1;
     private static final int BUTTON_SELECT_SET = 2;
     private static final int BUTTON_UPGRADE_SET = 3;
+    private static final int BUTTON_TAB_SETS = 4;
+    private static final int BUTTON_TAB_SETTINGS = 5;
+    private static final int BUTTON_OPEN_CONFIG_EDITOR = 6;
+    private static final int BUTTON_TOGGLE_FLUIDS = 7;
+    private static final int BUTTON_TOGGLE_MOBS = 8;
+    private static final int BUTTON_TOGGLE_CHESTS = 9;
+    private static final int VIEW_SETS = 0;
+    private static final int VIEW_SETTINGS = 1;
 
     private static final int GREEN_COLOR = 0x00EE00;
     private static final int ORANGE_COLOR = 0xFFAA00;
@@ -56,57 +66,210 @@ public class GuiOneBlock extends GuiContainer
     private GuiButton nextButton;
     private GuiButton selectButton;
     private GuiButton upgradeButton;
+    private GuiButton tabSetsButton;
+    private GuiButton tabSettingsButton;
+    private GuiButton openConfigEditorButton;
+    private GuiButton toggleFluidButton;
+    private GuiButton toggleMobsButton;
+    private GuiButton toggleChestsButton;
+    private Boolean pendingDisableFluid = null;
+    private Boolean pendingDisableMob = null;
+    private Boolean pendingDisableChest = null;
+    private int activeView = VIEW_SETS;
     private int blockScroll = 0;
     private int mobScroll = 0;
     private int blockScrollNext = 0;
     private int mobScrollNext = 0;
-    // hovered state for left (current) panel exported for tooltips
-    private int hoveredIndexLeft = -1;
+
     private BlockSetConfig.BlockEntryDefinition hoveredEntryLeft = null;
     private ItemStack hoveredStackLeft = ItemStack.EMPTY;
-    private int hoveredMobIndexLeft = -1;
     private BlockSetConfig.MobEntryDefinition hoveredMobEntryLeft = null;
     private String hoveredMobNameLeft = null;
 
-    private int hoveredIndexRight = -1;
     private BlockSetConfig.BlockEntryDefinition hoveredEntryRight = null;
     private ItemStack hoveredStackRight = ItemStack.EMPTY;
-    private int hoveredMobIndexRight = -1;
     private BlockSetConfig.MobEntryDefinition hoveredMobEntryRight = null;
     private String hoveredMobNameRight = null;
+
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
-    private final int iconCols = 4;
-    private final int cellSize = 20;
-    private final int cellPadding = 1;
-    private final int mobCellSize = 28;
+
+    private int cellSize = 18;
+    private int cellPadding = 1;
+    private int blockCols = 4;
+    private int mobCols = 2;
     private final int SCROLLBAR_WIDTH = 6;
+    private int panelGap = 8;
+    private int panelWidth;
+    private int panelHeight;
+    private int contentLeft;
+    private int contentWidth;
+    private int leftPanelX;
+    private int rightPanelX;
+    private int tabRowY;
+    private int textHeight;
+    private int infoRowY;
+    private int infoHeight;
+    private final int buttonHeight = 20;
+    private final int buttonGap = 6;
     private String clientActiveSetId = null;
     private boolean hasBrowsedSets = false;
+    private int rowInterval;
 
-    public GuiOneBlock(InventoryPlayer inventory, World world, BlockPos generatorPos)
+    private final int INNER_PADDING = 6;
+    private final int SECTION_GAP = 8;
+
+    public GuiOneBlock(EntityPlayer player, World world, BlockPos generatorPos)
     {
-        super(new ContainerOneBlock(inventory, world, generatorPos));
+        super(new ContainerOneBlock(player, world, generatorPos));
         this.container = (ContainerOneBlock) this.inventorySlots;
         this.xSize = 360;
-        this.ySize = 200;
+        this.ySize = 280;
     }
 
-    private void renderLevelPanel(BlockSetConfig.BlockSetDefinition set, BlockSetConfig.SetLevelDefinition levelDefinition, int gridStartX, int gridStartY, boolean isLeft, int mouseX, int mouseY)
+    private void updateLayoutMetrics()
+    {
+        int horizontalMargin = Math.max(12, Math.min(24, xSize / 24));
+        textHeight = fontRenderer.FONT_HEIGHT;
+
+        tabRowY = textHeight * 3;
+        int tabHeight = 24;
+        infoRowY = tabRowY + tabHeight + textHeight;
+
+        contentWidth = Math.max(120, xSize - horizontalMargin * 2);
+        contentLeft = Math.max(horizontalMargin, (xSize - contentWidth) / 2);
+
+        int infoInternalWidth = Math.max(80, contentWidth - 16);
+        int infoLines = 0;
+        if (activeView != VIEW_SETTINGS)
+        {
+            TileEntityOneBlockGenerator generator = container.getGenerator();
+            String activeSetId = generator == null ? null : generator.getSelectedSetId();
+
+            if (!visibleSets.isEmpty())
+            {
+                BlockSetConfig.BlockSetDefinition set = getBlockSetDefinition();
+                if (set != null)
+                {
+                    int currentLevel = OneBlockPlayerDataProvider.get(container.getPlayer()) == null ? 0 : OneBlockPlayerDataProvider.get(container.getPlayer()).getSetLevel(set.id);
+                    String setTitle = getLocalizedSetName(set) + " " + I18n.format("gui.oneblockultima.lv") + currentLevel;
+                    if (currentLevel <= 0)
+                    {
+                        setTitle += " (" + I18n.format("gui.oneblockultima.locked") + ")";
+                    }
+                    else if (set.id.equals(activeSetId))
+                    {
+                        setTitle += " (" + I18n.format("gui.oneblockultima.selected") + ")";
+                    }
+                    infoLines += fontRenderer.listFormattedStringToWidth(setTitle, infoInternalWidth).size();
+
+                    String statusText;
+                    if (currentLevel <= 0)
+                    {
+                        statusText = I18n.format("gui.oneblockultima.unlock_cost") + ": " + set.unlockCost;
+                    }
+                    else
+                    {
+                        BlockSetConfig.SetLevelDefinition nextLevel = set.getLevel(currentLevel + 1);
+                        if (nextLevel != null)
+                        {
+                            statusText = I18n.format("gui.oneblockultima.upgrade_cost") + ": " + nextLevel.upgradeCost;
+                        }
+                        else
+                        {
+                            statusText = I18n.format("gui.oneblockultima.max_level");
+                        }
+                    }
+                    infoLines += fontRenderer.listFormattedStringToWidth(statusText, infoInternalWidth).size();
+                }
+                else
+                {
+                    infoLines += 1;
+                }
+            }
+            else
+            {
+                infoLines += 1;
+            }
+        }
+
+        int infoButtonRows = activeView == VIEW_SETTINGS ? 3 : 2;
+        int infoTextHeight = infoLines * fontRenderer.FONT_HEIGHT + Math.max(0, infoLines - 1) * 4;
+        int infoButtonArea = infoButtonRows * buttonHeight + Math.max(0, infoButtonRows - 1) * buttonGap;
+        infoHeight = infoTextHeight + infoButtonArea + textHeight;
+
+        int contentHeight = ySize - infoRowY - infoHeight - 20;
+        if (contentHeight < 100) {
+            contentHeight = 100;
+        }
+
+        panelGap = Math.max(8, contentWidth / 40);
+        panelWidth = Math.max(140, (contentWidth - panelGap) / 2);
+        panelHeight = contentHeight - 10;
+        leftPanelX = contentLeft;
+        rightPanelX = contentLeft + panelWidth + panelGap;
+
+        calculateColumns();
+    }
+
+    private void calculateColumns() {
+        int availableWidth = Math.max(1, panelWidth - INNER_PADDING * 2);
+        int halfWidth = (availableWidth - SECTION_GAP) / 2;
+        int blockAreaWidth = Math.max(40, halfWidth - 8);
+        int mobAreaWidth = Math.max(40, halfWidth - 8);
+
+        int maxBlockCols = Math.max(2, blockAreaWidth / 20);
+        blockCols = Math.min(6, maxBlockCols);
+
+        mobCols = Math.min(blockCols, 3);
+
+        cellPadding = Math.max(1, Math.min(2, blockAreaWidth / 80));
+        cellSize = Math.max(14, Math.min(20, (blockAreaWidth - (blockCols - 1) * cellPadding) / blockCols));
+        cellSize = Math.max(14, Math.min(20, (mobAreaWidth - (mobCols - 1) * cellPadding) / mobCols));
+    }
+
+    private int getBlocksAreaWidth() {
+        return blockCols * (cellSize + cellPadding) - cellPadding;
+    }
+
+    private int getMobsAreaWidth() {
+        return mobCols * (cellSize + cellPadding) - cellPadding;
+    }
+
+    private int getMobsStartX(int panelX) {
+        return panelX + INNER_PADDING + getBlocksAreaWidth() + SECTION_GAP + 8;
+    }
+
+    private int getGridStartY(int panelY) {
+        return panelY + rowInterval * 2;
+    }
+
+    private int getAreaHeight() {
+        return panelHeight - rowInterval * 2 - cellSize;
+    }
+
+    private void renderLevelPanel(BlockSetConfig.SetLevelDefinition levelDefinition, int panelX, int panelY, boolean isLeft, int mouseX, int mouseY)
     {
         if (levelDefinition == null) return;
 
         int localBlockScroll = isLeft ? blockScroll : blockScrollNext;
         int localMobScroll = isLeft ? mobScroll : mobScrollNext;
 
-        fontRenderer.drawString(I18n.format(isLeft ? "gui.oneblockultima.current_level" : "gui.oneblockultima.next_level") + ": " + levelDefinition.level, gridStartX, gridStartY - 24, 0xA0B0C0);
+        int blocksAreaWidth = getBlocksAreaWidth();
+        int mobsAreaWidth = getMobsAreaWidth();
+        int mobsStartX = getMobsStartX(panelX);
+        int gridStartY = getGridStartY(panelY);
+        int areaHeight = getAreaHeight();
+
+        fontRenderer.drawString(I18n.format(isLeft ? "gui.oneblockultima.current_level" : "gui.oneblockultima.next_level") + ": " + levelDefinition.level,
+                panelX + INNER_PADDING, panelY + 4, 0xA0B0C0);
+        fontRenderer.drawString(I18n.format("gui.oneblockultima.possible_blocks") + ": ",
+                panelX + INNER_PADDING, panelY + rowInterval, 0xA0B0C0);
 
         if (levelDefinition.blocks != null && !levelDefinition.blocks.isEmpty())
         {
             int total = levelDefinition.blocks.size();
-            int cols = iconCols;
-            int rows = (total + cols - 1) / cols;
+            int rows = (total + blockCols - 1) / blockCols;
 
-            int areaHeight = ySize - gridStartY - 10;
             int visibleRows = Math.min(rows, Math.max(1, areaHeight / (cellSize + cellPadding)));
             int maxScroll = Math.max(0, rows - visibleRows);
             if (localBlockScroll > maxScroll) localBlockScroll = maxScroll;
@@ -125,117 +288,35 @@ public class GuiOneBlock extends GuiContainer
             BlockSetConfig.BlockEntryDefinition hoveredEntry = null;
             ItemStack hoveredStack = ItemStack.EMPTY;
 
+            // Рисуем блоки
             for (int row = 0; row < visibleRows; row++)
             {
-                for (int col = 0; col < cols; col++)
+                for (int col = 0; col < blockCols; col++)
                 {
                     int realRow = row + localBlockScroll;
-                    int index = realRow * cols + col;
-                    if (index >= total) break;
-
-                    int cellX = gridStartX + col * (cellSize + cellPadding);
-                    int cellY = gridStartY + row * (cellSize + cellPadding);
-
-                    if (localMouseX >= cellX && localMouseX < cellX + cellSize &&
-                            localMouseY >= cellY && localMouseY < cellY + cellSize)
-                    {
-                        hoveredIndex = index;
-                        hoveredEntry = levelDefinition.blocks.get(index);
-                        if (hoveredEntry != null)
-                        {
-                            net.minecraft.block.Block hoverBlock;
-                            if (hoveredEntry.dropItem != null) {
-                                ResourceLocation location = new ResourceLocation(hoveredEntry.dropItem);
-                                hoverBlock = ForgeRegistries.BLOCKS.getValue(location);
-                            }
-                            else
-                            {
-                                hoverBlock = hoveredEntry.resolveBlock();
-                            }
-
-                            if (hoverBlock != null && hoverBlock != Blocks.AIR)
-                            {
-                                Item item = Item.getItemFromBlock(hoverBlock);
-                                if (item != null && item != Items.AIR)
-                                {
-                                    try {
-                                        hoveredStack = new ItemStack(item, 1, hoveredEntry.meta);
-                                        // ПРИМЕНЯЕМ NBT ТЕГИ ДЛЯ ХОВЕРА
-                                        if (hoveredEntry.nbtTags != null && !hoveredEntry.nbtTags.hasNoTags()) {
-                                            if (hoveredEntry.registry != null && hoveredEntry.registry.toLowerCase().contains("forestry")) {
-                                                hoveredStack.setTagCompound(hoveredEntry.nbtTags.copy());
-                                            }
-                                        }
-                                    } catch (Exception ex) { hoveredStack = new ItemStack(item); }
-                                }
-                                else
-                                {
-                                    hoveredStack = ItemStack.EMPTY;
-                                }
-                            }
-                            else
-                            {
-                                // Try resolving as an item (e.g. carrot, seeds)
-                                try
-                                {
-                                    String itemRegistry = hoveredEntry.dropItem == null ? hoveredEntry.registry : hoveredEntry.dropItem;
-                                    Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemRegistry));
-                                    if (item != null && item != Items.AIR)
-                                    {
-                                        try {
-                                            hoveredStack = new ItemStack(item, 1, hoveredEntry.meta);
-                                            // ПРИМЕНЯЕМ NBT ТЕГИ ДЛЯ ХОВЕРА
-                                            if (hoveredEntry.nbtTags != null && !hoveredEntry.nbtTags.hasNoTags()) {
-                                                if (hoveredEntry.registry != null && hoveredEntry.registry.toLowerCase().contains("forestry")) {
-                                                    hoveredStack.setTagCompound(hoveredEntry.nbtTags.copy());
-                                                }
-                                            }
-                                        } catch (Exception ex) { hoveredStack = new ItemStack(item); }
-                                    }
-                                    else
-                                    {
-                                        hoveredStack = ItemStack.EMPTY;
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    hoveredStack = ItemStack.EMPTY;
-                                }
-                            }
-                        }
-                        if (isLeft)
-                        {
-                            hoveredIndexLeft = hoveredIndex;
-                            hoveredEntryLeft = hoveredEntry;
-                            hoveredStackLeft = hoveredStack;
-                        }
-                        else
-                        {
-                            hoveredIndexRight = hoveredIndex;
-                            hoveredEntryRight = hoveredEntry;
-                            hoveredStackRight = hoveredStack;
-                        }
-                        break;
-                    }
-                }
-                if (hoveredIndex >= 0) break;
-            }
-
-            for (int row = 0; row < visibleRows; row++)
-            {
-                for (int col = 0; col < cols; col++)
-                {
-                    int realRow = row + localBlockScroll;
-                    int index = realRow * cols + col;
+                    int index = realRow * blockCols + col;
                     if (index >= total) break;
 
                     BlockSetConfig.BlockEntryDefinition entry = levelDefinition.blocks.get(index);
                     if (entry == null) continue;
 
-                    // Use getPickBlock to get the correct item for GUI display
-                    ItemStack stack = entry.getPickBlock();
+                    int cellX = panelX + INNER_PADDING + col * (cellSize + cellPadding);
+                    int cellY = gridStartY + row * (cellSize + cellPadding);
 
-// Fallback to old logic if getPickBlock fails
+                    if (cellY + cellSize < gridStartY || cellY > gridStartY + areaHeight) {
+                        continue;
+                    }
+
+                    boolean isHovered = false;
+                    if (localMouseX >= cellX && localMouseX < cellX + cellSize &&
+                            localMouseY >= cellY && localMouseY < cellY + cellSize)
+                    {
+                        isHovered = true;
+                        hoveredIndex = index;
+                        hoveredEntry = entry;
+                    }
+
+                    ItemStack stack = entry.getPickBlock();
                     if (stack.isEmpty())
                     {
                         net.minecraft.block.Block blockForIcon = entry.resolveBlock();
@@ -244,7 +325,6 @@ public class GuiOneBlock extends GuiContainer
                         {
                             itemForIcon = Item.getItemFromBlock(blockForIcon);
                         }
-                        // If not a block item, try resolving directly as an item registry (carrot, seeds, etc.)
                         if (itemForIcon == null || itemForIcon == Items.AIR)
                         {
                             try { itemForIcon = ForgeRegistries.ITEMS.getValue(new ResourceLocation(entry.registry)); } catch (Exception ignored) { }
@@ -253,9 +333,7 @@ public class GuiOneBlock extends GuiContainer
                         {
                             try {
                                 stack = new ItemStack(itemForIcon, 1, entry.meta);
-                                // ПРИМЕНЯЕМ NBT ТЕГИ ДЛЯ ИКОНКИ
                                 if (entry.nbtTags != null && !entry.nbtTags.hasNoTags()) {
-                                    // Для Forestry саженцев применяем NBT теги к иконке
                                     if (entry.registry != null && entry.registry.toLowerCase().contains("forestry")) {
                                         stack.setTagCompound(entry.nbtTags.copy());
                                     }
@@ -266,12 +344,8 @@ public class GuiOneBlock extends GuiContainer
                         }
                     }
 
-                    // Declare blockForIcon for fallback rendering of fluids/blocks without item form
                     net.minecraft.block.Block blockForIcon = entry.resolveBlock();
 
-                    int cellX = gridStartX + col * (cellSize + cellPadding);
-                    int cellY = gridStartY + row * (cellSize + cellPadding);
-                    boolean isHovered = (index == hoveredIndex);
                     int bgColor = isHovered ? 0xFF3F5060 : 0xFF2A2F34;
                     int borderColor = isHovered ? 0xFFFFFFFF : 0xFF3A3F44;
 
@@ -297,7 +371,6 @@ public class GuiOneBlock extends GuiContainer
                     }
                     else
                     {
-                        // No ItemStack available (e.g. flowing liquids or blocks without item form) - render fluid sprite or block model
                         if (blockForIcon != null)
                         {
                             net.minecraft.block.state.IBlockState state = null;
@@ -329,24 +402,46 @@ public class GuiOneBlock extends GuiContainer
                     int chance = entry.getChance();
                     String percent = chance + "%";
                     int percentWidth = fontRenderer.getStringWidth(percent);
-                    int percentX = gridStartX + col * (cellSize + cellPadding) + (cellSize - percentWidth) / 2;
-                    int percentY = gridStartY + row * (cellSize + cellPadding) + cellSize - fontRenderer.FONT_HEIGHT - 1;
+                    int percentX = cellX + (cellSize - percentWidth) / 2;
+                    int percentY = cellY + cellSize - fontRenderer.FONT_HEIGHT - 1;
                     GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
                     int color = chance < 10 ? RED_COLOR : chance < 20 ? ORANGE_COLOR : GREEN_COLOR;
                     fontRenderer.drawStringWithShadow(percent, percentX, percentY, color);
+
+                    if (isHovered && hoveredEntry != null)
+                    {
+                        if (isLeft)
+                        {
+                            hoveredEntryLeft = hoveredEntry;
+                            hoveredStackLeft = stack;
+                        }
+                        else
+                        {
+                            hoveredEntryRight = hoveredEntry;
+                            hoveredStackRight = stack;
+                        }
+                    }
                 }
             }
 
-            // mobs area
-            int mobsAreaX = gridStartX + cols * (cellSize + cellPadding) + 14;
+            // Скроллбар для блоков - рисуем его ВНУТРИ области
+            int maxScrollBlocks = Math.max(0, rows - visibleRows);
+            if (maxScrollBlocks > 0)
+            {
+                int blockScrollbarX = panelX + INNER_PADDING + blocksAreaWidth + 2;
+                renderScrollBar(blockScrollbarX, gridStartY, areaHeight, localBlockScroll, maxScrollBlocks);
+            }
+
+            // --- Мобы ---
             if (levelDefinition.mobs != null && !levelDefinition.mobs.isEmpty())
             {
-                fontRenderer.drawString(I18n.format("gui.oneblockultima.mobs") + ":", mobsAreaX, gridStartY - 12, 0xA0B0C0);
+                // Заголовок мобов - слева от сетки мобов
+                fontRenderer.drawString(I18n.format("gui.oneblockultima.mobs") + ":",
+                        mobsStartX, panelY + rowInterval, 0xA0B0C0);
 
                 int mobTotal = levelDefinition.mobs.size();
-                int mobCols = 2;
                 int mobRows = (mobTotal + mobCols - 1) / mobCols;
-                int mobVisibleRows = Math.min(mobRows, Math.max(1, (ySize - gridStartY - 10) / (mobCellSize + 4)));
+                int mobVisibleRows = Math.min(mobRows, Math.max(1, areaHeight / (cellSize + cellPadding)));
                 int mobMaxScroll = Math.max(0, mobRows - mobVisibleRows);
                 if (localMobScroll > mobMaxScroll) localMobScroll = mobMaxScroll;
                 if (isLeft)
@@ -358,9 +453,7 @@ public class GuiOneBlock extends GuiContainer
                     mobScrollNext = localMobScroll;
                 }
 
-                int mobCellX = mobsAreaX;
-                int mobCellY = gridStartY;
-
+                // Рисуем мобов
                 for (int row = 0; row < mobVisibleRows; row++)
                 {
                     for (int col = 0; col < mobCols; col++)
@@ -371,17 +464,22 @@ public class GuiOneBlock extends GuiContainer
                         BlockSetConfig.MobEntryDefinition mobEntry = levelDefinition.mobs.get(realMobIndex);
                         if (mobEntry == null) continue;
 
-                        int cellX = mobCellX + col * (mobCellSize + 4);
-                        int cellY = mobCellY + row * (mobCellSize + 4);
-                        boolean isMobHovered = (localMouseX >= cellX && localMouseX < cellX + mobCellSize && localMouseY >= cellY && localMouseY < cellY + mobCellSize);
+                        int cellX = mobsStartX + col * (cellSize + cellPadding);
+                        int cellY = gridStartY + row * (cellSize + cellPadding);
+
+                        if (cellY + cellSize < gridStartY || cellY > gridStartY + areaHeight) continue;
+
+                        boolean isMobHovered = (localMouseX >= cellX && localMouseX < cellX + cellSize &&
+                                localMouseY >= cellY && localMouseY < cellY + cellSize);
+
                         int mobBgColor = isMobHovered ? 0xFF3F5060 : 0xFF2A2F34;
                         int mobBorderColor = isMobHovered ? 0xFFFFFFFF : 0xFF3A3F44;
 
-                        drawRect(cellX, cellY, cellX + mobCellSize, cellY + mobCellSize, mobBgColor);
-                        drawRect(cellX, cellY, cellX + mobCellSize, cellY + 1, mobBorderColor);
-                        drawRect(cellX, cellY + mobCellSize - 1, cellX + mobCellSize, cellY + mobCellSize, mobBorderColor);
-                        drawRect(cellX, cellY, cellX + 1, cellY + mobCellSize, mobBorderColor);
-                        drawRect(cellX + mobCellSize - 1, cellY, cellX + mobCellSize, cellY + mobCellSize, mobBorderColor);
+                        drawRect(cellX, cellY, cellX + cellSize, cellY + cellSize, mobBgColor);
+                        drawRect(cellX, cellY, cellX + cellSize, cellY + 1, mobBorderColor);
+                        drawRect(cellX, cellY + cellSize - 1, cellX + cellSize, cellY + cellSize, mobBorderColor);
+                        drawRect(cellX, cellY, cellX + 1, cellY + cellSize, mobBorderColor);
+                        drawRect(cellX + cellSize - 1, cellY, cellX + cellSize, cellY + cellSize, mobBorderColor);
 
                         Entity testEntity = null;
                         try
@@ -390,8 +488,8 @@ public class GuiOneBlock extends GuiContainer
                             testEntity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
                             if (testEntity != null && testEntity instanceof net.minecraft.entity.EntityLivingBase)
                             {
-                                int centerX = cellX + mobCellSize / 2;
-                                int centerY = cellY + mobCellSize / 2 + 4;
+                                int centerX = cellX + cellSize / 2;
+                                int centerY = cellY + cellSize / 2 + cellPadding;
                                 drawEntityOnScreen(centerX, centerY, 18, testEntity);
                             }
                         }
@@ -401,7 +499,6 @@ public class GuiOneBlock extends GuiContainer
                         {
                             if (isLeft)
                             {
-                                hoveredMobIndexLeft = realMobIndex;
                                 hoveredMobEntryLeft = mobEntry;
                                 hoveredMobNameLeft = null;
                                 if (testEntity != null)
@@ -411,7 +508,6 @@ public class GuiOneBlock extends GuiContainer
                             }
                             else
                             {
-                                hoveredMobIndexRight = realMobIndex;
                                 hoveredMobEntryRight = mobEntry;
                                 hoveredMobNameRight = null;
                                 if (testEntity != null)
@@ -426,49 +522,21 @@ public class GuiOneBlock extends GuiContainer
                         int pw = fontRenderer.getStringWidth(percent);
                         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
                         int color = chance < 10 ? RED_COLOR : chance < 20 ? ORANGE_COLOR : GREEN_COLOR;
-                        fontRenderer.drawStringWithShadow(percent, cellX + (mobCellSize - pw) / 2, cellY + mobCellSize - fontRenderer.FONT_HEIGHT - 2, color);
+                        fontRenderer.drawStringWithShadow(percent, cellX + (cellSize - pw) / 2, cellY + cellSize - fontRenderer.FONT_HEIGHT - 2, color);
                     }
                 }
-            }
-        }
 
-        // Draw scrollbars
-        if (levelDefinition.blocks != null && !levelDefinition.blocks.isEmpty())
-        {
-            int total = levelDefinition.blocks.size();
-            int cols = iconCols;
-            int rows = (total + cols - 1) / cols;
-            int areaHeight = ySize - gridStartY - 10;
-            int visibleRows = Math.min(rows, Math.max(1, areaHeight / (cellSize + cellPadding)));
-            int maxScroll = Math.max(0, rows - visibleRows);
-
-            if (maxScroll > 0)
-            {
-                // Block scrollbar - right of blocks grid
-                int blockScrollbarX = gridStartX + iconCols * (cellSize + cellPadding) + 2;
-                renderScrollBar(blockScrollbarX, gridStartY, areaHeight, localBlockScroll, maxScroll);
-            }
-
-            // Mob scrollbar
-            if (levelDefinition.mobs != null && !levelDefinition.mobs.isEmpty())
-            {
-                int mobTotal = levelDefinition.mobs.size();
-                int mobCols = 2;
-                int mobRows = (mobTotal + mobCols - 1) / mobCols;
-                int mobVisibleRows = Math.min(mobRows, Math.max(1, (ySize - gridStartY - 10) / (mobCellSize + 4)));
-                int mobMaxScroll = Math.max(0, mobRows - mobVisibleRows);
-
+                // Скроллбар для мобов
                 if (mobMaxScroll > 0)
                 {
-                    // Mob scrollbar - right of mobs
-                    int mobsAreaX = gridStartX + cols * (cellSize + cellPadding) + 14;
-                    int mobScrollbarX = mobsAreaX + mobCols * mobCellSize + (mobCols - 1) * 4 + 2;
+                    int mobScrollbarX = mobsStartX + mobsAreaWidth + 2;
                     renderMobScrollBar(mobScrollbarX, gridStartY, areaHeight, localMobScroll, mobMaxScroll);
                 }
             }
         }
     }
 
+    // Все остальные методы остаются без изменений
     private static void drawEntityOnScreen(int posX, int posY, int scale, Entity entity)
     {
         if (!(entity instanceof EntityLivingBase)) return;
@@ -624,9 +692,10 @@ public class GuiOneBlock extends GuiContainer
     @Override
     public void initGui()
     {
-        // Перезагружаем конфиг перед открытием GUI
         BlockSetConfig.reload();
-        
+
+        this.xSize = this.width - 40;
+        this.ySize = this.height - 40;
         super.initGui();
         visibleSets.clear();
         for (BlockSetConfig.BlockSetDefinition set : BlockSetConfig.get().getSets())
@@ -654,15 +723,89 @@ public class GuiOneBlock extends GuiContainer
             }
         }
 
+        updateLayoutMetrics();
         buttonList.clear();
-        prevButton = new GuiButton(BUTTON_PREV_SET, guiLeft + 10, guiTop + 85, 20, 20, "<");
-        nextButton = new GuiButton(BUTTON_NEXT_SET, guiLeft + 36, guiTop + 85, 20, 20, ">");
-        selectButton = new GuiButton(BUTTON_SELECT_SET, guiLeft + 10, guiTop + 109, 90, 20, "Select");
-        upgradeButton = new GuiButton(BUTTON_UPGRADE_SET, guiLeft + xSize - 100, guiTop + 109, 90, 20, "Upgrade");
+        rowInterval = fontRenderer.FONT_HEIGHT + 4;
+        int tabGap = xSize / 24;
+        int tabWidth = xSize / 5;
+        int totalTabWidth = tabWidth * 2 + tabGap;
+        int tabX = guiLeft + (xSize - totalTabWidth) / 2;
+        int tabY = guiTop + tabRowY + textHeight / 2;
+        int infoButtonsY = guiTop + infoRowY + rowInterval * 2;
+        int leftButtonX = guiLeft + contentLeft;
+        int selectWidth = contentWidth / 2 - buttonGap;
+        int rightButtonX = guiLeft + contentLeft + contentWidth - selectWidth;
+        int settingWidth = contentWidth;
+
+        tabSetsButton = new GuiButton(BUTTON_TAB_SETS, tabX, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.sets"));
+        tabSettingsButton = new GuiButton(BUTTON_TAB_SETTINGS, tabX + tabWidth + tabGap, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.settings"));
+        prevButton = new GuiButton(BUTTON_PREV_SET, leftButtonX, infoButtonsY, 20, buttonHeight, "<");
+        nextButton = new GuiButton(BUTTON_NEXT_SET, leftButtonX + 26, infoButtonsY, 20, buttonHeight, ">");
+        selectButton = new GuiButton(BUTTON_SELECT_SET, leftButtonX, infoButtonsY + buttonHeight + buttonGap, selectWidth, buttonHeight, I18n.format("gui.oneblockultima.select"));
+        upgradeButton = new GuiButton(BUTTON_UPGRADE_SET, rightButtonX, infoButtonsY + buttonHeight + buttonGap, selectWidth, buttonHeight, I18n.format("gui.oneblockultima.upgrade"));
+
+        int settingsButtonStartY = guiTop + infoRowY;
+        int buttonWidth = settingWidth / 2 - buttonGap;
+        toggleFluidButton = new GuiButton(BUTTON_TOGGLE_FLUIDS, guiLeft + contentLeft, settingsButtonStartY, buttonWidth, buttonHeight, "");
+        toggleMobsButton = new GuiButton(BUTTON_TOGGLE_MOBS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY, buttonWidth, buttonHeight, "");
+        toggleChestsButton = new GuiButton(BUTTON_TOGGLE_CHESTS, guiLeft + contentLeft, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
+        openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
+
+        buttonList.add(tabSetsButton);
+        buttonList.add(tabSettingsButton);
         buttonList.add(prevButton);
         buttonList.add(nextButton);
         buttonList.add(selectButton);
         buttonList.add(upgradeButton);
+        buttonList.add(openConfigEditorButton);
+        buttonList.add(toggleFluidButton);
+        buttonList.add(toggleMobsButton);
+        buttonList.add(toggleChestsButton);
+        updateViewButtons();
+    }
+
+    private void updateViewButtons()
+    {
+        boolean setsView = activeView == VIEW_SETS;
+        if (prevButton != null) prevButton.visible = setsView;
+        if (nextButton != null) nextButton.visible = setsView;
+        if (selectButton != null) selectButton.visible = setsView;
+        if (upgradeButton != null) upgradeButton.visible = setsView;
+        if (tabSetsButton != null) tabSetsButton.enabled = !setsView;
+        if (tabSettingsButton != null) tabSettingsButton.enabled = setsView;
+        if (openConfigEditorButton != null) openConfigEditorButton.visible = !setsView;
+        if (toggleFluidButton != null) toggleFluidButton.visible = !setsView;
+        if (toggleMobsButton != null) toggleMobsButton.visible = !setsView;
+        if (toggleChestsButton != null) toggleChestsButton.visible = !setsView;
+
+        TileEntityOneBlockGenerator generator = container.getGenerator();
+        if (toggleFluidButton != null)
+        {
+            boolean disabled = generator != null && generator.isDisableFluidGeneration();
+            if (pendingDisableFluid != null)
+            {
+                disabled = pendingDisableFluid;
+            }
+            toggleFluidButton.displayString = I18n.format("gui.oneblockultima.settings.fluid") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
+        }
+        if (toggleMobsButton != null)
+        {
+            boolean disabled = generator != null && generator.isDisableMobGeneration();
+            if (pendingDisableMob != null)
+            {
+                disabled = pendingDisableMob;
+            }
+            toggleMobsButton.displayString = I18n.format("gui.oneblockultima.settings.mobs") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
+        }
+        if (toggleChestsButton != null)
+        {
+            boolean disabled = generator != null && generator.isDisableChestGeneration();
+            if (pendingDisableChest != null)
+            {
+                disabled = pendingDisableChest;
+            }
+            toggleChestsButton.displayString = I18n.format("gui.oneblockultima.settings.chests") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
+        }
     }
 
     private void refreshActiveSetFromGenerator()
@@ -679,12 +822,10 @@ public class GuiOneBlock extends GuiContainer
             return;
         }
 
-        // Если активный набор изменился
         if (!activeSetId.equals(clientActiveSetId))
         {
             clientActiveSetId = activeSetId;
 
-            // Обновляем selectedSetIndex
             for (int i = 0; i < visibleSets.size(); i++)
             {
                 if (visibleSets.get(i).id.equals(activeSetId))
@@ -694,7 +835,6 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
 
-            // Сбрасываем hasBrowsedSets, чтобы показать активный набор
             hasBrowsedSets = false;
         }
     }
@@ -718,7 +858,42 @@ public class GuiOneBlock extends GuiContainer
             return;
         }
 
-        if (button.id == BUTTON_PREV_SET)
+        if (button.id == BUTTON_TAB_SETS)
+        {
+            activeView = VIEW_SETS;
+            updateViewButtons();
+        }
+        else if (button.id == BUTTON_TAB_SETTINGS)
+        {
+            activeView = VIEW_SETTINGS;
+            updateViewButtons();
+        }
+        else if (button.id == BUTTON_TOGGLE_FLUIDS)
+        {
+            boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableFluidGeneration();
+            pendingDisableFluid = !currentDisabled;
+            container.toggleFluidGeneration();
+            updateViewButtons();
+        }
+        else if (button.id == BUTTON_TOGGLE_MOBS)
+        {
+            boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableMobGeneration();
+            pendingDisableMob = !currentDisabled;
+            container.toggleMobGeneration();
+            updateViewButtons();
+        }
+        else if (button.id == BUTTON_TOGGLE_CHESTS)
+        {
+            boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableChestGeneration();
+            pendingDisableChest = !currentDisabled;
+            container.toggleChestGeneration();
+            updateViewButtons();
+        }
+        else if (button.id == BUTTON_OPEN_CONFIG_EDITOR)
+        {
+            mc.displayGuiScreen(new BlockSetConfigGui(this));
+        }
+        else if (button.id == BUTTON_PREV_SET)
         {
             selectedSetIndex = (selectedSetIndex - 1 + visibleSets.size()) % visibleSets.size();
             hasBrowsedSets = true;
@@ -745,13 +920,40 @@ public class GuiOneBlock extends GuiContainer
     {
         super.updateScreen();
         refreshActiveSetFromGenerator();
+        TileEntityOneBlockGenerator generator = container.getGenerator();
+        if (generator != null)
+        {
+            if (pendingDisableFluid != null && generator.isDisableFluidGeneration() == pendingDisableFluid)
+            {
+                pendingDisableFluid = null;
+            }
+            if (pendingDisableMob != null && generator.isDisableMobGeneration() == pendingDisableMob)
+            {
+                pendingDisableMob = null;
+            }
+            if (pendingDisableChest != null && generator.isDisableChestGeneration() == pendingDisableChest)
+            {
+                pendingDisableChest = null;
+            }
+        }
     }
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY)
     {
+        hoveredEntryLeft = null;
+        hoveredStackLeft = ItemStack.EMPTY;
+        hoveredMobEntryLeft = null;
+        hoveredMobNameLeft = null;
+        hoveredEntryRight = null;
+        hoveredStackRight = ItemStack.EMPTY;
+        hoveredMobEntryRight = null;
+        hoveredMobNameRight = null;
+
+        updateLayoutMetrics();
+
         String title = I18n.format("tile.one_block_generator.name");
-        drawCenteredString(fontRenderer, title, xSize / 2, 8, 0xFFFFFF);
+        drawCenteredString(fontRenderer, title, xSize / 2, textHeight, 0xFFFFFF);
 
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
         int currency = data == null ? 0 : data.getCurrency();
@@ -760,7 +962,6 @@ public class GuiOneBlock extends GuiContainer
         int iconSize = 12;
         int padding = 4;
         int boxWidth = iconSize + 2 + balanceWidth + padding * 2;
-        int boxHeight = iconSize + padding * 2;
         int boxX = xSize - 10 - boxWidth;
         int boxY = 4;
         int iconX = boxX + padding;
@@ -782,9 +983,62 @@ public class GuiOneBlock extends GuiContainer
             activeSetName = activeSetDef == null ? activeSetId : getLocalizedSetName(activeSetDef);
         }
 
-        int infoStartY = 32;
-        fontRenderer.drawString(I18n.format("gui.oneblockultima.active_set") + ":", 14, infoStartY, 0xA0B0C0);
-        fontRenderer.drawString(activeSetName, 14, infoStartY + 12, 0xFFFFFF);
+        if (activeView != VIEW_SETTINGS)
+        {
+            String activeSetString = I18n.format("gui.oneblockultima.active_set");
+            int rightTextX = contentWidth - fontRenderer.getStringWidth(activeSetString);
+            fontRenderer.drawString(activeSetString + ":", rightTextX, infoRowY, 0xA0B0C0);
+            fontRenderer.drawString(activeSetName, rightTextX, infoRowY + fontRenderer.FONT_HEIGHT + 2, 0xFFFFFF);
+
+            // Центральная часть - условия разблокировки для выбранного набора
+            if (!visibleSets.isEmpty())
+            {
+                BlockSetConfig.BlockSetDefinition set = getBlockSetDefinition();
+                if (set != null)
+                {
+                    if (data != null)
+                    {
+                        int currentLevel = data.getSetLevel(set.id);
+                        // Показываем условия только если набор НЕ разблокирован
+                        if (currentLevel <= 0 && set.unlockConditions != null &&
+                                !set.unlockConditions.conditions.isEmpty())
+                        {
+                            // Вычисляем центр
+                            int totalWidth = contentWidth;
+                            int centerX = contentLeft + totalWidth / 2;
+
+                            // Находим максимальную ширину текста условий
+                            int maxConditionWidth = 0;
+                            for (BlockSetConfig.UnlockConditionDefinition condition : set.unlockConditions.conditions)
+                            {
+                                if (condition == null) continue;
+                                String text = " - " + formatUnlockCondition(condition, data) + " ✓";
+                                int width = fontRenderer.getStringWidth(text);
+                                if (width > maxConditionWidth) maxConditionWidth = width;
+                            }
+
+                            // Добавляем отступы для заголовка
+                            String unlockConditionsTitle = I18n.format("gui.oneblockultima.unlock_conditions");
+                            int titleWidth = fontRenderer.getStringWidth(unlockConditionsTitle);
+                            if (titleWidth > maxConditionWidth) maxConditionWidth = titleWidth;
+
+                            // Увеличиваем немного для комфорта
+                            maxConditionWidth += 20;
+
+                            // Рисуем условия по центру
+                            int conditionsX = centerX - maxConditionWidth / 2;
+                            int conditionsY = infoRowY;
+                            drawUnlockConditions(set, conditionsX, conditionsY, maxConditionWidth);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (activeView == VIEW_SETTINGS)
+        {
+            return;
+        }
 
         if (!visibleSets.isEmpty())
         {
@@ -793,8 +1047,7 @@ public class GuiOneBlock extends GuiContainer
             if (set == null) return;
 
             int currentLevel = data == null ? 0 : data.getSetLevel(set.id);
-            // Используем clientActiveSetId для немедленного отклика
-            boolean isActiveSet = (clientActiveSetId != null && set.id.equals(clientActiveSetId));
+            boolean isActiveSet = (set.id.equals(clientActiveSetId));
 
             int setColor = currentLevel <= 0 ? 0xFF7D7D : isActiveSet ? 0x7CEC9F : 0xFFFFFF;
             String setTitle = getLocalizedSetName(set) + " " + I18n.format("gui.oneblockultima.lv") + currentLevel;
@@ -806,27 +1059,27 @@ public class GuiOneBlock extends GuiContainer
             {
                 setTitle += " (" + I18n.format("gui.oneblockultima.locked") + ")";
             }
-            fontRenderer.drawString(setTitle, 14, 60, setColor);
+            int setTitleY = infoRowY;
+            fontRenderer.drawString(setTitle, contentLeft, setTitleY, setColor);
 
-            int statusY = 72;
+            int statusY = setTitleY + rowInterval;
             if (currentLevel <= 0)
             {
-                fontRenderer.drawString(I18n.format("gui.oneblockultima.unlock_cost") + ": " + set.unlockCost, 14, statusY, 0xC0C0C0);
+                fontRenderer.drawString(I18n.format("gui.oneblockultima.unlock_cost") + ": " + set.unlockCost, contentLeft + 4, statusY, 0xC0C0C0);
             }
             else
             {
                 BlockSetConfig.SetLevelDefinition nextLevel = set.getLevel(currentLevel + 1);
                 if (nextLevel != null)
                 {
-                    fontRenderer.drawString(I18n.format("gui.oneblockultima.upgrade_cost") + ": " + nextLevel.upgradeCost, 14, statusY, 0xC0C0C0);
+                    fontRenderer.drawString(I18n.format("gui.oneblockultima.upgrade_cost") + ": " + nextLevel.upgradeCost, contentLeft + 4, statusY, 0xC0C0C0);
                 }
                 else
                 {
-                    fontRenderer.drawString(I18n.format("gui.oneblockultima.max_level"), 14, statusY, 0xC0C0C0);
+                    fontRenderer.drawString(I18n.format("gui.oneblockultima.max_level"), contentLeft + 4, statusY, 0xC0C0C0);
                 }
             }
 
-            // Обновляем кнопки
             if (selectButton != null)
             {
                 selectButton.displayString = currentLevel <= 0 ? I18n.format("gui.oneblockultima.locked") : (isActiveSet ? I18n.format("gui.oneblockultima.selected") : I18n.format("gui.oneblockultima.select"));
@@ -852,41 +1105,28 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
 
-            int gridStartX = 14;
-            int gridStartY = 160;
-
-            // Render current (left) and next (right) level panels
-            hoveredIndexLeft = -1; hoveredEntryLeft = null; hoveredStackLeft = ItemStack.EMPTY; hoveredMobIndexLeft = -1; hoveredMobEntryLeft = null; hoveredMobNameLeft = null;
-            hoveredIndexRight = -1; hoveredEntryRight = null; hoveredStackRight = ItemStack.EMPTY; hoveredMobIndexRight = -1; hoveredMobEntryRight = null; hoveredMobNameRight = null;
             boolean canShowCurrent = currentLevel > 0;
             BlockSetConfig.SetLevelDefinition currentDef = canShowCurrent ? set.getLevel(currentLevel) : null;
+            int panelY = infoRowY + infoHeight;
             if (canShowCurrent)
             {
-                renderLevelPanel(set, currentDef, gridStartX, gridStartY, true, mouseX, mouseY);
+                renderLevelPanel(currentDef, leftPanelX, panelY, true, mouseX, mouseY);
             }
-            int rightStartX = canShowCurrent ? this.xSize / 2 + 8 : gridStartX;
+            int rightStartX = canShowCurrent ? rightPanelX : leftPanelX;
             BlockSetConfig.SetLevelDefinition nextDef = set.getLevel(currentLevel <= 0 ? 1 : currentLevel + 1);
-            renderLevelPanel(set, nextDef, rightStartX, gridStartY, false, mouseX, mouseY);
+            renderLevelPanel(nextDef, rightStartX, panelY, false, mouseX, mouseY);
 
             if (canShowCurrent && nextDef != null)
             {
-                int separatorX = this.xSize / 2 + 2;
-                int separatorTop = gridStartY - 24;
-                int separatorBottom = ySize - 10;
+                int separatorX = leftPanelX + panelWidth + panelGap / 2;
+                int separatorTop = infoHeight + infoRowY + 5;
+                int separatorBottom = ySize - 5;
                 drawRect(separatorX, separatorTop, separatorX + 1, separatorBottom, 0xFF4C5560);
             }
 
-            if (canShowCurrent)
-            {
-                fontRenderer.drawString(I18n.format("gui.oneblockultima.possible_blocks"), gridStartX, gridStartY - 12, 0xA0B0C0);
-            }
-            if (nextDef != null && rightStartX != gridStartX)
-            {
-                fontRenderer.drawString(I18n.format("gui.oneblockultima.possible_blocks"), rightStartX, gridStartY - 12, 0xA0B0C0);
-            }
-            else if (!canShowCurrent && nextDef != null)
-            {
-                fontRenderer.drawString(I18n.format("gui.oneblockultima.possible_blocks"), gridStartX, gridStartY - 12, 0xA0B0C0);
+            if (hoveredEntryLeft == null && hoveredStackLeft.isEmpty() && hoveredMobEntryLeft == null &&
+                    hoveredEntryRight == null && hoveredStackRight.isEmpty() && hoveredMobEntryRight == null) {
+                return; // Нечего показывать
             }
 
             if (!hoveredStackLeft.isEmpty())
@@ -972,10 +1212,78 @@ public class GuiOneBlock extends GuiContainer
         }
     }
 
+    private void drawUnlockConditions(BlockSetConfig.BlockSetDefinition set, int x, int y, int maxWidth)
+    {
+        if (set == null || set.unlockConditions == null || set.unlockConditions.conditions == null ||
+                set.unlockConditions.conditions.isEmpty())
+        {
+            return;
+        }
+
+        // Получаем данные игрока
+        IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
+        if (data == null) return;
+
+        // Проверяем, разблокирован ли уже набор
+        int currentLevel = data.getSetLevel(set.id);
+        if (currentLevel > 0) return; // Если разблокирован - не показываем условия
+
+        String prefix = "all".equalsIgnoreCase(set.unlockConditions.mode) ?
+                I18n.format("gui.oneblockultima.conditions.require_all") :
+                I18n.format("gui.oneblockultima.conditions.require_any");
+
+        // Центрируем текст
+        String title = I18n.format("gui.oneblockultima.unlock_conditions");
+        int titleWidth = fontRenderer.getStringWidth(title);
+        int startX = x + (maxWidth - titleWidth) / 2;
+        fontRenderer.drawString(title, startX, y, 0xA0B0C0);
+        y += fontRenderer.FONT_HEIGHT + 2;
+
+        for (BlockSetConfig.UnlockConditionDefinition condition : set.unlockConditions.conditions)
+        {
+            if (condition == null) continue;
+
+            String conditionText = formatUnlockCondition(condition, data);
+            boolean satisfied = condition.isSatisfied(data);
+            int color = satisfied ? 0x7CEC9F : 0xFF7D7D;
+            String status = satisfied ? " ✓" : " ✗";
+            String fullText = " - " + conditionText + status;
+
+            // Центрируем каждое условие
+            int textWidth = fontRenderer.getStringWidth(fullText);
+            int textX = x + (maxWidth - textWidth) / 2;
+            fontRenderer.drawString(fullText, textX, y, color);
+            y += fontRenderer.FONT_HEIGHT + 1;
+        }
+    }
+
+    // 2. Исправленный метод formatUnlockCondition
+    private String formatUnlockCondition(BlockSetConfig.UnlockConditionDefinition condition, IOneBlockPlayerData data)
+    {
+        if (condition == null) return "";
+
+        switch (condition.type == null ? "" : condition.type.toLowerCase(Locale.ROOT))
+        {
+            case "set_level":
+                String setId = condition.setId != null ? condition.setId : "?";
+                BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(setId);
+                String setName = set != null ? getLocalizedSetName(set) : setId;
+                return I18n.format("gui.oneblockultima.condition.set_level", setName, data.getSetLevel(setId), condition.level);
+            case "broken_blocks":
+                String targetSetId = condition.setId != null ? condition.setId : "?";
+                BlockSetConfig.BlockSetDefinition targetSet = BlockSetConfig.get().getSet(targetSetId);
+                String targetSetName = targetSet != null ? getLocalizedSetName(targetSet) : targetSetId;
+                return I18n.format("gui.oneblockultima.condition.broken_blocks", String.format("%d/%d", data.getBrokenBlocksCount(targetSetId), condition.count), targetSetName);
+            case "broken_blocks_total":
+                return I18n.format("gui.oneblockultima.condition.broken_blocks_total", String.format("%s/%s", data.getBrokenBlocksCount(), condition.count));
+            default:
+                return I18n.format("gui.oneblockultima.condition.unknown", condition.type);
+        }
+    }
+
     private BlockSetConfig.BlockSetDefinition getBlockSetDefinition() {
         BlockSetConfig.BlockSetDefinition set = null;
 
-        // Если пользователь не листал наборы, показываем активный
         if (!hasBrowsedSets && clientActiveSetId != null)
         {
             for (BlockSetConfig.BlockSetDefinition s : visibleSets)
@@ -988,7 +1296,6 @@ public class GuiOneBlock extends GuiContainer
             }
         }
 
-        // Если не нашли или пользователь листал, используем selectedSetIndex
         if (set == null && selectedSetIndex >= 0 && selectedSetIndex < visibleSets.size())
         {
             set = visibleSets.get(selectedSetIndex);
@@ -1011,96 +1318,121 @@ public class GuiOneBlock extends GuiContainer
             int localMouseX = mouseX - guiLeft;
             int localMouseY = mouseY - guiTop;
 
-            int gridStartX = 14;
-            int gridStartY = 160;
-            int blocksAreaWidth = iconCols * (cellSize + cellPadding) + 10;
-            int leftMobsAreaX = gridStartX + iconCols * (cellSize + cellPadding) + 14;
-            
-            // Определяем, видна ли левая панель
+            updateLayoutMetrics();
+
             if (!visibleSets.isEmpty())
             {
                 BlockSetConfig.BlockSetDefinition set = visibleSets.get(selectedSetIndex);
                 IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
                 int currentLevel = data == null ? 0 : data.getSetLevel(set.id);
                 boolean canShowCurrent = currentLevel > 0;
-                int rightStartX = canShowCurrent ? this.xSize / 2 + 8 : gridStartX;
-                int rightMobsAreaX = rightStartX + iconCols * (cellSize + cellPadding) + 14;
 
-                if (canShowCurrent && localMouseX >= gridStartX && localMouseX <= gridStartX + blocksAreaWidth &&
-                        localMouseY >= gridStartY && localMouseY <= ySize - 10)
+                int panelY = infoRowY + infoHeight;
+
+                int blocksAreaWidth = getBlocksAreaWidth();
+                int mobsAreaWidth = getMobsAreaWidth();
+                int gridStartY = getGridStartY(panelY);
+                int areaHeight = getAreaHeight();
+
+                if (canShowCurrent)
                 {
-                    blockScroll = Math.max(0, blockScroll + delta);
+                    if (localMouseX >= leftPanelX + INNER_PADDING &&
+                            localMouseX <= leftPanelX + INNER_PADDING + blocksAreaWidth &&
+                            localMouseY >= gridStartY && localMouseY <= gridStartY + areaHeight)
+                    {
+                        int maxScroll = getMaxBlockScroll(set, currentLevel);
+                        blockScroll = Math.max(0, Math.min(blockScroll + delta, maxScroll));
+                        return;
+                    }
+
+                    int mobsStartX = getMobsStartX(leftPanelX);
+                    if (localMouseX >= mobsStartX &&
+                            localMouseX <= mobsStartX + mobsAreaWidth &&
+                            localMouseY >= gridStartY && localMouseY <= gridStartY + areaHeight)
+                    {
+                        int maxScroll = getMaxMobScroll(set, currentLevel);
+                        mobScroll = Math.max(0, Math.min(mobScroll + delta, maxScroll));
+                        return;
+                    }
                 }
-                else if (canShowCurrent && localMouseX >= leftMobsAreaX && localMouseX < leftMobsAreaX + mobCellSize * 2 + 4 &&
-                        localMouseY >= gridStartY && localMouseY <= ySize - 10)
+
+                int rightStartX = canShowCurrent ? rightPanelX : leftPanelX;
+                int nextLevel = currentLevel <= 0 ? 1 : currentLevel + 1;
+
+                if (localMouseX >= rightStartX + INNER_PADDING &&
+                        localMouseX <= rightStartX + INNER_PADDING + blocksAreaWidth &&
+                        localMouseY >= gridStartY && localMouseY <= gridStartY + areaHeight)
                 {
-                    mobScroll = Math.max(0, mobScroll + delta);
+                    int maxScroll = getMaxBlockScroll(set, nextLevel);
+                    blockScrollNext = Math.max(0, Math.min(blockScrollNext + delta, maxScroll));
+                    return;
                 }
-                else if (localMouseX >= rightStartX && localMouseX <= rightStartX + blocksAreaWidth &&
-                        localMouseY >= gridStartY && localMouseY <= ySize - 10)
+
+                int rightMobsStartX = getMobsStartX(rightStartX);
+                if (localMouseX >= rightMobsStartX &&
+                        localMouseX <= rightMobsStartX + mobsAreaWidth &&
+                        localMouseY >= gridStartY && localMouseY <= gridStartY + areaHeight)
                 {
-                    blockScrollNext = Math.max(0, blockScrollNext + delta);
-                }
-                else if (localMouseX >= rightMobsAreaX && localMouseX < rightMobsAreaX + mobCellSize * 2 + 4 &&
-                        localMouseY >= gridStartY && localMouseY <= ySize - 10)
-                {
-                    mobScrollNext = Math.max(0, mobScrollNext + delta);
+                    int maxScroll = getMaxMobScroll(set, nextLevel);
+                    mobScrollNext = Math.max(0, Math.min(mobScrollNext + delta, maxScroll));
+                    return;
                 }
             }
         }
     }
 
+    private int getMaxBlockScroll(BlockSetConfig.BlockSetDefinition set, int level)
+    {
+        if (set == null) return 0;
+        BlockSetConfig.SetLevelDefinition levelDef = set.getLevel(level);
+        if (levelDef == null || levelDef.blocks == null || levelDef.blocks.isEmpty()) return 0;
+
+        int areaHeight = getAreaHeight();
+
+        int total = levelDef.blocks.size();
+        int rows = (total + blockCols - 1) / blockCols;
+        int visibleRows = Math.min(rows, Math.max(1, areaHeight / (cellSize + cellPadding)));
+
+        return Math.max(0, rows - visibleRows);
+    }
+
+    private int getMaxMobScroll(BlockSetConfig.BlockSetDefinition set, int level)
+    {
+        if (set == null) return 0;
+        BlockSetConfig.SetLevelDefinition levelDef = set.getLevel(level);
+        if (levelDef == null || levelDef.mobs == null || levelDef.mobs.isEmpty()) return 0;
+
+        int areaHeight = getAreaHeight();
+
+        int total = levelDef.mobs.size();
+        int rows = (total + mobCols - 1) / mobCols;
+        int visibleRows = Math.min(rows, Math.max(1, areaHeight / (cellSize + cellPadding)));
+
+        return Math.max(0, rows - visibleRows);
+    }
+
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY)
     {
+        updateLayoutMetrics();
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        drawRect(guiLeft, guiTop, guiLeft + xSize, guiTop + ySize, 0xFF1B1D21);
-        drawRect(guiLeft + 4, guiTop + 4, guiLeft + xSize - 4, guiTop + ySize - 4, 0xFF22272E);
-        drawRect(guiLeft + 4, guiTop + 4, guiLeft + xSize - 4, guiTop + 24, 0xFF2E3A45);
-        drawRect(guiLeft + 6, guiTop + 28, guiLeft + xSize - 6, guiTop + 133, 0xFF252A30);
-        drawRect(guiLeft + 6, guiTop + 135, guiLeft + xSize - 6, guiTop + ySize - 6, 0xFF1D2025);
-        drawRect(guiLeft + 8, guiTop + 30, guiLeft + xSize - 8, guiTop + 131, 0xFF2F3741);
-        drawRect(guiLeft + 8, guiTop + 136, guiLeft + xSize - 8, guiTop + ySize - 8, 0xFF1F2328);
-    }
 
-    private String getFluidDisplayName(BlockSetConfig.BlockEntryDefinition entry)
-    {
-        if (entry.registry == null) return "Unknown Fluid";
+        int titleBottom = guiTop + textHeight * 3;
+        int tabsBottom = guiTop + tabRowY * 2;
+        int infoBottom = guiTop + infoRowY + infoHeight;
+        int setContentBottom = this.height - guiTop;
 
-        // Пытаемся получить локализованное имя через FluidRegistry
-        try {
-            net.minecraft.block.Block block = entry.resolveBlock();
-            if (block != null) {
-                net.minecraftforge.fluids.Fluid fluid = net.minecraftforge.fluids.FluidRegistry.lookupFluidForBlock(block);
-                if (fluid != null) {
-                    // Пробуем получить локализованное имя жидкости
-                    String unlocalizedName = fluid.getUnlocalizedName();
-                    if (unlocalizedName != null && !unlocalizedName.isEmpty()) {
-                        String localized = net.minecraft.client.resources.I18n.format(unlocalizedName);
-                        if (localized != null && !localized.equals(unlocalizedName)) {
-                            return localized;
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-
-        // Fallback: пробуем как блок
-        try {
-            net.minecraft.block.Block block = entry.resolveBlock();
-            if (block != null) {
-                String unlocalizedName = block.getUnlocalizedName();
-                if (unlocalizedName != null && !unlocalizedName.isEmpty()) {
-                    String localized = net.minecraft.client.resources.I18n.format(unlocalizedName + ".name");
-                    if (localized != null && !localized.equals(unlocalizedName + ".name")) {
-                        return localized;
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-
-        // Fallback: из registry
-        return entry.registry;
+        if (activeView == VIEW_SETTINGS) {
+            drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize, tabsBottom + (buttonHeight + buttonGap) * 2 + buttonGap, 0xFF252A30);
+            drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
+        }
+        else {
+            drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize, infoBottom, 0xFF252A30);
+            drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
+            drawRect(guiLeft, infoBottom, guiLeft + xSize, setContentBottom, 0xFF1F2328);
+        }
     }
 
     private void renderScrollBar(int scrollX, int scrollY, int scrollHeight, int currentScroll, int maxScroll)
@@ -1108,11 +1440,9 @@ public class GuiOneBlock extends GuiContainer
         if (maxScroll <= 0) return;
 
         int barHeight = Math.max(10, (scrollHeight * scrollHeight) / (scrollHeight + maxScroll * cellSize));
-        int barY = scrollY + (currentScroll * (scrollHeight - barHeight)) / Math.max(1, maxScroll);
+        int barY = scrollY + (currentScroll * (scrollHeight - barHeight)) / maxScroll;
 
-        // Background
         drawRect(scrollX, scrollY, scrollX + SCROLLBAR_WIDTH, scrollY + scrollHeight, 0xFF2A2F34);
-        // Scrollbar thumb
         drawRect(scrollX, barY, scrollX + SCROLLBAR_WIDTH, barY + barHeight, 0xFF7A7F84);
     }
 
@@ -1120,12 +1450,10 @@ public class GuiOneBlock extends GuiContainer
     {
         if (maxScroll <= 0) return;
 
-        int barHeight = Math.max(10, (scrollHeight * scrollHeight) / (scrollHeight + maxScroll * (mobCellSize + 4)));
-        int barY = scrollY + (currentScroll * (scrollHeight - barHeight)) / Math.max(1, maxScroll);
+        int barHeight = Math.max(10, (scrollHeight * scrollHeight) / (scrollHeight + maxScroll * cellSize));
+        int barY = scrollY + (currentScroll * (scrollHeight - barHeight)) / maxScroll;
 
-        // Background
         drawRect(scrollX, scrollY, scrollX + SCROLLBAR_WIDTH, scrollY + scrollHeight, 0xFF2A2F34);
-        // Scrollbar thumb
         drawRect(scrollX, barY, scrollX + SCROLLBAR_WIDTH, barY + barHeight, 0xFF7A7F84);
     }
 }

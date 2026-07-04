@@ -20,11 +20,11 @@ public class ContainerOneBlock extends Container
     private final BlockPos generatorPos;
     private final EntityPlayer player;
 
-    public ContainerOneBlock(InventoryPlayer inventory, World world, BlockPos generatorPos)
+    public ContainerOneBlock(EntityPlayer player, World world, BlockPos generatorPos)
     {
         this.world = world;
         this.generatorPos = generatorPos;
-        this.player = inventory.player;
+        this.player = player;
 
         if (!world.isRemote && player instanceof EntityPlayerMP)
         {
@@ -68,6 +68,39 @@ public class ContainerOneBlock extends Container
         }
 
         return applyUpgradeSet(setId);
+    }
+
+    public boolean toggleFluidGeneration()
+    {
+        if (world.isRemote)
+        {
+            ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_FLUIDS, ""));
+            return true;
+        }
+
+        return applyToggleFluidGeneration();
+    }
+
+    public boolean toggleMobGeneration()
+    {
+        if (world.isRemote)
+        {
+            ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_MOBS, ""));
+            return true;
+        }
+
+        return applyToggleMobGeneration();
+    }
+
+    public boolean toggleChestGeneration()
+    {
+        if (world.isRemote)
+        {
+            ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_CHESTS, ""));
+            return true;
+        }
+
+        return applyToggleChestGeneration();
     }
 
     public boolean applySelectSet(String setId)
@@ -175,6 +208,15 @@ public class ContainerOneBlock extends Container
         if (currentLevel <= 0)
         {
             // Попытка разблокировать набор
+            if (!set.hasUnlockRequirementsMet(data))
+            {
+                if (player instanceof EntityPlayerMP)
+                {
+                    ((EntityPlayerMP) player).sendMessage(new TextComponentString("§c" + I18n.format("gui.oneblockultima.msg.unlock_requirements")));
+                }
+                return false;
+            }
+
             int cost = set.unlockCost;
             int currency = data.getCurrency();
 
@@ -269,6 +311,69 @@ public class ContainerOneBlock extends Container
 
             // Синхронизируем данные игрока
             PacketSyncPlayerData.sendToPlayer(player);
+        }
+        return true;
+    }
+
+    public boolean applyToggleFluidGeneration()
+    {
+        TileEntityOneBlockGenerator generator = getGenerator();
+        if (generator == null)
+        {
+            return false;
+        }
+
+        generator.setDisableFluidGeneration(!generator.isDisableFluidGeneration());
+        if (player instanceof EntityPlayerMP)
+        {
+            EntityPlayerMP playerMP = (EntityPlayerMP) player;
+            net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
+            if (packet != null)
+            {
+                playerMP.connection.sendPacket(packet);
+            }
+        }
+        return true;
+    }
+
+    public boolean applyToggleMobGeneration()
+    {
+        TileEntityOneBlockGenerator generator = getGenerator();
+        if (generator == null)
+        {
+            return false;
+        }
+
+        generator.setDisableMobGeneration(!generator.isDisableMobGeneration());
+        if (player instanceof EntityPlayerMP)
+        {
+            EntityPlayerMP playerMP = (EntityPlayerMP) player;
+            net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
+            if (packet != null)
+            {
+                playerMP.connection.sendPacket(packet);
+            }
+        }
+        return true;
+    }
+
+    public boolean applyToggleChestGeneration()
+    {
+        TileEntityOneBlockGenerator generator = getGenerator();
+        if (generator == null)
+        {
+            return false;
+        }
+
+        generator.setDisableChestGeneration(!generator.isDisableChestGeneration());
+        if (player instanceof EntityPlayerMP)
+        {
+            EntityPlayerMP playerMP = (EntityPlayerMP) player;
+            net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
+            if (packet != null)
+            {
+                playerMP.connection.sendPacket(packet);
+            }
         }
         return true;
     }

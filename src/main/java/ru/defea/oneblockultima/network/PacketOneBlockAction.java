@@ -14,7 +14,10 @@ public class PacketOneBlockAction implements IMessage
     public enum Action
     {
         SELECT_SET,
-        UPGRADE_SET
+        UPGRADE_SET,
+        TOGGLE_FLUIDS,
+        TOGGLE_MOBS,
+        TOGGLE_CHESTS
     }
 
     private BlockPos generatorPos;
@@ -73,13 +76,26 @@ public class PacketOneBlockAction implements IMessage
                     if (message.action == Action.SELECT_SET)
                     {
                         container.applySelectSet(message.setId);
-                        // Принудительно синхронизируем контейнер с клиентом
                         player.openContainer.detectAndSendChanges();
                     }
                     else if (message.action == Action.UPGRADE_SET)
                     {
                         container.applyUpgradeSet(message.setId);
-                        // Принудительно синхронизируем контейнер с клиентом
+                        player.openContainer.detectAndSendChanges();
+                    }
+                    else if (message.action == Action.TOGGLE_FLUIDS)
+                    {
+                        container.applyToggleFluidGeneration();
+                        player.openContainer.detectAndSendChanges();
+                    }
+                    else if (message.action == Action.TOGGLE_MOBS)
+                    {
+                        container.applyToggleMobGeneration();
+                        player.openContainer.detectAndSendChanges();
+                    }
+                    else if (message.action == Action.TOGGLE_CHESTS)
+                    {
+                        container.applyToggleChestGeneration();
                         player.openContainer.detectAndSendChanges();
                     }
                 }

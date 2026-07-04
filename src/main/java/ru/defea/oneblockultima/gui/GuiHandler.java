@@ -18,7 +18,7 @@ public class GuiHandler implements IGuiHandler
     {
         if (ID == ONE_BLOCK_GUI)
         {
-            return new ContainerOneBlock(player.inventory, world, new BlockPos(x, y, z));
+            return new ContainerOneBlock(player, world, new BlockPos(x, y, z));
         }
 
         return null;
@@ -30,7 +30,7 @@ public class GuiHandler implements IGuiHandler
     {
         if (ID == ONE_BLOCK_GUI)
         {
-            return new GuiOneBlock(player.inventory, world, new BlockPos(x, y, z));
+            return new GuiOneBlock(player, world, new BlockPos(x, y, z));
         }
 
         return null;

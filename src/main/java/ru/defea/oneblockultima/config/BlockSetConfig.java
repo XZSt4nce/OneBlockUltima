@@ -13,6 +13,7 @@ import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.NBTTagCompoundAdapter;
 import ru.defea.oneblockultima.OneBlockUltima;
+import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,7 @@ public final class BlockSetConfig
     static File configFile;
 
     private List<BlockSetDefinition> sets = new ArrayList<>();
+    private SettingsDefinition settings = new SettingsDefinition();
 
     private transient Map<String, BlockSetDefinition> setsById = new HashMap<>();
 
@@ -41,6 +43,17 @@ public final class BlockSetConfig
     public static File getConfigFile()
     {
         return configFile;
+    }
+
+    public static boolean saveCurrentConfig()
+    {
+        if (instance == null || configFile == null)
+        {
+            return false;
+        }
+
+        saveToFile(configFile, instance);
+        return true;
     }
 
     public static boolean reload()
@@ -259,11 +272,63 @@ public final class BlockSetConfig
         return sets.get(0).id;
     }
 
+    public SettingsDefinition getSettings()
+    {
+        if (settings == null)
+        {
+            settings = new SettingsDefinition();
+        }
+        return settings;
+    }
+
+    public static class SettingsDefinition
+    {
+        public boolean disableFluidGeneration = false;
+        public boolean disableMobGeneration = false;
+        public boolean disableChestGeneration = false;
+    }
+
+    public static class UnlockConditionGroup
+    {
+        public String mode = "any";
+        public List<UnlockConditionDefinition> conditions = new ArrayList<>();
+    }
+
+    public static class UnlockConditionDefinition
+    {
+        public String type = "set_level";
+        public String setId;
+        public int level = 0;
+        public int count = 0;
+
+        public boolean isSatisfied(IOneBlockPlayerData data)
+        {
+            OneBlockUltima.getLogger().info("[MEOW3]: {}", data.getBrokenBlocksCount());
+            if (data == null)
+            {
+                return false;
+            }
+
+            switch (type == null ? "" : type.toLowerCase(Locale.ROOT))
+            {
+                case "broken_blocks_total":
+                    return data.getBrokenBlocksCount() >= count;
+                case "broken_blocks":
+                    return data.getBrokenBlocksCount(setId) >= count;
+                case "set_level":
+                    return data.getSetLevel(setId) >= level;
+                default:
+                    return false;
+            }
+        }
+    }
+
     public static class BlockSetDefinition
     {
         public String id;
         public List<String> requiredMods = new ArrayList<>();
         public int unlockCost = 0;
+        public UnlockConditionGroup unlockConditions;
 
         // New format: separate lists for block-elements and mob-elements
         public List<BlockElementDefinition> blocks = new ArrayList<>();
@@ -291,6 +356,36 @@ public final class BlockSetConfig
                 }
             }
             return true;
+        }
+
+        public boolean hasUnlockRequirementsMet(IOneBlockPlayerData data)
+        {
+            if (unlockConditions == null || unlockConditions.conditions == null || unlockConditions.conditions.isEmpty())
+            {
+                return true;
+            }
+
+            boolean requireAll = "all".equalsIgnoreCase(unlockConditions.mode);
+            if (requireAll)
+            {
+                for (UnlockConditionDefinition condition : unlockConditions.conditions)
+                {
+                    if (condition == null || !condition.isSatisfied(data))
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            for (UnlockConditionDefinition condition : unlockConditions.conditions)
+            {
+                if (condition != null && condition.isSatisfied(data))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public SetLevelDefinition getLevel(int level)

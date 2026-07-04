@@ -4,7 +4,10 @@ import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiCreateWorld;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.player.EntityPlayer;
@@ -15,6 +18,10 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldType;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -42,6 +49,7 @@ import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
 import ru.defea.oneblockultima.world.SpawnConfigData;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -163,6 +171,90 @@ public final class ModEvents
                 }
             }
         }
+    }
+
+    @SubscribeEvent
+    @SideOnly(Side.CLIENT)
+    public static void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event)
+    {
+        if (!(event.getGui() instanceof GuiCreateWorld))
+        {
+            return;
+        }
+
+        GuiCreateWorld screen = (GuiCreateWorld) event.getGui();
+        WorldType worldType = getCreateWorldType(screen);
+        if (worldType != OneBlockWorldType.ONE_BLOCK)
+        {
+            return;
+        }
+
+        String bonusLabel = I18n.format("createWorld.customize.bonusItems");
+        String structuresLabel = I18n.format("createWorld.customize.mapFeatures");
+        for (GuiButton button : event.getButtonList())
+        {
+            if (button == null || button.displayString == null)
+            {
+                continue;
+            }
+            if (button.displayString.equals(bonusLabel) || button.displayString.equals(structuresLabel))
+            {
+                button.visible = false;
+                button.enabled = false;
+            }
+        }
+    }
+
+    private static Field createWorldTypeField;
+
+    private static WorldType getCreateWorldType(GuiCreateWorld screen)
+    {
+        if (createWorldTypeField == null)
+        {
+            createWorldTypeField = findFieldByNames(GuiCreateWorld.class, "worldType", "field_146336_f", "field_146335_a");
+            if (createWorldTypeField != null)
+            {
+                createWorldTypeField.setAccessible(true);
+            }
+        }
+
+        if (createWorldTypeField == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            Object value = createWorldTypeField.get(screen);
+            if (value instanceof WorldType)
+            {
+                return (WorldType) value;
+            }
+        }
+        catch (IllegalAccessException ignored)
+        {
+        }
+
+        return null;
+    }
+
+    private static Field findFieldByNames(Class<?> clazz, String... names)
+    {
+        for (String name : names)
+        {
+            try
+            {
+                Field field = clazz.getDeclaredField(name);
+                if (field != null)
+                {
+                    return field;
+                }
+            }
+            catch (NoSuchFieldException ignored)
+            {
+            }
+        }
+        return null;
     }
 
     @SubscribeEvent
@@ -447,9 +539,13 @@ public final class ModEvents
         if (player != null)
         {
             IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(player);
-            if (data != null && entry.currency > 0)
+            if (data != null)
             {
-                data.addCurrency(entry.currency);
+                if (entry.currency > 0)
+                {
+                    data.addCurrency(entry.currency);
+                }
+                data.addBrokenBlocks(entry.setId, 1);
                 PacketSyncPlayerData.sendToPlayer(player);
             }
         }
@@ -621,6 +717,17 @@ public final class ModEvents
 
     private static void spawnMobOnBlockBreak(World world, BlockPos pos, GeneratedBlockRegistry.GeneratedBlockEntry entry)
     {
+        TileEntity tile = world.getTileEntity(entry.generatorPos);
+        if (tile instanceof TileEntityOneBlockGenerator)
+        {
+            TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tile;
+            if (generator.isDisableMobGeneration())
+            {
+                OneBlockUltima.getLogger().info("[Mob Spawn] Mob generation disabled on generator at {}", entry.generatorPos);
+                return;
+            }
+        }
+
         OneBlockUltima.getLogger().info("[Mob Spawn] Entry: setId={}, level={}", entry.setId, entry.level);
         BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(entry.setId);
         if (set == null)

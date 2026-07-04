@@ -11,4 +11,10 @@ public interface IOneBlockPlayerData
     int getSetLevel(String setId);
 
     boolean upgradeSet(String setId, int cost, int maxLevel);
+
+    int getBrokenBlocksCount();
+
+    int getBrokenBlocksCount(String setId);
+
+    void addBrokenBlocks(String setId, int amount);
 }

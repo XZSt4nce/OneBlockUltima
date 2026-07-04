@@ -3,6 +3,8 @@ package ru.defea.oneblockultima.capability;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumFacing;
 import net.minecraftforge.common.capabilities.*;
+import ru.defea.oneblockultima.OneBlockUltima;
+import scala.Int;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -56,13 +58,21 @@ public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTa
     {
         NBTTagCompound tag = new NBTTagCompound();
         tag.setInteger("currency", instance.getCurrency());
+        tag.setInteger("brokenBlocksTotal", instance.getBrokenBlocksCount());
 
-        NBTTagCompound levels = new NBTTagCompound();
+        NBTTagCompound setLevels = new NBTTagCompound();
         for (Map.Entry<String, Integer> entry : instance.getSetLevels().entrySet())
         {
-            levels.setInteger(entry.getKey(), entry.getValue());
+            setLevels.setInteger(entry.getKey(), entry.getValue());
         }
-        tag.setTag("setLevels", levels);
+        tag.setTag("setLevels", setLevels);
+
+        NBTTagCompound brokenBlocksBySet = new NBTTagCompound();
+        for (Map.Entry<String, Integer> entry : instance.getBrokenBlocksBySet().entrySet())
+        {
+            brokenBlocksBySet.setInteger(entry.getKey(), entry.getValue());
+        }
+        tag.setTag("brokenBlocksBySet", brokenBlocksBySet);
         return tag;
     }
 
@@ -70,12 +80,20 @@ public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTa
     public void deserializeNBT(NBTTagCompound nbt)
     {
         instance.setCurrency(nbt.getInteger("currency"));
-        instance.getSetLevels().clear();
+        instance.setBrokenBlocksTotal(nbt.getInteger("brokenBlocksTotal"));
 
-        NBTTagCompound levels = nbt.getCompoundTag("setLevels");
-        for (String key : levels.getKeySet())
+        instance.getSetLevels().clear();
+        NBTTagCompound setLevels = nbt.getCompoundTag("setLevels");
+        for (String key : setLevels.getKeySet())
         {
-            instance.getSetLevels().put(key, levels.getInteger(key));
+            instance.getSetLevels().put(key, setLevels.getInteger(key));
+        }
+
+        instance.getBrokenBlocksBySet().clear();
+        NBTTagCompound brokenBlocksBySet = nbt.getCompoundTag("brokenBlocksBySet");
+        for (String key : brokenBlocksBySet.getKeySet())
+        {
+            instance.getBrokenBlocksBySet().put(key, brokenBlocksBySet.getInteger(key));
         }
     }
 }

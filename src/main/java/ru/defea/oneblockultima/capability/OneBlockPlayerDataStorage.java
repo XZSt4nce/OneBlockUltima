@@ -16,14 +16,22 @@ public class OneBlockPlayerDataStorage implements Capability.IStorage<IOneBlockP
         tag.setInteger("currency", instance.getCurrency());
 
         NBTTagCompound levels = new NBTTagCompound();
+        NBTTagCompound brokenBlocks = new NBTTagCompound();
         if (instance instanceof OneBlockPlayerData)
         {
-            for (Map.Entry<String, Integer> entry : ((OneBlockPlayerData) instance).getSetLevels().entrySet())
+            OneBlockPlayerData data = (OneBlockPlayerData) instance;
+            for (Map.Entry<String, Integer> entry : data.getSetLevels().entrySet())
             {
                 levels.setInteger(entry.getKey(), entry.getValue());
             }
+            for (Map.Entry<String, Integer> entry : data.getBrokenBlocksBySet().entrySet())
+            {
+                brokenBlocks.setInteger(entry.getKey(), entry.getValue());
+            }
+            tag.setInteger("brokenBlocksTotal", data.getBrokenBlocksCount());
         }
         tag.setTag("setLevels", levels);
+        tag.setTag("brokenBlocksBySet", brokenBlocks);
         return tag;
     }
 
@@ -44,6 +52,14 @@ public class OneBlockPlayerDataStorage implements Capability.IStorage<IOneBlockP
         for (String key : levels.getKeySet())
         {
             data.getSetLevels().put(key, levels.getInteger(key));
+        }
+
+        data.setBrokenBlocksTotal(tag.getInteger("brokenBlocksTotal"));
+        NBTTagCompound brokenBlocks = tag.getCompoundTag("brokenBlocksBySet");
+        data.setBrokenBlocksBySet(null);
+        for (String key : brokenBlocks.getKeySet())
+        {
+            data.getBrokenBlocksBySet().put(key, brokenBlocks.getInteger(key));
         }
     }
 }
