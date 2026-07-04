@@ -48,6 +48,7 @@ import ru.defea.oneblockultima.gui.GuiHandler;
 import ru.defea.oneblockultima.gui.GuiOneBlock;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
+import ru.defea.oneblockultima.util.BlockUtil;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
 import ru.defea.oneblockultima.world.SpawnConfigData;
@@ -530,6 +531,29 @@ public final class ModEvents
         if (!event.isSpawner())
         {
             event.setResult(Event.Result.DENY);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onBlockPlace(BlockEvent.PlaceEvent event)
+    {
+        if (event.getWorld().isRemote)
+        {
+            return;
+        }
+
+        World world = event.getWorld();
+        if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
+        {
+            return;
+        }
+
+        BlockPos pos = event.getPos();
+        IBlockState placedState = event.getPlacedBlock();
+        IBlockState replacementState = BlockUtil.getReplacementStateForGeneratorPlacement(placedState, world.getBlockState(pos.down()));
+        if (replacementState != placedState)
+        {
+            world.setBlockState(pos, replacementState, 3);
         }
     }
 
