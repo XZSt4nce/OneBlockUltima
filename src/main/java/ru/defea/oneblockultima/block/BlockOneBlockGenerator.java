@@ -20,6 +20,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.EnumPlantType;
 import net.minecraftforge.common.IPlantable;
 import ru.defea.oneblockultima.OneBlockUltima;
+import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.gui.GuiHandler;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
@@ -50,10 +51,31 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     @Override
     public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ)
     {
-        if (!world.isRemote)
+        if (world.isRemote)
         {
-            player.openGui(OneBlockUltima.instance, GuiHandler.ONE_BLOCK_GUI, world, pos.getX(), pos.getY(), pos.getZ());
+            return true;
         }
+
+        TileEntity tileEntity = world.getTileEntity(pos);
+        if (tileEntity instanceof TileEntityOneBlockGenerator)
+        {
+            TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
+            if (generator.isFree() && generator.canBeClaimedBy(player.getUniqueID()))
+            {
+                GuiHandler.openClaimScreen(player, pos);
+                return true;
+            }
+
+            if (!ModEvents.ensureGeneratorAccess(world, pos, player, generator))
+            {
+                return true;
+            }
+
+            GuiHandler.open(player, pos);
+            return true;
+        }
+
+        GuiHandler.open(player, pos);
         return true;
     }
 
@@ -134,6 +156,8 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     {
         if (!world.isRemote)
         {
+            ModEvents.applyPendingGeneratorOwner(world, pos);
+
             // Ставим барьер над генератором
             OneBlockUltima.getLogger().info("[Generator] onBlockAdded: barrierPos=" + pos + ", block=" + world.getBlockState(pos).getBlock());
             if (world.getBlockState(pos).getBlock() == Blocks.AIR && world.getBlockState(pos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
@@ -165,6 +189,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         TileEntity tileEntity = world.getTileEntity(pos);
         if (tileEntity instanceof TileEntityOneBlockGenerator)
         {
+            ModEvents.applyPendingGeneratorOwner(world, pos);
             ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
         }
     }

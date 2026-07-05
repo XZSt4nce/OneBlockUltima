@@ -8,7 +8,9 @@ import net.minecraft.inventory.Container;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
+import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.config.BlockSetConfig;
+import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.network.ModMessages;
 import ru.defea.oneblockultima.network.PacketOneBlockAction;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
@@ -28,9 +30,14 @@ public class ContainerOneBlock extends Container
 
         if (!world.isRemote && player instanceof EntityPlayerMP)
         {
+            TileEntityOneBlockGenerator generator = getGenerator();
+            if (generator != null)
+            {
+                ModEvents.ensureGeneratorAccess(world, generatorPos, player, generator);
+            }
+
             PacketSyncPlayerData.sendToPlayer(player);
 
-            TileEntityOneBlockGenerator generator = getGenerator();
             if (generator != null)
             {
                 net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
@@ -63,11 +70,49 @@ public class ContainerOneBlock extends Container
     {
         if (world.isRemote)
         {
+            applyLocalBalancePreview(setId);
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.UPGRADE_SET, setId));
             return true; // Возвращаем true, чтобы клиент не показывал ошибку
         }
 
         return applyUpgradeSet(setId);
+    }
+
+    private void applyLocalBalancePreview(String setId)
+    {
+        if (!world.isRemote)
+        {
+            return;
+        }
+
+        TileEntityOneBlockGenerator generator = getGenerator();
+        if (generator == null)
+        {
+            return;
+        }
+
+        BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(setId);
+        if (set == null)
+        {
+            return;
+        }
+
+        int currentLevel = generator.getSetLevel(setId);
+        int cost = currentLevel <= 0 ? set.unlockCost : set.getLevel(currentLevel + 1) != null ? set.getLevel(currentLevel + 1).upgradeCost : 0;
+        if (cost <= 0)
+        {
+            return;
+        }
+
+        ru.defea.oneblockultima.capability.IOneBlockPlayerData data = ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.get(player);
+        if (data == null || data.getCurrency() < cost)
+        {
+            return;
+        }
+
+        data.spendCurrency(cost);
+        ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.saveToEntity(player, data);
+        ModEvents.syncDisplayedCurrency(player, data.getCurrency());
     }
 
     public boolean toggleFluidGeneration()
@@ -121,19 +166,7 @@ public class ContainerOneBlock extends Container
             return false;
         }
 
-        ru.defea.oneblockultima.capability.IOneBlockPlayerData data =
-                ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.get(player);
-        if (data == null)
-        {
-            System.out.println("[OneBlock] Player data is NULL!");
-            if (player instanceof EntityPlayerMP)
-            {
-                ((EntityPlayerMP) player).sendMessage(new TextComponentString("§cFailed to get player data!"));
-            }
-            return false;
-        }
-
-        int currentLevel = data.getSetLevel(setId);
+        int currentLevel = generator.getSetLevel(setId);
         if (currentLevel <= 0)
         {
             System.out.println("[OneBlock] Set not unlocked! Level: " + currentLevel);
@@ -150,11 +183,14 @@ public class ContainerOneBlock extends Container
 
         System.out.println("[OneBlock] Setting selectedSetId on generator...");
         generator.setSelectedSetId(setId);
-        generator.setOwnerId(player.getUniqueID());
+        if (!generator.ensureOwnership(player.getUniqueID()))
+        {
+            generator.setSelectedSetId(currentSelected);
+            return false;
+        }
 
         System.out.println("[OneBlock] Generator selectedSetId is now: " + generator.getSelectedSetId());
 
-        world.notifyBlockUpdate(generatorPos, world.getBlockState(generatorPos), world.getBlockState(generatorPos), 3);
         detectAndSendChanges();
 
         if (player instanceof EntityPlayerMP)
@@ -192,6 +228,8 @@ public class ContainerOneBlock extends Container
             return false;
         }
 
+        String currentSelected = generator.getSelectedSetId();
+
         ru.defea.oneblockultima.capability.IOneBlockPlayerData data =
                 ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.get(player);
         if (data == null)
@@ -201,14 +239,14 @@ public class ContainerOneBlock extends Container
             return false;
         }
 
-        int currentLevel = data.getSetLevel(setId);
+        int currentLevel = generator.getSetLevel(setId);
         System.out.println("[OneBlock] Current level: " + currentLevel);
 
         // Проверяем, разблокирован ли набор
         if (currentLevel <= 0)
         {
             // Попытка разблокировать набор
-            if (!set.hasUnlockRequirementsMet(data))
+            if (!set.hasUnlockRequirementsMet(data, generator))
             {
                 if (player instanceof EntityPlayerMP)
                 {
@@ -231,10 +269,22 @@ public class ContainerOneBlock extends Container
                 return false;
             }
 
+            if (!data.spendCurrency(cost))
+            {
+                if (player instanceof EntityPlayerMP)
+                {
+                    ((EntityPlayerMP) player).sendMessage(new TextComponentString("§c" + I18n.format("gui.oneblockultima.msg.unlock_fail")));
+                }
+                return false;
+            }
+
+            OneBlockPlayerDataProvider.saveToEntity(player, data);
+
             // Разблокируем набор
-            boolean success = data.upgradeSet(setId, cost, set.getMaxLevel());
+            boolean success = generator.upgradeSet(setId, cost, set.getMaxLevel());
             if (!success)
             {
+                data.addCurrency(cost);
                 if (player instanceof EntityPlayerMP)
                 {
                     ((EntityPlayerMP) player).sendMessage(new TextComponentString("§c" + I18n.format("gui.oneblockultima.msg.unlock_fail")));
@@ -244,7 +294,11 @@ public class ContainerOneBlock extends Container
 
             // После разблокировки автоматически выбираем набор
             generator.setSelectedSetId(setId);
-            generator.setOwnerId(player.getUniqueID());
+            if (!generator.ensureOwnership(player.getUniqueID()))
+            {
+                generator.setSelectedSetId(currentSelected);
+                return false;
+            }
 
             System.out.println("[OneBlock] Set unlocked and selected: " + setId);
             if (player instanceof EntityPlayerMP)
@@ -276,10 +330,22 @@ public class ContainerOneBlock extends Container
                 return false;
             }
 
+            if (!data.spendCurrency(cost))
+            {
+                if (player instanceof EntityPlayerMP)
+                {
+                    ((EntityPlayerMP) player).sendMessage(new TextComponentString("§c" + I18n.format("gui.oneblockultima.msg.upgrade_fail")));
+                }
+                return false;
+            }
+
+            OneBlockPlayerDataProvider.saveToEntity(player, data);
+
             // Улучшаем набор
-            boolean success = data.upgradeSet(setId, cost, set.getMaxLevel());
+            boolean success = generator.upgradeSet(setId, cost, set.getMaxLevel());
             if (!success)
             {
+                data.addCurrency(cost);
                 if (player instanceof EntityPlayerMP)
                 {
                     ((EntityPlayerMP) player).sendMessage(new TextComponentString("§c" + I18n.format("gui.oneblockultima.msg.upgrade_fail")));
@@ -289,18 +355,22 @@ public class ContainerOneBlock extends Container
 
             // После улучшения автоматически выбираем набор
             generator.setSelectedSetId(setId);
-            generator.setOwnerId(player.getUniqueID());
+            if (!generator.ensureOwnership(player.getUniqueID()))
+            {
+                generator.setSelectedSetId(currentSelected);
+                return false;
+            }
 
             System.out.println("[OneBlock] Set upgraded to level " + (currentLevel + 1) + " and selected: " + setId);
         }
 
-        // Обновляем мир
-        world.notifyBlockUpdate(generatorPos, world.getBlockState(generatorPos), world.getBlockState(generatorPos), 3);
         detectAndSendChanges();
 
         if (player instanceof EntityPlayerMP)
         {
             EntityPlayerMP playerMP = (EntityPlayerMP) player;
+
+            ModEvents.ensureGeneratorAccess(world, generatorPos, player, generator);
 
             // Отправляем обновление тайла
             net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
@@ -311,6 +381,7 @@ public class ContainerOneBlock extends Container
 
             // Синхронизируем данные игрока
             PacketSyncPlayerData.sendToPlayer(player);
+            OneBlockPlayerDataProvider.saveToEntity(player, data);
         }
         return true;
     }
