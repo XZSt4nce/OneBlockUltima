@@ -1,6 +1,7 @@
 package ru.defea.oneblockultima;
 
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
@@ -177,24 +178,58 @@ public class BlockSetConfigGui extends GuiScreen
         String text = jsonEditor.getText();
         try
         {
+            // 1. Проверяем JSON
             new JsonParser().parse(text);
+
+            // 2. Получаем файл
             File file = BlockSetConfig.getConfigFile();
             if (file == null)
             {
                 statusMessage = I18n.format("gui.oneblockultima.status.save_failed");
                 return;
             }
+
+            // 3. Создаем директории
             if (file.getParentFile() != null && !file.getParentFile().exists())
             {
-                file.getParentFile().mkdirs();
+                if (!file.getParentFile().mkdirs()) {
+                    statusMessage = I18n.format("gui.oneblockultima.status.save_failed_dir");
+                    return;
+                }
             }
-            Files.write(file.toPath(), normalizeLineEndings(text).getBytes(StandardCharsets.UTF_8));
-            BlockSetConfig.reload();
-            statusMessage = I18n.format("gui.oneblockultima.status.reloaded");
+
+            // 4. Пишем файл с проверкой
+            try
+            {
+                Files.write(file.toPath(), normalizeLineEndings(text).getBytes(StandardCharsets.UTF_8));
+            }
+            catch (IOException e)
+            {
+                statusMessage = I18n.format("gui.oneblockultima.status.save_failed_write", e.getMessage());
+                e.printStackTrace(); // Логируем ошибку
+                return;
+            }
+
+            // 5. Перезагружаем конфиг с проверкой
+            try
+            {
+                BlockSetConfig.reload();
+                statusMessage = I18n.format("gui.oneblockultima.status.reloaded");
+            }
+            catch (Exception e)
+            {
+                statusMessage = I18n.format("gui.oneblockultima.status.reload_failed", e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        catch (JsonSyntaxException e)
+        {
+            statusMessage = I18n.format("gui.oneblockultima.status.invalid_json");
         }
         catch (Exception e)
         {
-            statusMessage = I18n.format("gui.oneblockultima.status.invalid_json");
+            statusMessage = I18n.format("gui.oneblockultima.status.unknown_error", e.getMessage());
+            e.printStackTrace();
         }
     }
 

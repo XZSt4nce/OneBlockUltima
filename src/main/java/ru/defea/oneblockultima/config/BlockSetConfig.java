@@ -198,11 +198,22 @@ public final class BlockSetConfig
     {
         public String registry;
         public int meta;
+        public List<Integer> metas = new ArrayList<>();
         public int baseLevel = 1;
         public int baseChance = 0;
         public int currency = 0;
         String dropItem = null;
         public NBTTagCompound nbtTags = new NBTTagCompound();
+
+        public List<Integer> getMetaValues()
+        {
+            if (metas != null && !metas.isEmpty())
+            {
+                return metas;
+            }
+
+            return Collections.singletonList(meta);
+        }
     }
 
     public static class MobElementDefinition
@@ -431,21 +442,30 @@ public final class BlockSetConfig
             java.util.List<InternalElement> elems = new ArrayList<>();
             for (BlockElementDefinition be : blocks) {
                 if (be == null) continue;
-                InternalElement ie = new InternalElement();
-                ie.registry = be.registry;
-                ie.meta = be.meta;
-                ie.baseLevel = be.baseLevel;
-                ie.baseChance = be.baseChance;
-                ie.currency = be.currency;
-                ie.dropItem = be.dropItem;
-                ie.count = 1;
-                ie.isMob = false;
-                Set<String> keys = be.nbtTags.getKeySet();
-                for (String key : keys) {
-                    NBTBase tag = be.nbtTags.getTag(key);
-                    ie.nbtTags.setTag(key, tag.copy());
+                List<Integer> metaValues = be.getMetaValues();
+                if (metaValues == null || metaValues.isEmpty())
+                {
+                    metaValues = Collections.singletonList(be.meta);
                 }
-                elems.add(ie);
+
+                for (Integer metaValue : metaValues)
+                {
+                    InternalElement ie = new InternalElement();
+                    ie.registry = be.registry;
+                    ie.meta = metaValue == null ? 0 : metaValue;
+                    ie.baseLevel = be.baseLevel;
+                    ie.baseChance = be.baseChance;
+                    ie.currency = be.currency;
+                    ie.dropItem = be.dropItem;
+                    ie.count = 1;
+                    ie.isMob = false;
+                    Set<String> keys = be.nbtTags.getKeySet();
+                    for (String key : keys) {
+                        NBTBase tag = be.nbtTags.getTag(key);
+                        ie.nbtTags.setTag(key, tag.copy());
+                    }
+                    elems.add(ie);
+                }
             }
             for (MobElementDefinition me : mobs) {
                 if (me == null) continue;
