@@ -150,7 +150,7 @@ public class GuiOneBlock extends GuiContainer
                 BlockSetConfig.BlockSetDefinition set = getBlockSetDefinition();
                 if (set != null)
                 {
-                    int currentLevel = OneBlockPlayerDataProvider.get(container.getPlayer()) == null ? 0 : OneBlockPlayerDataProvider.get(container.getPlayer()).getSetLevel(set.id);
+                    int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
                     String setTitle = getLocalizedSetName(set) + " " + I18n.format("gui.oneblockultima.lv") + currentLevel;
                     if (currentLevel <= 0)
                     {
@@ -825,16 +825,6 @@ public class GuiOneBlock extends GuiContainer
         if (!activeSetId.equals(clientActiveSetId))
         {
             clientActiveSetId = activeSetId;
-
-            for (int i = 0; i < visibleSets.size(); i++)
-            {
-                if (visibleSets.get(i).id.equals(activeSetId))
-                {
-                    selectedSetIndex = i;
-                    break;
-                }
-            }
-
             hasBrowsedSets = false;
         }
     }
@@ -905,13 +895,19 @@ public class GuiOneBlock extends GuiContainer
         }
         else if (button.id == BUTTON_SELECT_SET)
         {
-            String setId = visibleSets.get(selectedSetIndex).id;
-            container.selectSet(setId);
+            BlockSetConfig.BlockSetDefinition selectedSet = getBlockSetDefinition();
+            if (selectedSet != null)
+            {
+                container.selectSet(selectedSet.id);
+            }
         }
         else if (button.id == BUTTON_UPGRADE_SET)
         {
-            String setId = visibleSets.get(selectedSetIndex).id;
-            container.upgradeSet(setId);
+            BlockSetConfig.BlockSetDefinition selectedSet = getBlockSetDefinition();
+            if (selectedSet != null)
+            {
+                container.upgradeSet(selectedSet.id);
+            }
         }
     }
 
@@ -956,7 +952,7 @@ public class GuiOneBlock extends GuiContainer
         drawCenteredString(fontRenderer, title, xSize / 2, textHeight, 0xFFFFFF);
 
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
-        int currency = data == null ? 0 : data.getCurrency();
+        int currency = ru.defea.oneblockultima.event.ModEvents.getDisplayedCurrency(container.getPlayer());
         String balanceValue = String.valueOf(currency);
         int balanceWidth = fontRenderer.getStringWidth(balanceValue);
         int iconSize = 12;
@@ -998,7 +994,7 @@ public class GuiOneBlock extends GuiContainer
                 {
                     if (data != null)
                     {
-                        int currentLevel = data.getSetLevel(set.id);
+                        int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
                         // Показываем условия только если набор НЕ разблокирован
                         if (currentLevel <= 0 && set.unlockConditions != null &&
                                 !set.unlockConditions.conditions.isEmpty())
@@ -1012,7 +1008,7 @@ public class GuiOneBlock extends GuiContainer
                             for (BlockSetConfig.UnlockConditionDefinition condition : set.unlockConditions.conditions)
                             {
                                 if (condition == null) continue;
-                                String text = " - " + formatUnlockCondition(condition, data) + " ✓";
+                                String text = " - " + formatUnlockCondition(condition, data, generator) + " ✓";
                                 int width = fontRenderer.getStringWidth(text);
                                 if (width > maxConditionWidth) maxConditionWidth = width;
                             }
@@ -1028,7 +1024,7 @@ public class GuiOneBlock extends GuiContainer
                             // Рисуем условия по центру
                             int conditionsX = centerX - maxConditionWidth / 2;
                             int conditionsY = infoRowY;
-                            drawUnlockConditions(set, conditionsX, conditionsY, maxConditionWidth);
+                            drawUnlockConditions(set, conditionsX, conditionsY, maxConditionWidth, generator);
                         }
                     }
                 }
@@ -1046,7 +1042,7 @@ public class GuiOneBlock extends GuiContainer
 
             if (set == null) return;
 
-            int currentLevel = data == null ? 0 : data.getSetLevel(set.id);
+            int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
             boolean isActiveSet = (set.id.equals(clientActiveSetId));
 
             int setColor = currentLevel <= 0 ? 0xFF7D7D : isActiveSet ? 0x7CEC9F : 0xFFFFFF;
@@ -1212,7 +1208,7 @@ public class GuiOneBlock extends GuiContainer
         }
     }
 
-    private void drawUnlockConditions(BlockSetConfig.BlockSetDefinition set, int x, int y, int maxWidth)
+    private void drawUnlockConditions(BlockSetConfig.BlockSetDefinition set, int x, int y, int maxWidth, TileEntityOneBlockGenerator generator)
     {
         if (set == null || set.unlockConditions == null || set.unlockConditions.conditions == null ||
                 set.unlockConditions.conditions.isEmpty())
@@ -1225,7 +1221,7 @@ public class GuiOneBlock extends GuiContainer
         if (data == null) return;
 
         // Проверяем, разблокирован ли уже набор
-        int currentLevel = data.getSetLevel(set.id);
+        int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
         if (currentLevel > 0) return; // Если разблокирован - не показываем условия
 
         String prefix = "all".equalsIgnoreCase(set.unlockConditions.mode) ?
@@ -1243,8 +1239,8 @@ public class GuiOneBlock extends GuiContainer
         {
             if (condition == null) continue;
 
-            String conditionText = formatUnlockCondition(condition, data);
-            boolean satisfied = condition.isSatisfied(data);
+            String conditionText = formatUnlockCondition(condition, data, generator);
+            boolean satisfied = condition.isSatisfied(data, generator);
             int color = satisfied ? 0x7CEC9F : 0xFF7D7D;
             String status = satisfied ? " ✓" : " ✗";
             String fullText = " - " + conditionText + status;
@@ -1258,7 +1254,7 @@ public class GuiOneBlock extends GuiContainer
     }
 
     // 2. Исправленный метод formatUnlockCondition
-    private String formatUnlockCondition(BlockSetConfig.UnlockConditionDefinition condition, IOneBlockPlayerData data)
+    private String formatUnlockCondition(BlockSetConfig.UnlockConditionDefinition condition, IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
     {
         if (condition == null) return "";
 
@@ -1268,7 +1264,8 @@ public class GuiOneBlock extends GuiContainer
                 String setId = condition.setId != null ? condition.setId : "?";
                 BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(setId);
                 String setName = set != null ? getLocalizedSetName(set) : setId;
-                return I18n.format("gui.oneblockultima.condition.set_level", setName, data.getSetLevel(setId), condition.level);
+                int levelValue = generator == null ? data.getSetLevel(setId) : generator.getSetLevel(setId);
+                return I18n.format("gui.oneblockultima.condition.set_level", setName, levelValue, condition.level);
             case "broken_blocks":
                 String targetSetId = condition.setId != null ? condition.setId : "?";
                 BlockSetConfig.BlockSetDefinition targetSet = BlockSetConfig.get().getSet(targetSetId);
@@ -1282,26 +1279,12 @@ public class GuiOneBlock extends GuiContainer
     }
 
     private BlockSetConfig.BlockSetDefinition getBlockSetDefinition() {
-        BlockSetConfig.BlockSetDefinition set = null;
-
-        if (!hasBrowsedSets && clientActiveSetId != null)
+        if (selectedSetIndex >= 0 && selectedSetIndex < visibleSets.size())
         {
-            for (BlockSetConfig.BlockSetDefinition s : visibleSets)
-            {
-                if (s.id.equals(clientActiveSetId))
-                {
-                    set = s;
-                    break;
-                }
-            }
+            return visibleSets.get(selectedSetIndex);
         }
 
-        if (set == null && selectedSetIndex >= 0 && selectedSetIndex < visibleSets.size())
-        {
-            set = visibleSets.get(selectedSetIndex);
-        }
-
-        return set;
+        return null;
     }
 
     @Override
@@ -1323,8 +1306,8 @@ public class GuiOneBlock extends GuiContainer
             if (!visibleSets.isEmpty())
             {
                 BlockSetConfig.BlockSetDefinition set = visibleSets.get(selectedSetIndex);
-                IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
-                int currentLevel = data == null ? 0 : data.getSetLevel(set.id);
+                TileEntityOneBlockGenerator generator = container.getGenerator();
+                int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
                 boolean canShowCurrent = currentLevel > 0;
 
                 int panelY = infoRowY + infoHeight;

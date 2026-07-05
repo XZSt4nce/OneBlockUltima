@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockCrops;
+import net.minecraft.block.BlockEndPortalFrame;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.enchantment.Enchantment;
@@ -31,6 +32,8 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.OneBlockUltima;
+import ru.defea.oneblockultima.block.ModBlocks;
+import ru.defea.oneblockultima.block.BlockCustomPortalFrame;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
@@ -45,6 +48,35 @@ public final class BlockUtil
 {
     private BlockUtil()
     {
+    }
+
+    public static IBlockState getReplacementStateForGeneratorPlacement(IBlockState state, IBlockState belowState)
+    {
+        if (state == null || belowState == null || belowState.getBlock() != ModBlocks.ONE_BLOCK_GENERATOR)
+        {
+            return state;
+        }
+
+        if (state.getBlock() == Blocks.BEDROCK)
+        {
+            return ModBlocks.CUSTOM_BEDROCK.getDefaultState();
+        }
+
+        if (state.getBlock() == Blocks.END_PORTAL_FRAME)
+        {
+            IBlockState replacement = ModBlocks.CUSTOM_PORTAL_FRAME.getDefaultState();
+            if (state.getProperties().containsKey(BlockEndPortalFrame.FACING))
+            {
+                replacement = replacement.withProperty(BlockCustomPortalFrame.FACING, state.getValue(BlockEndPortalFrame.FACING));
+            }
+            if (state.getProperties().containsKey(BlockEndPortalFrame.EYE))
+            {
+                replacement = replacement.withProperty(BlockCustomPortalFrame.EYE, state.getValue(BlockEndPortalFrame.EYE));
+            }
+            return replacement;
+        }
+
+        return state;
     }
 
     /**
@@ -65,6 +97,8 @@ public final class BlockUtil
         }
 
         Block block = state.getBlock();
+        state = getReplacementStateForGeneratorPlacement(state, world.getBlockState(pos.down()));
+        block = state.getBlock();
         
         // Для BlockContainer блоков с NBT тегами - создаем TileEntity ДО размещения
         TileEntity preCreatedTileEntity = null;

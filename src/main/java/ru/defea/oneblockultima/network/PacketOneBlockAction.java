@@ -7,6 +7,7 @@ import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
+import ru.defea.oneblockultima.gui.ContainerClaimGenerator;
 import ru.defea.oneblockultima.gui.ContainerOneBlock;
 
 public class PacketOneBlockAction implements IMessage
@@ -17,7 +18,8 @@ public class PacketOneBlockAction implements IMessage
         UPGRADE_SET,
         TOGGLE_FLUIDS,
         TOGGLE_MOBS,
-        TOGGLE_CHESTS
+        TOGGLE_CHESTS,
+        CLAIM_OWNER
     }
 
     private BlockPos generatorPos;
@@ -62,6 +64,26 @@ public class PacketOneBlockAction implements IMessage
                 @Override
                 public void run()
                 {
+                    if (player.openContainer instanceof ContainerClaimGenerator)
+                    {
+                        ContainerClaimGenerator claimContainer = (ContainerClaimGenerator) player.openContainer;
+                        if (!claimContainer.getGeneratorPos().equals(message.generatorPos))
+                        {
+                            return;
+                        }
+
+                        if (message.action == Action.CLAIM_OWNER)
+                        {
+                            boolean success = claimContainer.claimOwnership();
+                            if (success)
+                            {
+                                PacketSyncPlayerData.sendToPlayer(player);
+                                player.closeContainer();
+                            }
+                        }
+                        return;
+                    }
+
                     if (!(player.openContainer instanceof ContainerOneBlock))
                     {
                         return;
@@ -80,7 +102,11 @@ public class PacketOneBlockAction implements IMessage
                     }
                     else if (message.action == Action.UPGRADE_SET)
                     {
-                        container.applyUpgradeSet(message.setId);
+                        boolean success = container.applyUpgradeSet(message.setId);
+                        if (success)
+                        {
+                            PacketSyncPlayerData.sendToPlayer(player);
+                        }
                         player.openContainer.detectAndSendChanges();
                     }
                     else if (message.action == Action.TOGGLE_FLUIDS)

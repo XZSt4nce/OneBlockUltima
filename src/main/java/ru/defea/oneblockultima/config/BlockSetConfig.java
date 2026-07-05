@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.NBTTagCompoundAdapter;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
+import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -197,11 +198,22 @@ public final class BlockSetConfig
     {
         public String registry;
         public int meta;
+        public List<Integer> metas = new ArrayList<>();
         public int baseLevel = 1;
         public int baseChance = 0;
         public int currency = 0;
         String dropItem = null;
         public NBTTagCompound nbtTags = new NBTTagCompound();
+
+        public List<Integer> getMetaValues()
+        {
+            if (metas != null && !metas.isEmpty())
+            {
+                return metas;
+            }
+
+            return Collections.singletonList(meta);
+        }
     }
 
     public static class MobElementDefinition
@@ -303,6 +315,11 @@ public final class BlockSetConfig
 
         public boolean isSatisfied(IOneBlockPlayerData data)
         {
+            return isSatisfied(data, null);
+        }
+
+        public boolean isSatisfied(IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
+        {
             if (data == null)
             {
                 return false;
@@ -315,7 +332,8 @@ public final class BlockSetConfig
                 case "broken_blocks":
                     return data.getBrokenBlocksCount(setId) >= count;
                 case "set_level":
-                    return data.getSetLevel(setId) >= level;
+                    int generatorLevel = generator == null ? data.getSetLevel(setId) : generator.getSetLevel(setId);
+                    return generatorLevel >= level;
                 default:
                     return false;
             }
@@ -359,6 +377,11 @@ public final class BlockSetConfig
 
         public boolean hasUnlockRequirementsMet(IOneBlockPlayerData data)
         {
+            return hasUnlockRequirementsMet(data, null);
+        }
+
+        public boolean hasUnlockRequirementsMet(IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
+        {
             if (unlockConditions == null || unlockConditions.conditions == null || unlockConditions.conditions.isEmpty())
             {
                 return true;
@@ -369,7 +392,7 @@ public final class BlockSetConfig
             {
                 for (UnlockConditionDefinition condition : unlockConditions.conditions)
                 {
-                    if (condition == null || !condition.isSatisfied(data))
+                    if (condition == null || !condition.isSatisfied(data, generator))
                     {
                         return false;
                     }
@@ -379,7 +402,7 @@ public final class BlockSetConfig
 
             for (UnlockConditionDefinition condition : unlockConditions.conditions)
             {
-                if (condition != null && condition.isSatisfied(data))
+                if (condition != null && condition.isSatisfied(data, generator))
                 {
                     return true;
                 }
@@ -419,21 +442,30 @@ public final class BlockSetConfig
             java.util.List<InternalElement> elems = new ArrayList<>();
             for (BlockElementDefinition be : blocks) {
                 if (be == null) continue;
-                InternalElement ie = new InternalElement();
-                ie.registry = be.registry;
-                ie.meta = be.meta;
-                ie.baseLevel = be.baseLevel;
-                ie.baseChance = be.baseChance;
-                ie.currency = be.currency;
-                ie.dropItem = be.dropItem;
-                ie.count = 1;
-                ie.isMob = false;
-                Set<String> keys = be.nbtTags.getKeySet();
-                for (String key : keys) {
-                    NBTBase tag = be.nbtTags.getTag(key);
-                    ie.nbtTags.setTag(key, tag.copy());
+                List<Integer> metaValues = be.getMetaValues();
+                if (metaValues == null || metaValues.isEmpty())
+                {
+                    metaValues = Collections.singletonList(be.meta);
                 }
-                elems.add(ie);
+
+                for (Integer metaValue : metaValues)
+                {
+                    InternalElement ie = new InternalElement();
+                    ie.registry = be.registry;
+                    ie.meta = metaValue == null ? 0 : metaValue;
+                    ie.baseLevel = be.baseLevel;
+                    ie.baseChance = be.baseChance;
+                    ie.currency = be.currency;
+                    ie.dropItem = be.dropItem;
+                    ie.count = 1;
+                    ie.isMob = false;
+                    Set<String> keys = be.nbtTags.getKeySet();
+                    for (String key : keys) {
+                        NBTBase tag = be.nbtTags.getTag(key);
+                        ie.nbtTags.setTag(key, tag.copy());
+                    }
+                    elems.add(ie);
+                }
             }
             for (MobElementDefinition me : mobs) {
                 if (me == null) continue;
