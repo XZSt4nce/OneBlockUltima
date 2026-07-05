@@ -14,6 +14,7 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.NBTTagCompoundAdapter;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
+import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -303,6 +304,11 @@ public final class BlockSetConfig
 
         public boolean isSatisfied(IOneBlockPlayerData data)
         {
+            return isSatisfied(data, null);
+        }
+
+        public boolean isSatisfied(IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
+        {
             if (data == null)
             {
                 return false;
@@ -315,7 +321,8 @@ public final class BlockSetConfig
                 case "broken_blocks":
                     return data.getBrokenBlocksCount(setId) >= count;
                 case "set_level":
-                    return data.getSetLevel(setId) >= level;
+                    int generatorLevel = generator == null ? data.getSetLevel(setId) : generator.getSetLevel(setId);
+                    return generatorLevel >= level;
                 default:
                     return false;
             }
@@ -359,6 +366,11 @@ public final class BlockSetConfig
 
         public boolean hasUnlockRequirementsMet(IOneBlockPlayerData data)
         {
+            return hasUnlockRequirementsMet(data, null);
+        }
+
+        public boolean hasUnlockRequirementsMet(IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
+        {
             if (unlockConditions == null || unlockConditions.conditions == null || unlockConditions.conditions.isEmpty())
             {
                 return true;
@@ -369,7 +381,7 @@ public final class BlockSetConfig
             {
                 for (UnlockConditionDefinition condition : unlockConditions.conditions)
                 {
-                    if (condition == null || !condition.isSatisfied(data))
+                    if (condition == null || !condition.isSatisfied(data, generator))
                     {
                         return false;
                     }
@@ -379,7 +391,7 @@ public final class BlockSetConfig
 
             for (UnlockConditionDefinition condition : unlockConditions.conditions)
             {
-                if (condition != null && condition.isSatisfied(data))
+                if (condition != null && condition.isSatisfied(data, generator))
                 {
                     return true;
                 }

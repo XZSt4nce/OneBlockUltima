@@ -90,7 +90,9 @@ gui.oneblockultima.msg.unlock_fail=Failed to unlock set!
 gui.oneblockultima.msg.upgrade_fail=Failed to upgrade set!
 gui.oneblockultima.msg.unlocked=Set unlocked!
 gui.oneblockultima.msg.unlock_requirements=Unlock requirements are not met!
-
+gui.oneblockultima.claim_title=Free generator
+gui.oneblockultima.claim_description=You can become its owner.
+gui.oneblockultima.claim_owner=Become owner
 command.addUltimaBalance.usage=Usage: %s
 command.addUltimaBalance.integer=Amount must be an integer.
 command.addUltimaBalance.player=Command must be executed by a player.

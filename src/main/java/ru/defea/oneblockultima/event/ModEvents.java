@@ -76,9 +76,12 @@ public final class ModEvents
     }
 
     private static final java.util.Map<BlockPos, Boolean> processingBlocks = new java.util.HashMap<>();
+    private static final Map<BlockPos, UUID> pendingGeneratorOwners = new HashMap<>();
+    private static final Map<String, Long> lastAccessDeniedMessageTicks = new HashMap<>();
 
     @SideOnly(Side.CLIENT)
     private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<>();
+    private static final Map<UUID, Integer> lastDisplayedCurrency = new HashMap<>();
 
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
@@ -113,23 +116,7 @@ public final class ModEvents
             return;
         }
 
-        UUID playerUUID = player.getUniqueID();
-        int targetCurrency = data.getCurrency();
-
-        // Получаем текущее отображаемое значение для этого игрока
-        float currentDisplayed = displayedCurrencyMap.getOrDefault(playerUUID, (float) targetCurrency);
-
-        // Плавная анимация
-        float newDisplayed = currentDisplayed + (targetCurrency - currentDisplayed) * 0.14f;
-
-        // Если разница маленькая - сразу устанавливаем точное значение
-        if (Math.abs(targetCurrency - newDisplayed) < 0.01f)
-        {
-            newDisplayed = targetCurrency;
-        }
-
-        displayedCurrencyMap.put(playerUUID, newDisplayed);
-        int currency = Math.round(newDisplayed);
+        int currency = getDisplayedCurrency(player);
 
         String balanceValue = String.valueOf(currency);
         int textWidth = mc.fontRenderer.getStringWidth(balanceValue);
@@ -153,6 +140,132 @@ public final class ModEvents
         Minecraft.getMinecraft().getTextureManager().bindTexture(new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png"));
         Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, coinSize, coinSize, coinSize, coinSize);
         Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + coinSize + spaceBetween, y, 0xFFD700);
+    }
+
+    public static void syncDisplayedCurrency(EntityPlayer player, int currency)
+    {
+        if (player == null)
+        {
+            return;
+        }
+
+        UUID playerUUID = player.getUniqueID();
+        lastDisplayedCurrency.put(playerUUID, currency);
+    }
+
+    public static int getDisplayedCurrency(EntityPlayer player)
+    {
+        if (player == null)
+        {
+            return 0;
+        }
+
+        UUID playerUUID = player.getUniqueID();
+        IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(player);
+        int targetCurrency = data == null ? 0 : data.getCurrency();
+
+        Integer lastCurrency = lastDisplayedCurrency.get(playerUUID);
+        if (lastCurrency == null)
+        {
+            displayedCurrencyMap.put(playerUUID, (float) targetCurrency);
+            lastDisplayedCurrency.put(playerUUID, targetCurrency);
+            return targetCurrency;
+        }
+
+        if (lastCurrency != targetCurrency)
+        {
+            lastDisplayedCurrency.put(playerUUID, targetCurrency);
+        }
+
+        float currentDisplayed = displayedCurrencyMap.getOrDefault(playerUUID, (float) targetCurrency);
+        float newDisplayed = currentDisplayed + (targetCurrency - currentDisplayed) * 0.14f;
+        if (Math.abs(targetCurrency - newDisplayed) < 0.01f)
+        {
+            newDisplayed = targetCurrency;
+        }
+
+        displayedCurrencyMap.put(playerUUID, newDisplayed);
+        return Math.round(newDisplayed);
+    }
+
+    public static void sendAccessDeniedMessage(EntityPlayer player)
+    {
+        if (player == null || !(player instanceof EntityPlayerMP))
+        {
+            return;
+        }
+
+        ((EntityPlayerMP) player).sendMessage(new net.minecraft.util.text.TextComponentString("§c" + I18n.format("generator.access.denied")));
+    }
+
+    public static boolean trySendAccessDeniedMessage(UUID playerId, BlockPos pos, long worldTick)
+    {
+        if (playerId == null || pos == null)
+        {
+            return false;
+        }
+
+        String key = playerId + ":" + pos.toLong();
+        Long lastTick = lastAccessDeniedMessageTicks.get(key);
+        if (lastTick != null && lastTick == worldTick)
+        {
+            return false;
+        }
+
+        lastAccessDeniedMessageTicks.put(key, worldTick);
+        return true;
+    }
+
+    public static boolean trySendAccessDeniedMessage(EntityPlayer player, BlockPos pos, long worldTick)
+    {
+        if (player == null || !(player instanceof EntityPlayerMP))
+        {
+            return false;
+        }
+
+        if (!trySendAccessDeniedMessage(player.getUniqueID(), pos, worldTick))
+        {
+            return false;
+        }
+
+        ((EntityPlayerMP) player).sendMessage(new net.minecraft.util.text.TextComponentString("§c" + I18n.format("generator.access.denied")));
+        return true;
+    }
+
+    public static boolean ensureGeneratorAccess(World world, BlockPos pos, EntityPlayer player, TileEntityOneBlockGenerator generator)
+    {
+        if (generator == null || player == null)
+        {
+            return false;
+        }
+
+        if (world != null && pos != null)
+        {
+            applyPendingGeneratorOwner(world, pos);
+        }
+
+        return generator.hasAccess(player);
+    }
+
+    public static void refreshOpenGui()
+    {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.currentScreen == null)
+        {
+            return;
+        }
+
+        mc.addScheduledTask(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                if (mc.currentScreen instanceof GuiOneBlock)
+                {
+                    mc.currentScreen.initGui();
+                }
+            }
+        });
     }
 
     private static void drawRoundedRect(int x, int y, int width, int height, int radius, int color)
@@ -181,6 +294,42 @@ public final class ModEvents
                     Gui.drawRect(right - 1, bottom - 1, right, bottom, color);
                 }
             }
+        }
+    }
+
+    public static void registerPendingGeneratorOwner(World world, BlockPos pos, UUID playerId)
+    {
+        if (world == null || pos == null || playerId == null)
+        {
+            return;
+        }
+
+        pendingGeneratorOwners.put(pos, playerId);
+    }
+
+    public static void applyPendingGeneratorOwner(World world, BlockPos pos)
+    {
+        if (world == null || pos == null)
+        {
+            return;
+        }
+
+        UUID playerId = pendingGeneratorOwners.get(pos);
+        if (playerId == null)
+        {
+            return;
+        }
+
+        TileEntity tileEntity = world.getTileEntity(pos);
+        if (!(tileEntity instanceof TileEntityOneBlockGenerator))
+        {
+            return;
+        }
+
+        TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
+        if (generator.assignOwnerForPlacement(playerId))
+        {
+            pendingGeneratorOwners.remove(pos);
         }
     }
 
@@ -593,6 +742,8 @@ public final class ModEvents
         IBlockState placedState = event.getPlacedBlock();
         if (placedState.getBlock() == ModBlocks.ONE_BLOCK_GENERATOR && event.getPlayer() != null)
         {
+            registerPendingGeneratorOwner(world, pos, event.getPlayer().getUniqueID());
+
             TileEntity tileEntity = world.getTileEntity(pos);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
@@ -628,43 +779,49 @@ public final class ModEvents
         BlockPos clickedPos = event.getPos();
         GeneratedBlockRegistry registry = GeneratedBlockRegistry.get(event.getWorld());
 
+        boolean denied = false;
+        BlockPos targetGeneratorPos = null;
+
         if (event.getWorld().getBlockState(clickedPos).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            TileEntity tileEntity = event.getWorld().getTileEntity(clickedPos);
-            if (tileEntity instanceof TileEntityOneBlockGenerator)
-            {
-                TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
-                if (!generator.hasAccess(player))
-                {
-                    event.setCanceled(true);
-                    return;
-                }
-            }
-            event.setCanceled(true);
-            GuiHandler.open(player, clickedPos);
-            return;
+            targetGeneratorPos = clickedPos;
+        }
+        else
+        {
+            targetGeneratorPos = registry.getGeneratorPos(clickedPos);
         }
 
-        BlockPos generatorPos = registry.getGeneratorPos(clickedPos);
-        if (generatorPos != null)
+        if (targetGeneratorPos != null)
         {
-            TileEntity generatorTile = event.getWorld().getTileEntity(generatorPos);
+            TileEntity generatorTile = event.getWorld().getTileEntity(targetGeneratorPos);
             if (generatorTile instanceof TileEntityOneBlockGenerator)
             {
                 TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) generatorTile;
-                if (!generator.hasAccess(player))
+                if (generator.isFree() && generator.canBeClaimedBy(player.getUniqueID()))
                 {
                     event.setCanceled(true);
-                    if (player instanceof EntityPlayerMP)
-                    {
-                        ((EntityPlayerMP) player).sendMessage(new net.minecraft.util.text.TextComponentString("§c" + I18n.format("generator.access.denied")));
-                    }
+                    GuiHandler.openClaimScreen(player, targetGeneratorPos);
                     return;
                 }
-            }
 
+                if (!ensureGeneratorAccess(event.getWorld(), targetGeneratorPos, player, generator))
+                {
+                    denied = true;
+                }
+            }
+        }
+
+        if (denied)
+        {
             event.setCanceled(true);
-            GuiHandler.open(player, generatorPos);
+            trySendAccessDeniedMessage(player, targetGeneratorPos != null ? targetGeneratorPos : clickedPos, event.getWorld().getTotalWorldTime());
+            return;
+        }
+
+        if (targetGeneratorPos != null)
+        {
+            event.setCanceled(true);
+            GuiHandler.open(player, targetGeneratorPos);
         }
     }
 
@@ -691,10 +848,7 @@ public final class ModEvents
             if (!generator.hasAccess(event.getPlayer()))
             {
                 event.setCanceled(true);
-                if (event.getPlayer() instanceof EntityPlayerMP)
-                {
-                    ((EntityPlayerMP) event.getPlayer()).sendMessage(new net.minecraft.util.text.TextComponentString("§c" + I18n.format("generator.access.denied")));
-                }
+                trySendAccessDeniedMessage(event.getPlayer(), pos, world.getTotalWorldTime());
                 return;
             }
         }
@@ -721,10 +875,7 @@ public final class ModEvents
             if (!generator.hasAccess(event.getPlayer()))
             {
                 event.setCanceled(true);
-                if (event.getPlayer() instanceof EntityPlayerMP)
-                {
-                    ((EntityPlayerMP) event.getPlayer()).sendMessage(new net.minecraft.util.text.TextComponentString("§c" + I18n.format("generator.access.denied")));
-                }
+                trySendAccessDeniedMessage(event.getPlayer(), entry.generatorPos, world.getTotalWorldTime());
                 return;
             }
         }

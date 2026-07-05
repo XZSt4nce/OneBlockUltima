@@ -2,9 +2,11 @@ package ru.defea.oneblockultima;
 
 import net.minecraft.init.Bootstrap;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.math.BlockPos;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.block.ModBlocks;
+import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
 import ru.defea.oneblockultima.command.CommandDeclineGeneratorInvite;
@@ -116,5 +118,69 @@ public class BlockSetConfigUnlockConditionTest
 
         assertFalse(freeGenerator.tryAssignOwnerIfEligible(playerId));
         assertTrue(freeGenerator.isFree());
+    }
+
+    @Test
+    public void generatorTracksSetLevelsIndependentlyFromPlayerData()
+    {
+        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
+        assertEquals(0, generator.getSetLevel("classic"));
+
+        assertTrue(generator.upgradeSet("classic", 10, 3));
+        assertEquals(1, generator.getSetLevel("classic"));
+    }
+
+    @Test
+    public void ensureOwnershipKeepsAlreadyOwnedGeneratorSelectable()
+    {
+        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
+        java.util.UUID playerId = java.util.UUID.fromString("66666666-6666-6666-6666-666666666666");
+        generator.setOwnerId(playerId);
+
+        assertTrue(generator.ensureOwnership(playerId));
+    }
+
+    @Test
+    public void duplicateAccessDeniedMessagesAreSuppressedForSameInteraction()
+    {
+        java.util.UUID playerId = java.util.UUID.fromString("55555555-5555-5555-5555-555555555555");
+        BlockPos pos = new BlockPos(10, 64, 10);
+
+        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, pos, 100L));
+        assertFalse(ModEvents.trySendAccessDeniedMessage(playerId, pos, 100L));
+        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, pos, 101L));
+    }
+
+    @Test
+    public void placingGeneratorAssignsOwnerForPlacerWithoutBreakingExistingGeneratorAccess()
+    {
+        java.util.UUID playerId = java.util.UUID.fromString("44444444-4444-4444-4444-444444444444");
+        TileEntityOneBlockGenerator oldGenerator = new TileEntityOneBlockGenerator();
+        oldGenerator.setOwnerId(playerId);
+
+        TileEntityOneBlockGenerator newGenerator = new TileEntityOneBlockGenerator();
+        assertTrue(newGenerator.assignOwnerForPlacement(playerId));
+        assertTrue(newGenerator.hasAccess(playerId));
+        assertTrue(oldGenerator.hasAccess(playerId));
+    }
+
+    @Test
+    public void unlockRequirementsCanBeEvaluatedAgainstGeneratorState()
+    {
+        BlockSetConfig.BlockSetDefinition set = new BlockSetConfig.BlockSetDefinition();
+        set.unlockConditions = new BlockSetConfig.UnlockConditionGroup();
+        set.unlockConditions.mode = "all";
+        set.unlockConditions.conditions.add(new BlockSetConfig.UnlockConditionDefinition());
+        set.unlockConditions.conditions.get(0).type = "set_level";
+        set.unlockConditions.conditions.get(0).setId = "classic";
+        set.unlockConditions.conditions.get(0).level = 1;
+
+        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
+        OneBlockPlayerData playerData = new OneBlockPlayerData();
+
+        assertFalse(set.hasUnlockRequirementsMet(playerData, generator));
+
+        generator.upgradeSet("classic", 10, 3);
+        assertTrue(set.hasUnlockRequirementsMet(playerData, generator));
     }
 }

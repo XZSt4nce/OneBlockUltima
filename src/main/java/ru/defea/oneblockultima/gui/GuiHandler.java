@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 public class GuiHandler implements IGuiHandler
 {
     public static final int ONE_BLOCK_GUI = 0;
+    public static final int CLAIM_GENERATOR_GUI = 1;
 
     @Nullable
     @Override
@@ -19,6 +20,11 @@ public class GuiHandler implements IGuiHandler
         if (ID == ONE_BLOCK_GUI)
         {
             return new ContainerOneBlock(player, world, new BlockPos(x, y, z));
+        }
+
+        if (ID == CLAIM_GENERATOR_GUI)
+        {
+            return new ContainerClaimGenerator(player, world, new BlockPos(x, y, z));
         }
 
         return null;
@@ -33,11 +39,21 @@ public class GuiHandler implements IGuiHandler
             return new GuiOneBlock(player, world, new BlockPos(x, y, z));
         }
 
+        if (ID == CLAIM_GENERATOR_GUI)
+        {
+            return new GuiClaimGenerator(player, world, new BlockPos(x, y, z));
+        }
+
         return null;
     }
 
     public static void open(EntityPlayer player, BlockPos generatorPos)
     {
         player.openGui(OneBlockUltima.instance, ONE_BLOCK_GUI, player.world, generatorPos.getX(), generatorPos.getY(), generatorPos.getZ());
+    }
+
+    public static void openClaimScreen(EntityPlayer player, BlockPos generatorPos)
+    {
+        player.openGui(OneBlockUltima.instance, CLAIM_GENERATOR_GUI, player.world, generatorPos.getX(), generatorPos.getY(), generatorPos.getZ());
     }
 }

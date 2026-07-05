@@ -18,6 +18,8 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.util.BlockUtil;
+import java.util.HashMap;
+import java.util.Map;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
@@ -37,6 +39,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
     private boolean disableFluidGeneration = false;
     private boolean disableMobGeneration = false;
     private boolean disableChestGeneration = false;
+    private final Map<String, Integer> setLevels = new HashMap<>();
 
     public TileEntityOneBlockGenerator()
     {
@@ -328,25 +331,53 @@ public class TileEntityOneBlockGenerator extends TileEntity
 
     private int resolveGenerationLevel()
     {
-        if (ownerId == null)
+        return getSetLevel(selectedSetId);
+    }
+
+    public int getSetLevel(String setId)
+    {
+        if (setId == null)
         {
-            return 1;
+            return 0;
         }
 
-        net.minecraft.entity.player.EntityPlayer owner = world.getPlayerEntityByUUID(ownerId);
-        if (owner == null)
+        Integer level = setLevels.get(setId);
+        if (level != null)
         {
-            return 1;
+            return level;
         }
 
-        ru.defea.oneblockultima.capability.IOneBlockPlayerData data =
-                ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider.get(owner);
-        if (data == null)
+        BlockSetConfig config = BlockSetConfig.get();
+        if (config == null)
         {
-            return 1;
+            return 0;
         }
 
-        return data.getSetLevel(selectedSetId);
+        String defaultSetId = config.getDefaultSetId();
+        return setId.equals(defaultSetId) ? 1 : 0;
+    }
+
+    public boolean upgradeSet(String setId, int cost, int maxLevel)
+    {
+        if (setId == null || cost < 0 || maxLevel <= 0)
+        {
+            return false;
+        }
+
+        int currentLevel = getSetLevel(setId);
+        if (currentLevel >= maxLevel)
+        {
+            return false;
+        }
+
+        setLevels.put(setId, currentLevel + 1);
+        markDirty();
+        return true;
+    }
+
+    public Map<String, Integer> getSetLevels()
+    {
+        return setLevels;
     }
 
     public String getSelectedSetId()
@@ -473,6 +504,42 @@ public class TileEntityOneBlockGenerator extends TileEntity
 
         setOwnerId(playerId);
         return true;
+    }
+
+    public boolean ensureOwnership(UUID playerId)
+    {
+        if (playerId == null)
+        {
+            return false;
+        }
+
+        if (!isFree())
+        {
+            return true;
+        }
+
+        return tryAssignOwnerIfEligible(playerId);
+    }
+
+    public boolean assignOwnerForPlacement(UUID playerId)
+    {
+        if (playerId == null)
+        {
+            return false;
+        }
+
+        if (ownerId == null && memberIds.isEmpty())
+        {
+            setOwnerId(playerId);
+            return true;
+        }
+
+        if (ownerId != null && ownerId.equals(playerId))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public boolean isPlacedByPlayer()
@@ -678,6 +745,21 @@ public class TileEntityOneBlockGenerator extends TileEntity
         }
         compound.setBoolean("placedByPlayer", placedByPlayer);
 
+        NBTTagList levelsTag = new NBTTagList();
+        for (Map.Entry<String, Integer> entry : setLevels.entrySet())
+        {
+            if (entry.getKey() == null || entry.getValue() == null)
+            {
+                continue;
+            }
+
+            NBTTagCompound levelTag = new NBTTagCompound();
+            levelTag.setString("setId", entry.getKey());
+            levelTag.setInteger("level", entry.getValue());
+            levelsTag.appendTag(levelTag);
+        }
+        compound.setTag("setLevels", levelsTag);
+
         NBTTagList membersTag = new NBTTagList();
         for (UUID memberId : memberIds)
         {
@@ -719,6 +801,20 @@ public class TileEntityOneBlockGenerator extends TileEntity
             ownerId = compound.getUniqueId("ownerId");
         }
         placedByPlayer = compound.getBoolean("placedByPlayer");
+
+        setLevels.clear();
+        if (compound.hasKey("setLevels", Constants.NBT.TAG_LIST))
+        {
+            NBTTagList levelsTag = compound.getTagList("setLevels", Constants.NBT.TAG_COMPOUND);
+            for (int i = 0; i < levelsTag.tagCount(); i++)
+            {
+                NBTTagCompound levelTag = levelsTag.getCompoundTagAt(i);
+                if (levelTag.hasKey("setId") && levelTag.hasKey("level"))
+                {
+                    setLevels.put(levelTag.getString("setId"), levelTag.getInteger("level"));
+                }
+            }
+        }
 
         memberIds.clear();
         if (compound.hasKey("memberIds", Constants.NBT.TAG_LIST))

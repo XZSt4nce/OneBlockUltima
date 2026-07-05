@@ -12,6 +12,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
+import ru.defea.oneblockultima.event.ModEvents;
 
 public class PacketSyncPlayerData implements IMessage
 {
@@ -99,6 +100,7 @@ public class PacketSyncPlayerData implements IMessage
                         {
                             playerData.getBrokenBlocksBySet().put(key, brokenBlocksBySet.getInteger(key));
                         }
+                        ModEvents.syncDisplayedCurrency(player, playerData.getCurrency());
                     }
                 }
             });
