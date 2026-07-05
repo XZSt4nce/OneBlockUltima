@@ -16,6 +16,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.OneBlockUltima;
+import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.util.BlockUtil;
 import java.util.HashMap;
@@ -31,6 +32,8 @@ import java.util.UUID;
 
 public class TileEntityOneBlockGenerator extends TileEntity
 {
+    private static final int NON_PLAYER_BREAK_COOLDOWN_TICKS = 20;
+
     private String selectedSetId;
     private UUID ownerId;
     private final List<UUID> memberIds = new ArrayList<>();
@@ -40,13 +43,62 @@ public class TileEntityOneBlockGenerator extends TileEntity
     private boolean disableMobGeneration = false;
     private boolean disableChestGeneration = false;
     private final Map<String, Integer> setLevels = new HashMap<>();
+    private long lastNonPlayerBreakTick = Long.MIN_VALUE;
+    private boolean nonPlayerBreakCooldownActive = false;
 
     public TileEntityOneBlockGenerator()
     {
     }
 
+    public boolean canProcessNonPlayerBreak(long worldTick)
+    {
+        boolean active = isNonPlayerBreakCooldownActive(worldTick);
+        boolean canProcess = !active;
+        OneBlockUltima.getLogger().info("[BreakDebug] Non-player cooldown check for generator {}: active={}, lastTick={}, currentTick={}, canProcess={}", pos, nonPlayerBreakCooldownActive, lastNonPlayerBreakTick, worldTick, canProcess);
+        return canProcess;
+    }
+
+    public boolean isNonPlayerBreakCooldownActive(long worldTick)
+    {
+        if (lastNonPlayerBreakTick == Long.MIN_VALUE)
+        {
+            nonPlayerBreakCooldownActive = false;
+            return false;
+        }
+
+        boolean active = worldTick - lastNonPlayerBreakTick < NON_PLAYER_BREAK_COOLDOWN_TICKS;
+        if (!active)
+        {
+            nonPlayerBreakCooldownActive = false;
+            lastNonPlayerBreakTick = Long.MIN_VALUE;
+        }
+        return active;
+    }
+
+    public void markNonPlayerBreak(long worldTick)
+    {
+        lastNonPlayerBreakTick = worldTick;
+        nonPlayerBreakCooldownActive = true;
+        if (world != null && !world.isRemote)
+        {
+            world.scheduleUpdate(pos, ModBlocks.ONE_BLOCK_GENERATOR, NON_PLAYER_BREAK_COOLDOWN_TICKS);
+            OneBlockUltima.getLogger().info("[BreakDebug] Scheduled delayed generation for generator {} in {} ticks", pos, NON_PLAYER_BREAK_COOLDOWN_TICKS);
+        }
+        markDirty();
+    }
+
     public void tryGenerateBlock()
     {
+        tryGenerateBlock(false);
+    }
+
+    public void tryGenerateBlock(boolean fromNonPlayerBreak)
+    {
+        if (world != null && !world.isRemote && isNonPlayerBreakCooldownActive(world.getTotalWorldTime()))
+        {
+            OneBlockUltima.getLogger().info("[BreakDebug] Skipping generation for generator {} because non-player cooldown is active", pos);
+            return;
+        }
 
         if (selectedSetId == null || selectedSetId.isEmpty())
         {
@@ -263,6 +315,12 @@ public class TileEntityOneBlockGenerator extends TileEntity
         BlockUtil.placeBlockWithNBT(world, targetPos, state, entry.nbtTags);
         OneBlockUltima.getLogger().info("[Generator] After place block at " + targetPos + ", now=" + world.getBlockState(targetPos).getBlock().getRegistryName());
         registry.markGenerated(targetPos, pos, selectedSetId, entry.currency, level, entry.registry, entry.meta);
+        if (world != null && !world.isRemote)
+        {
+            nonPlayerBreakCooldownActive = false;
+            lastNonPlayerBreakTick = Long.MIN_VALUE;
+            OneBlockUltima.getLogger().info("[BreakDebug] Cleared non-player cooldown for generator {} after successful generation", pos);
+        }
     }
 
     private BlockSetConfig.BlockEntryDefinition pickGenerationEntry(BlockSetConfig.SetLevelDefinition levelDefinition)
@@ -744,6 +802,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
             compound.setUniqueId("ownerId", ownerId);
         }
         compound.setBoolean("placedByPlayer", placedByPlayer);
+        compound.setLong("lastNonPlayerBreakTick", lastNonPlayerBreakTick);
 
         NBTTagList levelsTag = new NBTTagList();
         for (Map.Entry<String, Integer> entry : setLevels.entrySet())
@@ -801,6 +860,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
             ownerId = compound.getUniqueId("ownerId");
         }
         placedByPlayer = compound.getBoolean("placedByPlayer");
+        lastNonPlayerBreakTick = compound.hasKey("lastNonPlayerBreakTick") ? compound.getLong("lastNonPlayerBreakTick") : Long.MIN_VALUE;
 
         setLevels.clear();
         if (compound.hasKey("setLevels", Constants.NBT.TAG_LIST))

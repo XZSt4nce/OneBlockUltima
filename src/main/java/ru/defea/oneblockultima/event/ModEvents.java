@@ -835,6 +835,9 @@ public final class ModEvents
 
         BlockPos pos = event.getPos();
         World world = event.getWorld();
+        EntityPlayer breaker = event.getPlayer();
+        OneBlockUltima.getLogger().warn("[BreakDebug] onBlockBreak entered at {} by player={} remote={}", pos, breaker != null ? breaker.getName() : "null", world.isRemote);
+        System.out.println("[BreakDebug] onBlockBreak entered at " + pos + " by player=" + (breaker != null ? breaker.getName() : "null") + " remote=" + world.isRemote);
 
         if (processingBlocks.getOrDefault(event.getPos(), false))
         {
@@ -865,17 +868,34 @@ public final class ModEvents
         GeneratedBlockRegistry.GeneratedBlockEntry entry = registry.getEntry(event.getPos());
         if (entry == null)
         {
+            OneBlockUltima.getLogger().warn("[BreakDebug] No generated entry found for broken block {}", event.getPos());
             return;
         }
 
+        OneBlockUltima.getLogger().warn("[BreakDebug] Generated entry found for {} -> generator {} set={} level={}", event.getPos(), entry.generatorPos, entry.setId, entry.level);
+
         TileEntity generatedTile = world.getTileEntity(entry.generatorPos);
+        EntityPlayer player = event.getPlayer();
         if (generatedTile instanceof TileEntityOneBlockGenerator)
         {
             TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) generatedTile;
-            if (!generator.hasAccess(event.getPlayer()))
+            if (player == null)
+            {
+                OneBlockUltima.getLogger().info("[BreakDebug] Non-player break detected at {} for generator {}", event.getPos(), entry.generatorPos);
+                if (!generator.canProcessNonPlayerBreak(world.getTotalWorldTime()))
+                {
+                    OneBlockUltima.getLogger().info("[BreakDebug] Non-player break blocked by cooldown for generator {} at tick {}", entry.generatorPos, world.getTotalWorldTime());
+                    event.setCanceled(true);
+                    return;
+                }
+
+                generator.markNonPlayerBreak(world.getTotalWorldTime());
+                OneBlockUltima.getLogger().info("[BreakDebug] Non-player break accepted for generator {} at tick {}", entry.generatorPos, world.getTotalWorldTime());
+            }
+            else if (!generator.hasAccess(player))
             {
                 event.setCanceled(true);
-                trySendAccessDeniedMessage(event.getPlayer(), entry.generatorPos, world.getTotalWorldTime());
+                trySendAccessDeniedMessage(player, entry.generatorPos, world.getTotalWorldTime());
                 return;
             }
         }
@@ -888,7 +908,17 @@ public final class ModEvents
         registry.remove(event.getPos());
         spawnMobOnBlockBreak(world, event.getPos(), entry);
 
-        EntityPlayer player = event.getPlayer();
+        if (player == null && generatedTile instanceof TileEntityOneBlockGenerator)
+        {
+            TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) generatedTile;
+            OneBlockUltima.getLogger().info("[BreakDebug] Invoking non-player generation for generator {} at tick {}", entry.generatorPos, world.getTotalWorldTime());
+            generator.tryGenerateBlock(true);
+        }
+        else if (player != null)
+        {
+            OneBlockUltima.getLogger().info("[BreakDebug] Player break detected at {} for generator {}", event.getPos(), entry.generatorPos);
+        }
+
         if (player != null)
         {
             IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(player);
@@ -922,7 +952,11 @@ public final class ModEvents
         EntityPlayer player = event.getHarvester();
         if (player == null)
         {
-            return;
+            OneBlockUltima.getLogger().warn("[BreakDebug] onHarvestDrops entered at {} with harvester=null", event.getPos());
+        }
+        else
+        {
+            OneBlockUltima.getLogger().warn("[BreakDebug] onHarvestDrops entered at {} by player={}", event.getPos(), player.getName());
         }
 
         // Получаем стандартные дропы
@@ -964,6 +998,20 @@ public final class ModEvents
             }
         }
 
+        if (player == null)
+        {
+            OneBlockUltima.getLogger().warn("[BreakDebug] Non-player harvest detected at {} for generator {}", event.getPos(), entry.generatorPos);
+            TileEntity generatedTile = event.getWorld().getTileEntity(entry.generatorPos);
+            if (generatedTile instanceof TileEntityOneBlockGenerator)
+            {
+                TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) generatedTile;
+                generator.markNonPlayerBreak(event.getWorld().getTotalWorldTime());
+                generator.tryGenerateBlock(true);
+            }
+            event.getDrops().clear();
+            return;
+        }
+
         // Очищаем все дропы
         event.getDrops().clear();
 
@@ -990,13 +1038,15 @@ public final class ModEvents
     private static boolean isShouldDropBlock(Block block, EntityPlayer player, List<ItemStack> drops) {
         boolean shouldDropBlock = true;
 
+        if (player == null)
+        {
+            return shouldDropBlock;
+        }
+
         // Проверяем на траву
         if (block == Blocks.TALLGRASS || block == Blocks.DOUBLE_PLANT || block == Blocks.DEADBUSH)
         {
-            // Трава не дропается без ножниц
-            // Проверяем, есть ли у игрока ножницы
             ItemStack heldItem = player.getHeldItemMainhand();
-            // noinspection ConstantConditions
             if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
             {
                 shouldDropBlock = false;
@@ -1006,12 +1056,9 @@ public final class ModEvents
         // Проверяем на листья
         if (block == Blocks.LEAVES || block == Blocks.LEAVES2)
         {
-            // Листья дропаются только с ножницами или если есть шанс на саженец
             ItemStack heldItem = player.getHeldItemMainhand();
-            // noinspection ConstantConditions
             if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
             {
-                // Если нет ножниц, проверяем, есть ли дропы (саженцы)
                 boolean hasSapling = false;
                 for (ItemStack drop : drops)
                 {
@@ -1031,9 +1078,7 @@ public final class ModEvents
         // Проверяем на паутину
         if (block == Blocks.WEB)
         {
-            // Паутина дропается только с ножницами
             ItemStack heldItem = player.getHeldItemMainhand();
-            // noinspection ConstantConditions
             if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() != net.minecraft.init.Items.SHEARS)
             {
                 shouldDropBlock = false;
