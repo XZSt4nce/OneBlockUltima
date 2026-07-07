@@ -1008,7 +1008,6 @@ public final class ModEvents
                 generator.markNonPlayerBreak(event.getWorld().getTotalWorldTime());
                 generator.tryGenerateBlock(true);
             }
-            event.getDrops().clear();
             return;
         }
 
