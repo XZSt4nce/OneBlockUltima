@@ -548,7 +548,6 @@ public final class ModEvents
     {
         File worldDir = new File(Minecraft.getMinecraft().mcDataDir, "saves" + File.separator + worldName);
         File iconFile = new File(worldDir, "icon.png");
-        OneBlockUltima.getLogger().info("[MEOW]: {} {}", worldDir, iconFile);
 
         // Если иконка уже есть - не перезаписываем
         if (iconFile.exists())
@@ -837,7 +836,6 @@ public final class ModEvents
         World world = event.getWorld();
         EntityPlayer breaker = event.getPlayer();
         OneBlockUltima.getLogger().warn("[BreakDebug] onBlockBreak entered at {} by player={} remote={}", pos, breaker != null ? breaker.getName() : "null", world.isRemote);
-        System.out.println("[BreakDebug] onBlockBreak entered at " + pos + " by player=" + (breaker != null ? breaker.getName() : "null") + " remote=" + world.isRemote);
 
         if (processingBlocks.getOrDefault(event.getPos(), false))
         {
@@ -906,7 +904,6 @@ public final class ModEvents
         }
 
         registry.remove(event.getPos());
-        spawnMobOnBlockBreak(world, event.getPos(), entry);
 
         if (player == null && generatedTile instanceof TileEntityOneBlockGenerator)
         {
@@ -942,8 +939,10 @@ public final class ModEvents
             return;
         }
 
-        GeneratedBlockRegistry registry = GeneratedBlockRegistry.get(event.getWorld());
-        GeneratedBlockRegistry.GeneratedBlockEntry entry = registry.getEntry(event.getPos());
+        World world = event.getWorld();
+        BlockPos pos = event.getPos();
+        GeneratedBlockRegistry registry = GeneratedBlockRegistry.get(world);
+        GeneratedBlockRegistry.GeneratedBlockEntry entry = registry.getEntry(pos);
         if (entry == null)
         {
             return;
@@ -958,6 +957,8 @@ public final class ModEvents
         {
             OneBlockUltima.getLogger().warn("[BreakDebug] onHarvestDrops entered at {} by player={}", event.getPos(), player.getName());
         }
+
+        spawnMobOnBlockBreak(world, pos, entry);
 
         // Получаем стандартные дропы
         java.util.List<net.minecraft.item.ItemStack> drops = new java.util.ArrayList<>(event.getDrops());
@@ -1001,11 +1002,11 @@ public final class ModEvents
         if (player == null)
         {
             OneBlockUltima.getLogger().warn("[BreakDebug] Non-player harvest detected at {} for generator {}", event.getPos(), entry.generatorPos);
-            TileEntity generatedTile = event.getWorld().getTileEntity(entry.generatorPos);
+            TileEntity generatedTile = world.getTileEntity(entry.generatorPos);
             if (generatedTile instanceof TileEntityOneBlockGenerator)
             {
                 TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) generatedTile;
-                generator.markNonPlayerBreak(event.getWorld().getTotalWorldTime());
+                generator.markNonPlayerBreak(world.getTotalWorldTime());
                 generator.tryGenerateBlock(true);
             }
             return;
@@ -1024,9 +1025,9 @@ public final class ModEvents
             {
                 net.minecraft.entity.item.EntityItem entityItem = new net.minecraft.entity.item.EntityItem(
                         event.getWorld(),
-                        event.getPos().getX() + 0.5D,
-                        event.getPos().getY() + 0.5D,
-                        event.getPos().getZ() + 0.5D,
+                        pos.getX() + 0.5D,
+                        pos.getY() + 0.5D,
+                        pos.getZ() + 0.5D,
                         remaining
                 );
                 event.getWorld().spawnEntity(entityItem);
