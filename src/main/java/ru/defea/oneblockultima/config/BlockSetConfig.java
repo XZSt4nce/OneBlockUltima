@@ -298,6 +298,7 @@ public final class BlockSetConfig
         public boolean disableFluidGeneration = false;
         public boolean disableMobGeneration = false;
         public boolean disableChestGeneration = false;
+        public boolean disableSaplingGeneration = false;
     }
 
     public static class UnlockConditionGroup

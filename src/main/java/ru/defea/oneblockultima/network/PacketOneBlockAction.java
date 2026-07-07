@@ -19,6 +19,7 @@ public class PacketOneBlockAction implements IMessage
         TOGGLE_FLUIDS,
         TOGGLE_MOBS,
         TOGGLE_CHESTS,
+        TOGGLE_SAPLINGS,
         CLAIM_OWNER
     }
 
@@ -122,6 +123,11 @@ public class PacketOneBlockAction implements IMessage
                     else if (message.action == Action.TOGGLE_CHESTS)
                     {
                         container.applyToggleChestGeneration();
+                        player.openContainer.detectAndSendChanges();
+                    }
+                    else if (message.action == Action.TOGGLE_SAPLINGS)
+                    {
+                        container.applyToggleSaplingGeneration();
                         player.openContainer.detectAndSendChanges();
                     }
                 }

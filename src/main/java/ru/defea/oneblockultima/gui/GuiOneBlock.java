@@ -52,6 +52,7 @@ public class GuiOneBlock extends GuiContainer
     private static final int BUTTON_TOGGLE_FLUIDS = 7;
     private static final int BUTTON_TOGGLE_MOBS = 8;
     private static final int BUTTON_TOGGLE_CHESTS = 9;
+    private static final int BUTTON_TOGGLE_SAPLINGS = 10;
     private static final int VIEW_SETS = 0;
     private static final int VIEW_SETTINGS = 1;
 
@@ -72,9 +73,11 @@ public class GuiOneBlock extends GuiContainer
     private GuiButton toggleFluidButton;
     private GuiButton toggleMobsButton;
     private GuiButton toggleChestsButton;
+    private GuiButton toggleSaplingsButton;
     private Boolean pendingDisableFluid = null;
     private Boolean pendingDisableMob = null;
     private Boolean pendingDisableChest = null;
+    private Boolean pendingDisableSapling = null;
     private int activeView = VIEW_SETS;
     private int blockScroll = 0;
     private int mobScroll = 0;
@@ -749,7 +752,8 @@ public class GuiOneBlock extends GuiContainer
         toggleFluidButton = new GuiButton(BUTTON_TOGGLE_FLUIDS, guiLeft + contentLeft, settingsButtonStartY, buttonWidth, buttonHeight, "");
         toggleMobsButton = new GuiButton(BUTTON_TOGGLE_MOBS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY, buttonWidth, buttonHeight, "");
         toggleChestsButton = new GuiButton(BUTTON_TOGGLE_CHESTS, guiLeft + contentLeft, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
-        openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
+        toggleSaplingsButton = new GuiButton(BUTTON_TOGGLE_SAPLINGS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
+        openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + (buttonHeight + buttonGap) * 2, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
 
         buttonList.add(tabSetsButton);
         buttonList.add(tabSettingsButton);
@@ -761,6 +765,7 @@ public class GuiOneBlock extends GuiContainer
         buttonList.add(toggleFluidButton);
         buttonList.add(toggleMobsButton);
         buttonList.add(toggleChestsButton);
+        buttonList.add(toggleSaplingsButton);
         updateViewButtons();
     }
 
@@ -777,6 +782,7 @@ public class GuiOneBlock extends GuiContainer
         if (toggleFluidButton != null) toggleFluidButton.visible = !setsView;
         if (toggleMobsButton != null) toggleMobsButton.visible = !setsView;
         if (toggleChestsButton != null) toggleChestsButton.visible = !setsView;
+        if (toggleSaplingsButton != null) toggleSaplingsButton.visible = !setsView;
 
         TileEntityOneBlockGenerator generator = container.getGenerator();
         if (toggleFluidButton != null)
@@ -805,6 +811,15 @@ public class GuiOneBlock extends GuiContainer
                 disabled = pendingDisableChest;
             }
             toggleChestsButton.displayString = I18n.format("gui.oneblockultima.settings.chests") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
+        }
+        if (toggleSaplingsButton != null)
+        {
+            boolean disabled = generator != null && generator.isDisableSaplingGeneration();
+            if (pendingDisableSapling != null)
+            {
+                disabled = pendingDisableSapling;
+            }
+            toggleSaplingsButton.displayString = I18n.format("gui.oneblockultima.settings.saplings") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
         }
     }
 
@@ -879,6 +894,13 @@ public class GuiOneBlock extends GuiContainer
             container.toggleChestGeneration();
             updateViewButtons();
         }
+        else if (button.id == BUTTON_TOGGLE_SAPLINGS)
+        {
+            boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableSaplingGeneration();
+            pendingDisableSapling = !currentDisabled;
+            container.toggleSaplingGeneration();
+            updateViewButtons();
+        }
         else if (button.id == BUTTON_OPEN_CONFIG_EDITOR)
         {
             mc.displayGuiScreen(new BlockSetConfigGui(this));
@@ -930,6 +952,10 @@ public class GuiOneBlock extends GuiContainer
             if (pendingDisableChest != null && generator.isDisableChestGeneration() == pendingDisableChest)
             {
                 pendingDisableChest = null;
+            }
+            if (pendingDisableSapling != null && generator.isDisableSaplingGeneration() == pendingDisableSapling)
+            {
+                pendingDisableSapling = null;
             }
         }
     }
@@ -1407,7 +1433,7 @@ public class GuiOneBlock extends GuiContainer
 
         if (activeView == VIEW_SETTINGS) {
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
-            drawRect(guiLeft, titleBottom, guiLeft + xSize, tabsBottom + (buttonHeight + buttonGap) * 2 + buttonGap, 0xFF252A30);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize, tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap, 0xFF252A30);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
         }
         else {
