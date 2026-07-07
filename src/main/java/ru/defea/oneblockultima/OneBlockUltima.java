@@ -8,10 +8,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import org.apache.logging.log4j.Logger;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
-import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
-import ru.defea.oneblockultima.command.CommandAddUltimaBalance;
-import ru.defea.oneblockultima.command.CommandDeclineGeneratorInvite;
-import ru.defea.oneblockultima.command.CommandInviteGeneratorMember;
+import ru.defea.oneblockultima.command.*;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
 import ru.defea.oneblockultima.network.ModMessages;
@@ -68,5 +65,6 @@ public class OneBlockUltima
         event.registerServerCommand(new CommandInviteGeneratorMember());
         event.registerServerCommand(new CommandAcceptGeneratorInvite());
         event.registerServerCommand(new CommandDeclineGeneratorInvite());
+        event.registerServerCommand(new CommandSetOwner());
     }
 }

@@ -52,7 +52,7 @@ public class CommandAcceptGeneratorInvite extends CommandBase
         TileEntity tileEntity = world.getTileEntity(generatorPos);
         if (!(tileEntity instanceof TileEntityOneBlockGenerator))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.acceptGeneratorInvite.no_generator")));
+            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.no_generator")));
             return;
         }
 
@@ -76,5 +76,12 @@ public class CommandAcceptGeneratorInvite extends CommandBase
     public int getRequiredPermissionLevel()
     {
         return 0;
+    }
+
+
+    @Override
+    public boolean checkPermission(MinecraftServer server, ICommandSender sender)
+    {
+        return true;
     }
 }

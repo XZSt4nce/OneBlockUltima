@@ -58,7 +58,7 @@ public class CommandInviteGeneratorMember extends CommandBase
         TileEntity tileEntity = world.getTileEntity(generatorPos);
         if (!(tileEntity instanceof TileEntityOneBlockGenerator))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.no_generator")));
+            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.no_generator")));
             return;
         }
 
@@ -72,7 +72,7 @@ public class CommandInviteGeneratorMember extends CommandBase
         EntityPlayerMP target = server.getPlayerList().getPlayerByUsername(args[0]);
         if (target == null)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.player_not_found")));
+            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.player_not_found")));
             return;
         }
 
@@ -102,5 +102,11 @@ public class CommandInviteGeneratorMember extends CommandBase
     public int getRequiredPermissionLevel()
     {
         return 0;
+    }
+
+    @Override
+    public boolean checkPermission(MinecraftServer server, ICommandSender sender)
+    {
+        return true;
     }
 }

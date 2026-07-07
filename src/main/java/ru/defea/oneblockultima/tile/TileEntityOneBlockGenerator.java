@@ -782,10 +782,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
     public void setOwnerId(UUID ownerId)
     {
         this.ownerId = ownerId;
-        if (ownerId != null)
-        {
-            addMember(ownerId);
-        }
+        this.memberIds.clear();
         markDirty();
     }
 
