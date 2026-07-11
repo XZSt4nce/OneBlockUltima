@@ -14,6 +14,9 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.block.BlockCustomPortalFrame;
 import ru.defea.oneblockultima.block.ModBlocks;
+import ru.defea.oneblockultima.item.ModItems;
+
+import java.util.Objects;
 
 @Mod.EventBusSubscriber(value = Side.CLIENT, modid = OneBlockUltima.MODID)
 public final class ModModels
@@ -26,22 +29,32 @@ public final class ModModels
     @SideOnly(Side.CLIENT)
     public static void registerModels(ModelRegistryEvent event)
     {
-        String defaultVariantIn = "inventory";
-        registerBlockModel(ModBlocks.ONE_BLOCK_GENERATOR, defaultVariantIn);
-        registerBlockModel(ModBlocks.CUSTOM_PORTAL_FRAME, defaultVariantIn);
-        registerBlockModel(ModBlocks.CUSTOM_BEDROCK, "normal");
+        for (ModBlocks.RegisterBlock modBlock : ModBlocks.modBlocks)
+        {
+            registerBlockModel(modBlock.getBlock(), modBlock.getVariantIn(), modBlock.getMeta());
+        }
+        for (ModItems.RegisterItem modItems : ModItems.modItems)
+        {
+            registerItemModel(modItems.getItem(), modItems.getVariantIn(), modItems.getMeta());
+        }
         registerCustomPortalFrameStateMapper();
         registerCustomBedrockStateMapper();
     }
 
     @SideOnly(Side.CLIENT)
-    private static void registerBlockModel(net.minecraft.block.Block block, String variantIn)
+    private static void registerBlockModel(net.minecraft.block.Block block, String variantIn, int meta)
     {
         Item item = Item.getItemFromBlock(block);
+        registerItemModel(item, variantIn, meta);
+    }
+
+    @SideOnly(Side.CLIENT)
+    private static void registerItemModel(net.minecraft.item.Item item, String variantIn, int meta)
+    {
         ModelLoader.setCustomModelResourceLocation(
                 item,
-                0,
-                new ModelResourceLocation(block.getRegistryName(), variantIn)
+                meta,
+                new ModelResourceLocation(Objects.requireNonNull(item.getRegistryName()), variantIn)
         );
     }
 

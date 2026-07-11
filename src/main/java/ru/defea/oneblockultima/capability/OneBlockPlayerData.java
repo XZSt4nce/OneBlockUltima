@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima.capability;
 
-import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 
 import java.util.HashMap;

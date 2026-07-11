@@ -14,7 +14,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -115,7 +114,6 @@ public class GuiOneBlock extends GuiContainer
     private final int buttonHeight = 20;
     private final int buttonGap = 6;
     private String clientActiveSetId = null;
-    private boolean hasBrowsedSets = false;
     private int rowInterval;
 
     private final int INNER_PADDING = 6;
@@ -226,7 +224,6 @@ public class GuiOneBlock extends GuiContainer
         mobCols = Math.min(blockCols, 3);
 
         cellPadding = Math.max(1, Math.min(2, blockAreaWidth / 80));
-        cellSize = Math.max(14, Math.min(20, (blockAreaWidth - (blockCols - 1) * cellPadding) / blockCols));
         cellSize = Math.max(14, Math.min(20, (mobAreaWidth - (mobCols - 1) * cellPadding) / mobCols));
     }
 
@@ -287,9 +284,7 @@ public class GuiOneBlock extends GuiContainer
 
             int localMouseX = mouseX - guiLeft;
             int localMouseY = mouseY - guiTop;
-            int hoveredIndex = -1;
             BlockSetConfig.BlockEntryDefinition hoveredEntry = null;
-            ItemStack hoveredStack = ItemStack.EMPTY;
 
             // Рисуем блоки
             for (int row = 0; row < visibleRows; row++)
@@ -315,7 +310,6 @@ public class GuiOneBlock extends GuiContainer
                             localMouseY >= cellY && localMouseY < cellY + cellSize)
                     {
                         isHovered = true;
-                        hoveredIndex = index;
                         hoveredEntry = entry;
                     }
 
@@ -489,7 +483,7 @@ public class GuiOneBlock extends GuiContainer
                         {
                             World mcWorld = Minecraft.getMinecraft().world;
                             testEntity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
-                            if (testEntity != null && testEntity instanceof net.minecraft.entity.EntityLivingBase)
+                            if (testEntity instanceof EntityLivingBase)
                             {
                                 int centerX = cellX + cellSize / 2;
                                 int centerY = cellY + cellSize / 2 + cellPadding;
@@ -708,7 +702,6 @@ public class GuiOneBlock extends GuiContainer
                 visibleSets.add(set);
             }
         }
-        hasBrowsedSets = false;
 
         refreshActiveSetFromGenerator();
 
@@ -840,7 +833,6 @@ public class GuiOneBlock extends GuiContainer
         if (!activeSetId.equals(clientActiveSetId))
         {
             clientActiveSetId = activeSetId;
-            hasBrowsedSets = false;
         }
     }
 
@@ -908,12 +900,10 @@ public class GuiOneBlock extends GuiContainer
         else if (button.id == BUTTON_PREV_SET)
         {
             selectedSetIndex = (selectedSetIndex - 1 + visibleSets.size()) % visibleSets.size();
-            hasBrowsedSets = true;
         }
         else if (button.id == BUTTON_NEXT_SET)
         {
             selectedSetIndex = (selectedSetIndex + 1) % visibleSets.size();
-            hasBrowsedSets = true;
         }
         else if (button.id == BUTTON_SELECT_SET)
         {
@@ -1165,7 +1155,7 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredMobEntryLeft != null)
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<String>();
+                java.util.List<String> tooltip = new java.util.ArrayList<>();
                 String mobName = hoveredMobNameLeft;
                 if (mobName == null || mobName.isEmpty())
                 {
@@ -1205,7 +1195,7 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredMobEntryRight != null)
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<String>();
+                java.util.List<String> tooltip = new java.util.ArrayList<>();
                 String mobName = hoveredMobNameRight;
                 if (mobName == null || mobName.isEmpty())
                 {
@@ -1250,9 +1240,11 @@ public class GuiOneBlock extends GuiContainer
         int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
         if (currentLevel > 0) return; // Если разблокирован - не показываем условия
 
-        String prefix = "all".equalsIgnoreCase(set.unlockConditions.mode) ?
-                I18n.format("gui.oneblockultima.conditions.require_all") :
-                I18n.format("gui.oneblockultima.conditions.require_any");
+        if ("all".equalsIgnoreCase(set.unlockConditions.mode)) {
+            I18n.format("gui.oneblockultima.conditions.require_all");
+        } else {
+            I18n.format("gui.oneblockultima.conditions.require_any");
+        }
 
         // Центрируем текст
         String title = I18n.format("gui.oneblockultima.unlock_conditions");
@@ -1384,7 +1376,6 @@ public class GuiOneBlock extends GuiContainer
                 {
                     int maxScroll = getMaxMobScroll(set, nextLevel);
                     mobScrollNext = Math.max(0, Math.min(mobScrollNext + delta, maxScroll));
-                    return;
                 }
             }
         }

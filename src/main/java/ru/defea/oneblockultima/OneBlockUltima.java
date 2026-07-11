@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima;
 
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -23,7 +24,9 @@ import ru.defea.oneblockultima.world.OneBlockWorldType;
 public class OneBlockUltima
 {
     public static final String MODID = "oneblockultima";
-    public static final String NAME = "OneBlock Ultima";
+    public static final String NAME = "OneBlockUltima";
+
+    public static final CreativeTabs modTab = new ModTab(NAME);
 
     @Mod.Instance(MODID)
     public static OneBlockUltima instance;
