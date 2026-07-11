@@ -1,23 +1,21 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
 import net.minecraft.init.Blocks;
+import net.minecraft.init.Bootstrap;
 import net.minecraft.util.math.BlockPos;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.block.ModBlocks;
-import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
 import ru.defea.oneblockultima.command.CommandDeclineGeneratorInvite;
 import ru.defea.oneblockultima.command.CommandInviteGeneratorMember;
 import ru.defea.oneblockultima.config.BlockSetConfig;
+import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class BlockSetConfigUnlockConditionTest
 {

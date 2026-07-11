@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    },
+    {
+      "item": "oneblockultima:compressed_end_stone_1x"
+    }
+  ],
+  "result": {
+    "item": "oneblockultima:compressed_end_stone_2x"
+  }
+}

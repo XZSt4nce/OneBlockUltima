@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima.command;
 
+import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -9,7 +10,6 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
-import net.minecraft.client.resources.I18n;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 

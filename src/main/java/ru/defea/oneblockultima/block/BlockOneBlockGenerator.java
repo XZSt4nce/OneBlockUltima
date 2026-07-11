@@ -42,7 +42,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         setHardness(-1.0F);
         setResistance(6000000.0F);
         setHarvestLevel("pickaxe", 0);
-        setCreativeTab(net.minecraft.creativetab.CreativeTabs.MISC);
+        setCreativeTab(OneBlockUltima.modTab);
         setRegistryName(OneBlockUltima.MODID, "one_block_generator");
         setUnlocalizedName("one_block_generator");
         this.setLightOpacity(0);
@@ -140,7 +140,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     @Override
     public boolean canSustainPlant(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing direction, IPlantable plantable)
     {
-        if (plantable == null || direction != EnumFacing.UP)
+        if (direction != EnumFacing.UP)
         {
             return false;
         }
