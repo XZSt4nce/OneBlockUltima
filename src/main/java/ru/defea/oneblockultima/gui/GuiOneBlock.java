@@ -95,8 +95,8 @@ public class GuiOneBlock extends GuiContainer
 
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
 
-    private int cellSize = 18;
-    private int cellPadding = 1;
+    private static int cellSize = 18;
+    private static int cellPadding = 1;
     private int blockCols = 4;
     private int mobCols = 2;
     private final int SCROLLBAR_WIDTH = 6;
@@ -533,7 +533,6 @@ public class GuiOneBlock extends GuiContainer
         }
     }
 
-    // Все остальные методы остаются без изменений
     private static void drawEntityOnScreen(int posX, int posY, int scale, Entity entity)
     {
         if (!(entity instanceof EntityLivingBase)) return;
@@ -555,8 +554,10 @@ public class GuiOneBlock extends GuiContainer
         try
         {
             GlStateManager.translate(posX, posY, 50.0F);
-            float sizeScale = (float) scale * 0.45F;
-            GlStateManager.scale(-sizeScale, sizeScale, sizeScale);
+
+            float finalScale = getScale(scale, ent);
+
+            GlStateManager.scale(-finalScale, finalScale, finalScale);
             GlStateManager.rotate(170.0F, 0.3F, 0.0F, 1.0F);
 
             ent.renderYawOffset = 0.0F;
@@ -612,6 +613,13 @@ public class GuiOneBlock extends GuiContainer
             ent.prevLimbSwingAmount = origPrevLimbSwingAmount;
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         }
+    }
+
+    private static float getScale(int scale, EntityLivingBase ent) {
+        scale = scale / 2 - cellPadding;
+        float heightScale = scale / ent.height;
+        float widthScale = scale / ent.width;
+        return Math.min(heightScale, widthScale);
     }
 
     private static void renderBlockModelToGUI(net.minecraft.block.state.IBlockState state, int x, int y, int size)
