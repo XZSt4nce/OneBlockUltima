@@ -353,7 +353,7 @@ public final class BlockSetConfig
         public List<MobElementDefinition> mobs = new ArrayList<>();
 
         // transient cache for computed levels
-        private transient java.util.Map<Integer, SetLevelDefinition> computedLevels = null;
+        public transient java.util.Map<Integer, SetLevelDefinition> computedLevels = null;
 
         public boolean isAvailable()
         {
@@ -426,7 +426,7 @@ public final class BlockSetConfig
             return max;
         }
 
-        private void ensureComputedLevels()
+        public void ensureComputedLevels()
         {
             if (computedLevels != null) return;
 

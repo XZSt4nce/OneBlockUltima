@@ -35,9 +35,11 @@ import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class GuiOneBlock extends GuiContainer
 {
@@ -95,7 +97,7 @@ public class GuiOneBlock extends GuiContainer
 
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
 
-    private static int cellSize = 18;
+    private int cellSize = 18;
     private static int cellPadding = 1;
     private int blockCols = 4;
     private int mobCols = 2;
@@ -118,6 +120,11 @@ public class GuiOneBlock extends GuiContainer
 
     private final int INNER_PADDING = 6;
     private final int SECTION_GAP = 8;
+
+    // Поля для процедурного фона
+    private List<BlockSetConfig.BlockEntryDefinition> backgroundBlocks = new ArrayList<>();
+    private int backgroundTextureSize = 32;
+    private boolean backgroundInitialized = false;
 
     public GuiOneBlock(EntityPlayer player, World world, BlockPos generatorPos)
     {
@@ -247,6 +254,251 @@ public class GuiOneBlock extends GuiContainer
         return panelHeight - rowInterval * 2 - cellSize;
     }
 
+    // ==================== МЕТОДЫ ДЛЯ ПРОЦЕДУРНОГО ФОНА ====================
+
+    private void initBackgroundBlocks()
+    {
+        backgroundBlocks.clear();
+
+        BlockSetConfig.BlockSetDefinition currentSet = getBlockSetDefinition();
+
+        if (currentSet != null)
+        {
+            currentSet.ensureComputedLevels();
+            Map<Integer, BlockSetConfig.SetLevelDefinition> levels = currentSet.computedLevels;
+            if (levels != null)
+            {
+                for (BlockSetConfig.SetLevelDefinition level : levels.values())
+                {
+                    if (level.blocks == null) continue;
+                    for (BlockSetConfig.BlockEntryDefinition block : level.blocks)
+                    {
+                        if (block == null) continue;
+
+                        net.minecraft.block.Block mcBlock = block.resolveBlock();
+                        if (mcBlock == null) continue;
+
+                        // Проверяем, что это полноразмерный блок
+                        if (!isFullBlock(mcBlock, block.meta)) continue;
+
+                        backgroundBlocks.add(block);
+                    }
+                }
+            }
+        }
+
+        if (backgroundBlocks.isEmpty())
+        {
+            OneBlockUltima.getLogger().warn("No blocks found for background, adding defaults");
+            addDefaultBackgroundBlocks();
+        }
+
+        backgroundInitialized = true;
+    }
+
+    private boolean isFullBlock(net.minecraft.block.Block block, int meta)
+    {
+        try
+        {
+            // Проверяем, есть ли у блока предмет (некоторые блоки не имеют предмета)
+            net.minecraft.item.Item item = net.minecraft.item.Item.getItemFromBlock(block);
+            if (item == Items.AIR)
+            {
+                return false;
+            }
+
+            // Получаем состояние блока
+            net.minecraft.block.state.IBlockState state = null;
+            try
+            {
+                state = block.getStateFromMeta(meta);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    state = block.getDefaultState();
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (state == null) return false;
+
+            return block.isFullBlock(state) && block.isFullCube(state);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    private void addDefaultBackgroundBlocks()
+    {
+        // Добавляем только полноразмерные блоки
+        addBlockIfFull("minecraft:stone", 0);
+        addBlockIfFull("minecraft:dirt", 0);
+        addBlockIfFull("minecraft:cobblestone", 0);
+        addBlockIfFull("minecraft:planks", 0);
+        addBlockIfFull("minecraft:sand", 0);
+        addBlockIfFull("minecraft:gravel", 0);
+        addBlockIfFull("minecraft:netherrack", 0);
+        addBlockIfFull("minecraft:end_stone", 0);
+        addBlockIfFull("minecraft:bricks", 0);
+        addBlockIfFull("minecraft:stonebrick", 0);
+        addBlockIfFull("minecraft:quartz_block", 0);
+    }
+
+    private void addBlockIfFull(String registry, int meta)
+    {
+        try
+        {
+            net.minecraft.block.Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(registry));
+            if (block != null && isFullBlock(block, meta))
+            {
+                backgroundBlocks.add(createBlockEntry(registry, meta));
+            }
+        }
+        catch (Exception ignored) {}
+    }
+
+    private BlockSetConfig.BlockEntryDefinition createBlockEntry(String registry, int meta)
+    {
+        BlockSetConfig.BlockEntryDefinition entry = new BlockSetConfig.BlockEntryDefinition();
+        entry.registry = registry;
+        entry.meta = meta;
+        entry.chance = 100;
+        return entry;
+    }
+
+    private void renderProceduralBackground(int startX, int startY, int width, int height)
+    {
+        if (backgroundBlocks.isEmpty() || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        int totalBlocks = backgroundBlocks.size();
+        int texSize = backgroundTextureSize;
+
+        int cols = (width + texSize - 1) / texSize;
+        int rows = (height + texSize - 1) / texSize;
+
+        // Добавляем небольшой запас для плавного движения
+        int extraCols = 2;
+        int extraRows = 2;
+
+        for (int row = -extraRows; row <= rows + extraRows; row++)
+        {
+            for (int col = -extraCols; col <= cols + extraCols; col++)
+            {
+                int blockIndex = ((row + col) * 7 + col * 3) % totalBlocks;
+                if (blockIndex < 0) blockIndex += totalBlocks;
+
+                BlockSetConfig.BlockEntryDefinition entry = backgroundBlocks.get(blockIndex);
+                if (entry == null) continue;
+
+                int x = startX + col * texSize;
+                int y = startY + row * texSize;
+
+                // Обрезаем по координатам - если текстура выходит за границы, рисуем только видимую часть
+                int drawX = Math.max(startX, x);
+                int drawY = Math.max(startY, y);
+                int drawX2 = Math.min(startX + width, x + texSize);
+                int drawY2 = Math.min(startY + height, y + texSize);
+
+                if (drawX >= drawX2 || drawY >= drawY2) continue;
+
+                // Вычисляем UV координаты для обрезанной части
+                float u1 = (drawX - x) / (float)texSize;
+                float v1 = (drawY - y) / (float)texSize;
+                float u2 = (drawX2 - x) / (float)texSize;
+                float v2 = (drawY2 - y) / (float)texSize;
+
+                renderBlockAsBackgroundClipped(entry, drawX, drawY, drawX2 - drawX, drawY2 - drawY, u1, v1, u2, v2);
+            }
+        }
+    }
+
+    private void renderBlockAsBackgroundClipped(BlockSetConfig.BlockEntryDefinition entry, int x, int y, int width, int height, float u1, float v1, float u2, float v2)
+    {
+        try
+        {
+            Minecraft mc = Minecraft.getMinecraft();
+            net.minecraft.block.Block block = entry.resolveBlock();
+            if (block == null) return;
+
+            net.minecraft.block.state.IBlockState state = null;
+            try
+            {
+                state = block.getStateFromMeta(entry.meta);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    state = block.getDefaultState();
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (state == null) return;
+
+            BlockRendererDispatcher blockRenderer = mc.getBlockRendererDispatcher();
+            TextureAtlasSprite sprite = null;
+
+            try
+            {
+                sprite = blockRenderer.getBlockModelShapes().getTexture(state);
+            }
+            catch (Exception ignored) {}
+
+            if (sprite == null)
+            {
+                try
+                {
+                    sprite = mc.getTextureMapBlocks().getAtlasSprite(block.getRegistryName().toString());
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (sprite == null) return;
+
+            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+
+            // Интерполируем UV координаты
+            float minU = sprite.getMinU();
+            float maxU = sprite.getMaxU();
+            float minV = sprite.getMinV();
+            float maxV = sprite.getMaxV();
+
+            float uMin = minU + (maxU - minU) * u1;
+            float uMax = minU + (maxU - minU) * u2;
+            float vMin = minV + (maxV - minV) * v1;
+            float vMax = minV + (maxV - minV) * v2;
+
+            GlStateManager.enableAlpha();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+
+            Tessellator tess = Tessellator.getInstance();
+            BufferBuilder buf = tess.getBuffer();
+            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
+            buf.pos(x, y + height, 0.0D).tex(uMin, vMax).endVertex();
+            buf.pos(x + width, y + height, 0.0D).tex(uMax, vMax).endVertex();
+            buf.pos(x + width, y, 0.0D).tex(uMax, vMin).endVertex();
+            buf.pos(x, y, 0.0D).tex(uMin, vMin).endVertex();
+            tess.draw();
+
+            GlStateManager.disableBlend();
+            GlStateManager.disableAlpha();
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+        catch (Exception ignored) {}
+    }
+
+    // ==================== ОСТАЛЬНЫЕ МЕТОДЫ ====================
+
     private void renderLevelPanel(BlockSetConfig.SetLevelDefinition levelDefinition, int panelX, int panelY, boolean isLeft, int mouseX, int mouseY)
     {
         if (levelDefinition == null) return;
@@ -286,7 +538,6 @@ public class GuiOneBlock extends GuiContainer
             int localMouseY = mouseY - guiTop;
             BlockSetConfig.BlockEntryDefinition hoveredEntry = null;
 
-            // Рисуем блоки
             for (int row = 0; row < visibleRows; row++)
             {
                 for (int col = 0; col < blockCols; col++)
@@ -360,8 +611,8 @@ public class GuiOneBlock extends GuiContainer
                         int iconX = cellX + (cellSize - 16) / 2;
                         int iconY = cellY + (cellSize - 16) / 2;
 
-                        RenderItem itemRender = Minecraft.getMinecraft().getRenderItem();
-                        itemRender.renderItemAndEffectIntoGUI(stack, iconX, iconY);
+                        RenderItem renderItem = Minecraft.getMinecraft().getRenderItem();
+                        renderItem.renderItemAndEffectIntoGUI(stack, iconX, iconY);
 
                         GlStateManager.disableDepth();
                         RenderHelper.disableStandardItemLighting();
@@ -421,7 +672,6 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
 
-            // Скроллбар для блоков - рисуем его ВНУТРИ области
             int maxScrollBlocks = Math.max(0, rows - visibleRows);
             if (maxScrollBlocks > 0)
             {
@@ -429,10 +679,8 @@ public class GuiOneBlock extends GuiContainer
                 renderScrollBar(blockScrollbarX, gridStartY, areaHeight, localBlockScroll, maxScrollBlocks);
             }
 
-            // --- Мобы ---
             if (levelDefinition.mobs != null && !levelDefinition.mobs.isEmpty())
             {
-                // Заголовок мобов - слева от сетки мобов
                 fontRenderer.drawString(I18n.format("gui.oneblockultima.mobs") + ":",
                         mobsStartX, panelY + rowInterval, 0xA0B0C0);
 
@@ -450,7 +698,6 @@ public class GuiOneBlock extends GuiContainer
                     mobScrollNext = localMobScroll;
                 }
 
-                // Рисуем мобов
                 for (int row = 0; row < mobVisibleRows; row++)
                 {
                     for (int col = 0; col < mobCols; col++)
@@ -523,7 +770,6 @@ public class GuiOneBlock extends GuiContainer
                     }
                 }
 
-                // Скроллбар для мобов
                 if (mobMaxScroll > 0)
                 {
                     int mobScrollbarX = mobsStartX + mobsAreaWidth + 2;
@@ -616,7 +862,7 @@ public class GuiOneBlock extends GuiContainer
     }
 
     private static float getScale(int scale, EntityLivingBase ent) {
-        scale = scale / 2 - cellPadding;
+        scale = scale / 2 - cellPadding * 2;
         float heightScale = scale / ent.height;
         float widthScale = scale / ent.width;
         return Math.min(heightScale, widthScale);
@@ -702,6 +948,7 @@ public class GuiOneBlock extends GuiContainer
         this.xSize = this.width - 40;
         this.ySize = this.height - 40;
         super.initGui();
+
         visibleSets.clear();
         for (BlockSetConfig.BlockSetDefinition set : BlockSetConfig.get().getSets())
         {
@@ -730,6 +977,7 @@ public class GuiOneBlock extends GuiContainer
         updateLayoutMetrics();
         buttonList.clear();
         rowInterval = fontRenderer.FONT_HEIGHT + 4;
+
         int tabGap = xSize / 24;
         int tabWidth = xSize / 5;
         int totalTabWidth = tabWidth * 2 + tabGap;
@@ -768,6 +1016,9 @@ public class GuiOneBlock extends GuiContainer
         buttonList.add(toggleChestsButton);
         buttonList.add(toggleSaplingsButton);
         updateViewButtons();
+
+        // Инициализируем фон ПОСЛЕ того, как выбран набор
+        initBackgroundBlocks();
     }
 
     private void updateViewButtons()
@@ -841,6 +1092,8 @@ public class GuiOneBlock extends GuiContainer
         if (!activeSetId.equals(clientActiveSetId))
         {
             clientActiveSetId = activeSetId;
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
     }
 
@@ -908,10 +1161,14 @@ public class GuiOneBlock extends GuiContainer
         else if (button.id == BUTTON_PREV_SET)
         {
             selectedSetIndex = (selectedSetIndex - 1 + visibleSets.size()) % visibleSets.size();
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
         else if (button.id == BUTTON_NEXT_SET)
         {
             selectedSetIndex = (selectedSetIndex + 1) % visibleSets.size();
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
         else if (button.id == BUTTON_SELECT_SET)
         {
@@ -919,6 +1176,8 @@ public class GuiOneBlock extends GuiContainer
             if (selectedSet != null)
             {
                 container.selectSet(selectedSet.id);
+                // Обновляем фон при выборе набора
+                initBackgroundBlocks();
             }
         }
         else if (button.id == BUTTON_UPGRADE_SET)
@@ -927,6 +1186,8 @@ public class GuiOneBlock extends GuiContainer
             if (selectedSet != null)
             {
                 container.upgradeSet(selectedSet.id);
+                // Обновляем фон при улучшении
+                initBackgroundBlocks();
             }
         }
     }
@@ -1010,7 +1271,6 @@ public class GuiOneBlock extends GuiContainer
             fontRenderer.drawString(activeSetString + ":", rightTextX, infoRowY, 0xA0B0C0);
             fontRenderer.drawString(activeSetName, rightTextX, infoRowY + fontRenderer.FONT_HEIGHT + 2, 0xFFFFFF);
 
-            // Центральная часть - условия разблокировки для выбранного набора
             if (!visibleSets.isEmpty())
             {
                 BlockSetConfig.BlockSetDefinition set = getBlockSetDefinition();
@@ -1019,15 +1279,12 @@ public class GuiOneBlock extends GuiContainer
                     if (data != null)
                     {
                         int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
-                        // Показываем условия только если набор НЕ разблокирован
                         if (currentLevel <= 0 && set.unlockConditions != null &&
                                 !set.unlockConditions.conditions.isEmpty())
                         {
-                            // Вычисляем центр
                             int totalWidth = contentWidth;
                             int centerX = contentLeft + totalWidth / 2;
 
-                            // Находим максимальную ширину текста условий
                             int maxConditionWidth = 0;
                             for (BlockSetConfig.UnlockConditionDefinition condition : set.unlockConditions.conditions)
                             {
@@ -1037,15 +1294,12 @@ public class GuiOneBlock extends GuiContainer
                                 if (width > maxConditionWidth) maxConditionWidth = width;
                             }
 
-                            // Добавляем отступы для заголовка
                             String unlockConditionsTitle = I18n.format("gui.oneblockultima.unlock_conditions");
                             int titleWidth = fontRenderer.getStringWidth(unlockConditionsTitle);
                             if (titleWidth > maxConditionWidth) maxConditionWidth = titleWidth;
 
-                            // Увеличиваем немного для комфорта
                             maxConditionWidth += 20;
 
-                            // Рисуем условия по центру
                             int conditionsX = centerX - maxConditionWidth / 2;
                             int conditionsY = infoRowY;
                             drawUnlockConditions(set, conditionsX, conditionsY, maxConditionWidth, generator);
@@ -1146,7 +1400,7 @@ public class GuiOneBlock extends GuiContainer
 
             if (hoveredEntryLeft == null && hoveredStackLeft.isEmpty() && hoveredMobEntryLeft == null &&
                     hoveredEntryRight == null && hoveredStackRight.isEmpty() && hoveredMobEntryRight == null) {
-                return; // Нечего показывать
+                return;
             }
 
             if (!hoveredStackLeft.isEmpty())
@@ -1240,21 +1494,12 @@ public class GuiOneBlock extends GuiContainer
             return;
         }
 
-        // Получаем данные игрока
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
         if (data == null) return;
 
-        // Проверяем, разблокирован ли уже набор
         int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
-        if (currentLevel > 0) return; // Если разблокирован - не показываем условия
+        if (currentLevel > 0) return;
 
-        if ("all".equalsIgnoreCase(set.unlockConditions.mode)) {
-            I18n.format("gui.oneblockultima.conditions.require_all");
-        } else {
-            I18n.format("gui.oneblockultima.conditions.require_any");
-        }
-
-        // Центрируем текст
         String title = I18n.format("gui.oneblockultima.unlock_conditions");
         int titleWidth = fontRenderer.getStringWidth(title);
         int startX = x + (maxWidth - titleWidth) / 2;
@@ -1271,7 +1516,6 @@ public class GuiOneBlock extends GuiContainer
             String status = satisfied ? " ✓" : " ✗";
             String fullText = " - " + conditionText + status;
 
-            // Центрируем каждое условие
             int textWidth = fontRenderer.getStringWidth(fullText);
             int textX = x + (maxWidth - textWidth) / 2;
             fontRenderer.drawString(fullText, textX, y, color);
@@ -1279,7 +1523,6 @@ public class GuiOneBlock extends GuiContainer
         }
     }
 
-    // 2. Исправленный метод formatUnlockCondition
     private String formatUnlockCondition(BlockSetConfig.UnlockConditionDefinition condition, IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
     {
         if (condition == null) return "";
@@ -1309,7 +1552,6 @@ public class GuiOneBlock extends GuiContainer
         {
             return visibleSets.get(selectedSetIndex);
         }
-
         return null;
     }
 
@@ -1431,15 +1673,43 @@ public class GuiOneBlock extends GuiContainer
         int setContentBottom = this.height - guiTop;
 
         if (activeView == VIEW_SETTINGS) {
+            // 1. Рисуем фон из блоков
+            renderProceduralBackground(
+                    guiLeft,
+                    titleBottom,
+                    xSize,
+                    tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap - titleBottom
+            );
+
+            // 2. Рисуем полупрозрачный тёмный фон поверх
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
-            drawRect(guiLeft, titleBottom, guiLeft + xSize, tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap, 0xFF252A30);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize,
+                    tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap, 0xCC1F2328);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
         }
         else {
+            // 1. Рисуем фон из блоков для области info
+            renderProceduralBackground(
+                    guiLeft,
+                    titleBottom,
+                    xSize,
+                    infoBottom - titleBottom
+            );
+
+            // 2. Рисуем фон из блоков для области content
+            renderProceduralBackground(
+                    guiLeft,
+                    infoBottom,
+                    xSize,
+                    setContentBottom - infoBottom
+            );
+
+            // 3. Рисуем полупрозрачный тёмный фон поверх
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
-            drawRect(guiLeft, titleBottom, guiLeft + xSize, infoBottom, 0xFF252A30);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize, infoBottom, 0xCC1F2328);
+            drawRect(guiLeft, infoBottom, guiLeft + xSize, setContentBottom, 0xCC1F2328);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
-            drawRect(guiLeft, infoBottom, guiLeft + xSize, setContentBottom, 0xFF1F2328);
+            drawRect(guiLeft, infoBottom, guiLeft + xSize, infoBottom + 1, 0xFF2E3A45);
         }
     }
 
