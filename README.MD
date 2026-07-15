@@ -33,7 +33,7 @@
 <ol>
     <li>Скачай и установи <a href="https://files.minecraftforge.net/net/minecraftforge/forge">Minecraft Forge</a></li>
     <li>Скачай мод</li>
-    <li>Не распаковывая поместите по пути .minecraft\mods</li>
+    <li>Не распаковывая поместите по пути C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\AppData\Roaming\.minecraft\mods</li>
     <li>Готово</li>
 </ol>
 
