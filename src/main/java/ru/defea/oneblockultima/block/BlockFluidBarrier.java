@@ -32,7 +32,6 @@ public class BlockFluidBarrier extends Block
     @Override
     public RayTraceResult collisionRayTrace(IBlockState blockState, World worldIn, BlockPos pos, Vec3d start, Vec3d end)
     {
-        // Не даём игроку кликать по блоку
         return null;
     }
 
@@ -52,14 +51,12 @@ public class BlockFluidBarrier extends Block
     @Override
     public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos)
     {
-        // Нет коллизии для сущностей
         return NULL_AABB;
     }
 
     @Override
     public void addCollisionBoxToList(IBlockState state, World worldIn, BlockPos pos, AxisAlignedBB entityBox, java.util.List<AxisAlignedBB> collidingBoxes, @Nullable Entity entityIn, boolean p_185477_7_)
     {
-        // Не добавляем коллизию
     }
 
     @Override
@@ -77,21 +74,18 @@ public class BlockFluidBarrier extends Block
     @Override
     public boolean isFullBlock(IBlockState state)
     {
-        // ВАЖНО: чтобы вода не проходила
         return true;
     }
 
     @Override
     public boolean isPassable(IBlockAccess worldIn, BlockPos pos)
     {
-        // Сущности проходят сквозь
         return true;
     }
 
     @Override
     public boolean isReplaceable(IBlockAccess worldIn, BlockPos pos)
     {
-        // Можно заменить другим блоком
         return true;
     }
 

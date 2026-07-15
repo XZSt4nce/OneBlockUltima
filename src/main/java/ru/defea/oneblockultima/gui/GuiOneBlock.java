@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
@@ -14,7 +13,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -27,7 +25,6 @@ import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
-import ru.defea.oneblockultima.BlockSetConfigGui;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
@@ -36,9 +33,9 @@ import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+
+import static ru.defea.oneblockultima.util.ModelUtil.*;
 
 public class GuiOneBlock extends GuiContainer
 {
@@ -52,6 +49,7 @@ public class GuiOneBlock extends GuiContainer
     private static final int BUTTON_TOGGLE_FLUIDS = 7;
     private static final int BUTTON_TOGGLE_MOBS = 8;
     private static final int BUTTON_TOGGLE_CHESTS = 9;
+    private static final int BUTTON_TOGGLE_SAPLINGS = 10;
     private static final int VIEW_SETS = 0;
     private static final int VIEW_SETTINGS = 1;
 
@@ -72,9 +70,11 @@ public class GuiOneBlock extends GuiContainer
     private GuiButton toggleFluidButton;
     private GuiButton toggleMobsButton;
     private GuiButton toggleChestsButton;
+    private GuiButton toggleSaplingsButton;
     private Boolean pendingDisableFluid = null;
     private Boolean pendingDisableMob = null;
     private Boolean pendingDisableChest = null;
+    private Boolean pendingDisableSapling = null;
     private int activeView = VIEW_SETS;
     private int blockScroll = 0;
     private int mobScroll = 0;
@@ -112,11 +112,14 @@ public class GuiOneBlock extends GuiContainer
     private final int buttonHeight = 20;
     private final int buttonGap = 6;
     private String clientActiveSetId = null;
-    private boolean hasBrowsedSets = false;
     private int rowInterval;
 
     private final int INNER_PADDING = 6;
     private final int SECTION_GAP = 8;
+
+    // Поля для процедурного фона
+    private final List<BlockSetConfig.BlockEntryDefinition> backgroundBlocks = new ArrayList<>();
+    private final int backgroundTextureSize = 32;
 
     public GuiOneBlock(EntityPlayer player, World world, BlockPos generatorPos)
     {
@@ -217,13 +220,11 @@ public class GuiOneBlock extends GuiContainer
         int blockAreaWidth = Math.max(40, halfWidth - 8);
         int mobAreaWidth = Math.max(40, halfWidth - 8);
 
-        int maxBlockCols = Math.max(2, blockAreaWidth / 20);
-        blockCols = Math.min(6, maxBlockCols);
+        blockCols = Math.max(2, blockAreaWidth / 20);
 
-        mobCols = Math.min(blockCols, 3);
+        mobCols = blockCols;
 
         cellPadding = Math.max(1, Math.min(2, blockAreaWidth / 80));
-        cellSize = Math.max(14, Math.min(20, (blockAreaWidth - (blockCols - 1) * cellPadding) / blockCols));
         cellSize = Math.max(14, Math.min(20, (mobAreaWidth - (mobCols - 1) * cellPadding) / mobCols));
     }
 
@@ -246,6 +247,249 @@ public class GuiOneBlock extends GuiContainer
     private int getAreaHeight() {
         return panelHeight - rowInterval * 2 - cellSize;
     }
+
+    // ==================== МЕТОДЫ ДЛЯ ПРОЦЕДУРНОГО ФОНА ====================
+
+    private void initBackgroundBlocks()
+    {
+        backgroundBlocks.clear();
+
+        BlockSetConfig.BlockSetDefinition currentSet = getBlockSetDefinition();
+
+        if (currentSet != null)
+        {
+            currentSet.ensureComputedLevels();
+            Map<Integer, BlockSetConfig.SetLevelDefinition> levels = currentSet.computedLevels;
+            if (levels != null)
+            {
+                for (BlockSetConfig.SetLevelDefinition level : levels.values())
+                {
+                    if (level.blocks == null) continue;
+                    for (BlockSetConfig.BlockEntryDefinition block : level.blocks)
+                    {
+                        if (block == null) continue;
+
+                        net.minecraft.block.Block mcBlock = block.resolveBlock();
+                        if (mcBlock == null) continue;
+
+                        // Проверяем, что это полноразмерный блок
+                        if (!isFullBlock(mcBlock, block.meta)) continue;
+
+                        backgroundBlocks.add(block);
+                    }
+                }
+            }
+        }
+
+        if (backgroundBlocks.isEmpty())
+        {
+            OneBlockUltima.getLogger().warn("No blocks found for background, adding defaults");
+            addDefaultBackgroundBlocks();
+        }
+    }
+
+    private boolean isFullBlock(net.minecraft.block.Block block, int meta)
+    {
+        try
+        {
+            // Проверяем, есть ли у блока предмет (некоторые блоки не имеют предмета)
+            net.minecraft.item.Item item = net.minecraft.item.Item.getItemFromBlock(block);
+            if (item == Items.AIR)
+            {
+                return false;
+            }
+
+            // Получаем состояние блока
+            net.minecraft.block.state.IBlockState state = null;
+            try
+            {
+                state = block.getStateFromMeta(meta);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    state = block.getDefaultState();
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (state == null) return false;
+
+            return block.isFullBlock(state) && block.isFullCube(state);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    private void addDefaultBackgroundBlocks()
+    {
+        // Добавляем только полноразмерные блоки
+        addBlockIfFull("minecraft:stone", 0);
+        addBlockIfFull("minecraft:dirt", 0);
+        addBlockIfFull("minecraft:cobblestone", 0);
+        addBlockIfFull("minecraft:planks", 0);
+        addBlockIfFull("minecraft:sand", 0);
+        addBlockIfFull("minecraft:gravel", 0);
+        addBlockIfFull("minecraft:netherrack", 0);
+        addBlockIfFull("minecraft:end_stone", 0);
+        addBlockIfFull("minecraft:bricks", 0);
+        addBlockIfFull("minecraft:stonebrick", 0);
+        addBlockIfFull("minecraft:quartz_block", 0);
+    }
+
+    private void addBlockIfFull(String registry, int meta)
+    {
+        try
+        {
+            net.minecraft.block.Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(registry));
+            if (block != null && isFullBlock(block, meta))
+            {
+                backgroundBlocks.add(createBlockEntry(registry, meta));
+            }
+        }
+        catch (Exception ignored) {}
+    }
+
+    private BlockSetConfig.BlockEntryDefinition createBlockEntry(String registry, int meta)
+    {
+        BlockSetConfig.BlockEntryDefinition entry = new BlockSetConfig.BlockEntryDefinition();
+        entry.registry = registry;
+        entry.meta = meta;
+        entry.chance = 100;
+        return entry;
+    }
+
+    private void renderProceduralBackground(int startX, int startY, int width, int height)
+    {
+        if (backgroundBlocks.isEmpty() || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        int totalBlocks = backgroundBlocks.size();
+        int texSize = backgroundTextureSize;
+
+        int cols = (width + texSize - 1) / texSize;
+        int rows = (height + texSize - 1) / texSize;
+
+        // Добавляем небольшой запас для плавного движения
+        int extraCols = 2;
+        int extraRows = 2;
+
+        for (int row = -extraRows; row <= rows + extraRows; row++)
+        {
+            for (int col = -extraCols; col <= cols + extraCols; col++)
+            {
+                int blockIndex = ((row + col) * 7 + col * 3) % totalBlocks;
+                if (blockIndex < 0) blockIndex += totalBlocks;
+
+                BlockSetConfig.BlockEntryDefinition entry = backgroundBlocks.get(blockIndex);
+                if (entry == null) continue;
+
+                int x = startX + col * texSize;
+                int y = startY + row * texSize;
+
+                // Обрезаем по координатам - если текстура выходит за границы, рисуем только видимую часть
+                int drawX = Math.max(startX, x);
+                int drawY = Math.max(startY, y);
+                int drawX2 = Math.min(startX + width, x + texSize);
+                int drawY2 = Math.min(startY + height, y + texSize);
+
+                if (drawX >= drawX2 || drawY >= drawY2) continue;
+
+                // Вычисляем UV координаты для обрезанной части
+                float u1 = (drawX - x) / (float)texSize;
+                float v1 = (drawY - y) / (float)texSize;
+                float u2 = (drawX2 - x) / (float)texSize;
+                float v2 = (drawY2 - y) / (float)texSize;
+
+                renderBlockAsBackgroundClipped(entry, drawX, drawY, drawX2 - drawX, drawY2 - drawY, u1, v1, u2, v2);
+            }
+        }
+    }
+
+    private void renderBlockAsBackgroundClipped(BlockSetConfig.BlockEntryDefinition entry, int x, int y, int width, int height, float u1, float v1, float u2, float v2)
+    {
+        try
+        {
+            Minecraft mc = Minecraft.getMinecraft();
+            net.minecraft.block.Block block = entry.resolveBlock();
+            if (block == null) return;
+
+            net.minecraft.block.state.IBlockState state = null;
+            try
+            {
+                state = block.getStateFromMeta(entry.meta);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    state = block.getDefaultState();
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (state == null) return;
+
+            BlockRendererDispatcher blockRenderer = mc.getBlockRendererDispatcher();
+            TextureAtlasSprite sprite = null;
+
+            try
+            {
+                sprite = blockRenderer.getBlockModelShapes().getTexture(state);
+            }
+            catch (Exception ignored) {}
+
+            if (sprite == null)
+            {
+                try
+                {
+                    sprite = mc.getTextureMapBlocks().getAtlasSprite(Objects.requireNonNull(block.getRegistryName()).toString());
+                }
+                catch (Exception ignored) {}
+            }
+
+            if (sprite == null) return;
+
+            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+
+            // Интерполируем UV координаты
+            float minU = sprite.getMinU();
+            float maxU = sprite.getMaxU();
+            float minV = sprite.getMinV();
+            float maxV = sprite.getMaxV();
+
+            float uMin = minU + (maxU - minU) * u1;
+            float uMax = minU + (maxU - minU) * u2;
+            float vMin = minV + (maxV - minV) * v1;
+            float vMax = minV + (maxV - minV) * v2;
+
+            GlStateManager.enableAlpha();
+            GlStateManager.enableBlend();
+            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+
+            Tessellator tess = Tessellator.getInstance();
+            BufferBuilder buf = tess.getBuffer();
+            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
+            buf.pos(x, y + height, 0.0D).tex(uMin, vMax).endVertex();
+            buf.pos(x + width, y + height, 0.0D).tex(uMax, vMax).endVertex();
+            buf.pos(x + width, y, 0.0D).tex(uMax, vMin).endVertex();
+            buf.pos(x, y, 0.0D).tex(uMin, vMin).endVertex();
+            tess.draw();
+
+            GlStateManager.disableBlend();
+            GlStateManager.disableAlpha();
+            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        }
+        catch (Exception ignored) {}
+    }
+
+    // ==================== ОСТАЛЬНЫЕ МЕТОДЫ ====================
 
     private void renderLevelPanel(BlockSetConfig.SetLevelDefinition levelDefinition, int panelX, int panelY, boolean isLeft, int mouseX, int mouseY)
     {
@@ -284,11 +528,8 @@ public class GuiOneBlock extends GuiContainer
 
             int localMouseX = mouseX - guiLeft;
             int localMouseY = mouseY - guiTop;
-            int hoveredIndex = -1;
             BlockSetConfig.BlockEntryDefinition hoveredEntry = null;
-            ItemStack hoveredStack = ItemStack.EMPTY;
 
-            // Рисуем блоки
             for (int row = 0; row < visibleRows; row++)
             {
                 for (int col = 0; col < blockCols; col++)
@@ -312,7 +553,6 @@ public class GuiOneBlock extends GuiContainer
                             localMouseY >= cellY && localMouseY < cellY + cellSize)
                     {
                         isHovered = true;
-                        hoveredIndex = index;
                         hoveredEntry = entry;
                     }
 
@@ -363,8 +603,8 @@ public class GuiOneBlock extends GuiContainer
                         int iconX = cellX + (cellSize - 16) / 2;
                         int iconY = cellY + (cellSize - 16) / 2;
 
-                        RenderItem itemRender = Minecraft.getMinecraft().getRenderItem();
-                        itemRender.renderItemAndEffectIntoGUI(stack, iconX, iconY);
+                        RenderItem renderItem = Minecraft.getMinecraft().getRenderItem();
+                        renderItem.renderItemAndEffectIntoGUI(stack, iconX, iconY);
 
                         GlStateManager.disableDepth();
                         RenderHelper.disableStandardItemLighting();
@@ -424,7 +664,6 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
 
-            // Скроллбар для блоков - рисуем его ВНУТРИ области
             int maxScrollBlocks = Math.max(0, rows - visibleRows);
             if (maxScrollBlocks > 0)
             {
@@ -432,10 +671,8 @@ public class GuiOneBlock extends GuiContainer
                 renderScrollBar(blockScrollbarX, gridStartY, areaHeight, localBlockScroll, maxScrollBlocks);
             }
 
-            // --- Мобы ---
             if (levelDefinition.mobs != null && !levelDefinition.mobs.isEmpty())
             {
-                // Заголовок мобов - слева от сетки мобов
                 fontRenderer.drawString(I18n.format("gui.oneblockultima.mobs") + ":",
                         mobsStartX, panelY + rowInterval, 0xA0B0C0);
 
@@ -453,7 +690,6 @@ public class GuiOneBlock extends GuiContainer
                     mobScrollNext = localMobScroll;
                 }
 
-                // Рисуем мобов
                 for (int row = 0; row < mobVisibleRows; row++)
                 {
                     for (int col = 0; col < mobCols; col++)
@@ -481,16 +717,16 @@ public class GuiOneBlock extends GuiContainer
                         drawRect(cellX, cellY, cellX + 1, cellY + cellSize, mobBorderColor);
                         drawRect(cellX + cellSize - 1, cellY, cellX + cellSize, cellY + cellSize, mobBorderColor);
 
-                        Entity testEntity = null;
+                        Entity entity = null;
                         try
                         {
                             World mcWorld = Minecraft.getMinecraft().world;
-                            testEntity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
-                            if (testEntity != null && testEntity instanceof net.minecraft.entity.EntityLivingBase)
+                            entity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
+                            if (entity instanceof EntityLivingBase)
                             {
                                 int centerX = cellX + cellSize / 2;
                                 int centerY = cellY + cellSize / 2 + cellPadding;
-                                drawEntityOnScreen(centerX, centerY, 18, testEntity);
+                                drawEntityOnScreen(centerX, centerY, entity, cellSize - 2 * cellPadding);
                             }
                         }
                         catch (Exception ignored) { }
@@ -501,18 +737,18 @@ public class GuiOneBlock extends GuiContainer
                             {
                                 hoveredMobEntryLeft = mobEntry;
                                 hoveredMobNameLeft = null;
-                                if (testEntity != null)
+                                if (entity != null)
                                 {
-                                    try { hoveredMobNameLeft = testEntity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
+                                    try { hoveredMobNameLeft = entity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
                                 }
                             }
                             else
                             {
                                 hoveredMobEntryRight = mobEntry;
                                 hoveredMobNameRight = null;
-                                if (testEntity != null)
+                                if (entity != null)
                                 {
-                                    try { hoveredMobNameRight = testEntity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
+                                    try { hoveredMobNameRight = entity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
                                 }
                             }
                         }
@@ -526,7 +762,6 @@ public class GuiOneBlock extends GuiContainer
                     }
                 }
 
-                // Скроллбар для мобов
                 if (mobMaxScroll > 0)
                 {
                     int mobScrollbarX = mobsStartX + mobsAreaWidth + 2;
@@ -534,159 +769,6 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
         }
-    }
-
-    // Все остальные методы остаются без изменений
-    private static void drawEntityOnScreen(int posX, int posY, int scale, Entity entity)
-    {
-        if (!(entity instanceof EntityLivingBase)) return;
-        EntityLivingBase ent = (EntityLivingBase) entity;
-
-        float origRenderYawOffset = ent.renderYawOffset;
-        float origPrevRotationYaw = ent.prevRotationYaw;
-        float origRotationYaw = ent.rotationYaw;
-        float origRotationYawHead = ent.rotationYawHead;
-        float origPrevRotationYawHead = ent.prevRotationYawHead;
-        float origRotationPitch = ent.rotationPitch;
-        float origPrevRotationPitch = ent.prevRotationPitch;
-        float origLimbSwing = ent.limbSwing;
-        float origLimbSwingAmount = ent.limbSwingAmount;
-        float origPrevLimbSwingAmount = ent.prevLimbSwingAmount;
-
-        GlStateManager.enableColorMaterial();
-        GlStateManager.pushMatrix();
-        try
-        {
-            GlStateManager.translate(posX, posY, 50.0F);
-            float sizeScale = (float) scale * 0.45F;
-            GlStateManager.scale(-sizeScale, sizeScale, sizeScale);
-            GlStateManager.rotate(170.0F, 0.3F, 0.0F, 1.0F);
-
-            ent.renderYawOffset = 0.0F;
-            ent.prevRotationYaw = 0.0F;
-            ent.rotationYaw = 0.0F;
-            ent.rotationYawHead = 0.0F;
-            ent.prevRotationYawHead = 0.0F;
-            ent.rotationPitch = 0.0F;
-            ent.prevRotationPitch = 0.0F;
-            ent.limbSwing = 0.0F;
-            ent.limbSwingAmount = 0.0F;
-            ent.prevLimbSwingAmount = 0.0F;
-
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableRescaleNormal();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableDepth();
-            GlStateManager.enableCull();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-
-            RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
-            float prevPlayerViewY = renderManager.playerViewY;
-            renderManager.setPlayerViewY(180.0F);
-            renderManager.setRenderShadow(false);
-            renderManager.renderEntity(ent, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-            renderManager.setRenderShadow(true);
-            renderManager.setPlayerViewY(prevPlayerViewY);
-
-            GlStateManager.disableCull();
-            GlStateManager.disableDepth();
-            GlStateManager.disableRescaleNormal();
-        }
-        catch (Exception ignored) { }
-        finally
-        {
-            GlStateManager.popMatrix();
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
-            GlStateManager.disableTexture2D();
-            GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
-            GlStateManager.disableColorMaterial();
-            GlStateManager.disableLighting();
-
-            ent.renderYawOffset = origRenderYawOffset;
-            ent.prevRotationYaw = origPrevRotationYaw;
-            ent.rotationYaw = origRotationYaw;
-            ent.rotationYawHead = origRotationYawHead;
-            ent.prevRotationYawHead = origPrevRotationYawHead;
-            ent.rotationPitch = origRotationPitch;
-            ent.prevRotationPitch = origPrevRotationPitch;
-            ent.limbSwing = origLimbSwing;
-            ent.limbSwingAmount = origLimbSwingAmount;
-            ent.prevLimbSwingAmount = origPrevLimbSwingAmount;
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        }
-    }
-
-    private static void renderBlockModelToGUI(net.minecraft.block.state.IBlockState state, int x, int y, int size)
-    {
-        try
-        {
-            Minecraft mc = Minecraft.getMinecraft();
-            BlockRendererDispatcher blockRenderer = mc.getBlockRendererDispatcher();
-
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 100.0F);
-            GlStateManager.scale(size / 16.0F, size / 16.0F, size / 16.0F);
-            GlStateManager.rotate(180F, 1F, 0F, 0F);
-            RenderHelper.enableGUIStandardItemLighting();
-            blockRenderer.renderBlockBrightness(state, 1.0F);
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.popMatrix();
-        }
-        catch (Exception ignored) { }
-    }
-
-    private static void renderFluidSprite(net.minecraftforge.fluids.Fluid fluid, int x, int y, int w, int h)
-    {
-        if (fluid == null) return;
-        Minecraft mc = Minecraft.getMinecraft();
-        TextureAtlasSprite sprite = null;
-        try
-        {
-            ResourceLocation tex = fluid.getStill();
-            if (tex == null) tex = fluid.getFlowing();
-            if (tex != null)
-            {
-                TextureMap map = mc.getTextureMapBlocks();
-                sprite = map.getAtlasSprite(tex.toString());
-            }
-        }
-        catch (Exception ignored) { }
-
-        if (sprite == null) return;
-
-        try
-        {
-            GlStateManager.pushMatrix();
-            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-
-            float minU = sprite.getMinU();
-            float maxU = sprite.getMaxU();
-            float minV = sprite.getMinV();
-            float maxV = sprite.getMaxV();
-
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-
-            Tessellator tess = Tessellator.getInstance();
-            BufferBuilder buf = tess.getBuffer();
-            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-            buf.pos(x, y + h, 0.0D).tex(minU, maxV).endVertex();
-            buf.pos(x + w, y + h, 0.0D).tex(maxU, maxV).endVertex();
-            buf.pos(x + w, y, 0.0D).tex(maxU, minV).endVertex();
-            buf.pos(x, y, 0.0D).tex(minU, minV).endVertex();
-            tess.draw();
-
-            GlStateManager.disableBlend();
-            GlStateManager.disableAlpha();
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-            GlStateManager.popMatrix();
-        }
-        catch (Exception ignored) { }
     }
 
     @Override
@@ -697,6 +779,7 @@ public class GuiOneBlock extends GuiContainer
         this.xSize = this.width - 40;
         this.ySize = this.height - 40;
         super.initGui();
+
         visibleSets.clear();
         for (BlockSetConfig.BlockSetDefinition set : BlockSetConfig.get().getSets())
         {
@@ -705,7 +788,6 @@ public class GuiOneBlock extends GuiContainer
                 visibleSets.add(set);
             }
         }
-        hasBrowsedSets = false;
 
         refreshActiveSetFromGenerator();
 
@@ -726,6 +808,7 @@ public class GuiOneBlock extends GuiContainer
         updateLayoutMetrics();
         buttonList.clear();
         rowInterval = fontRenderer.FONT_HEIGHT + 4;
+
         int tabGap = xSize / 24;
         int tabWidth = xSize / 5;
         int totalTabWidth = tabWidth * 2 + tabGap;
@@ -749,7 +832,8 @@ public class GuiOneBlock extends GuiContainer
         toggleFluidButton = new GuiButton(BUTTON_TOGGLE_FLUIDS, guiLeft + contentLeft, settingsButtonStartY, buttonWidth, buttonHeight, "");
         toggleMobsButton = new GuiButton(BUTTON_TOGGLE_MOBS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY, buttonWidth, buttonHeight, "");
         toggleChestsButton = new GuiButton(BUTTON_TOGGLE_CHESTS, guiLeft + contentLeft, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
-        openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
+        toggleSaplingsButton = new GuiButton(BUTTON_TOGGLE_SAPLINGS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
+        openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + (buttonHeight + buttonGap) * 2, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
 
         buttonList.add(tabSetsButton);
         buttonList.add(tabSettingsButton);
@@ -761,7 +845,11 @@ public class GuiOneBlock extends GuiContainer
         buttonList.add(toggleFluidButton);
         buttonList.add(toggleMobsButton);
         buttonList.add(toggleChestsButton);
+        buttonList.add(toggleSaplingsButton);
         updateViewButtons();
+
+        // Инициализируем фон ПОСЛЕ того, как выбран набор
+        initBackgroundBlocks();
     }
 
     private void updateViewButtons()
@@ -777,6 +865,7 @@ public class GuiOneBlock extends GuiContainer
         if (toggleFluidButton != null) toggleFluidButton.visible = !setsView;
         if (toggleMobsButton != null) toggleMobsButton.visible = !setsView;
         if (toggleChestsButton != null) toggleChestsButton.visible = !setsView;
+        if (toggleSaplingsButton != null) toggleSaplingsButton.visible = !setsView;
 
         TileEntityOneBlockGenerator generator = container.getGenerator();
         if (toggleFluidButton != null)
@@ -806,6 +895,15 @@ public class GuiOneBlock extends GuiContainer
             }
             toggleChestsButton.displayString = I18n.format("gui.oneblockultima.settings.chests") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
         }
+        if (toggleSaplingsButton != null)
+        {
+            boolean disabled = generator != null && generator.isDisableSaplingGeneration();
+            if (pendingDisableSapling != null)
+            {
+                disabled = pendingDisableSapling;
+            }
+            toggleSaplingsButton.displayString = I18n.format("gui.oneblockultima.settings.saplings") + ": " + (disabled ? I18n.format("gui.oneblockultima.settings.disabled") : I18n.format("gui.oneblockultima.settings.enabled"));
+        }
     }
 
     private void refreshActiveSetFromGenerator()
@@ -825,20 +923,14 @@ public class GuiOneBlock extends GuiContainer
         if (!activeSetId.equals(clientActiveSetId))
         {
             clientActiveSetId = activeSetId;
-            hasBrowsedSets = false;
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
     }
 
     private String getLocalizedSetName(BlockSetConfig.BlockSetDefinition set)
     {
-        if (set == null || set.id == null)
-        {
-            return "-";
-        }
-
-        String key = "gui.oneblockultima.set." + set.id;
-        String localized = I18n.format(key);
-        return localized.equals(key) ? set.id : localized;
+        return GuiSetsConfig.getLocalizedSetNameStatic(set);
     }
 
     @Override
@@ -879,19 +971,28 @@ public class GuiOneBlock extends GuiContainer
             container.toggleChestGeneration();
             updateViewButtons();
         }
+        else if (button.id == BUTTON_TOGGLE_SAPLINGS)
+        {
+            boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableSaplingGeneration();
+            pendingDisableSapling = !currentDisabled;
+            container.toggleSaplingGeneration();
+            updateViewButtons();
+        }
         else if (button.id == BUTTON_OPEN_CONFIG_EDITOR)
         {
-            mc.displayGuiScreen(new BlockSetConfigGui(this));
+            mc.displayGuiScreen(new GuiSetsConfig(this));
         }
         else if (button.id == BUTTON_PREV_SET)
         {
             selectedSetIndex = (selectedSetIndex - 1 + visibleSets.size()) % visibleSets.size();
-            hasBrowsedSets = true;
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
         else if (button.id == BUTTON_NEXT_SET)
         {
             selectedSetIndex = (selectedSetIndex + 1) % visibleSets.size();
-            hasBrowsedSets = true;
+            // Обновляем фон при смене набора
+            initBackgroundBlocks();
         }
         else if (button.id == BUTTON_SELECT_SET)
         {
@@ -899,6 +1000,8 @@ public class GuiOneBlock extends GuiContainer
             if (selectedSet != null)
             {
                 container.selectSet(selectedSet.id);
+                // Обновляем фон при выборе набора
+                initBackgroundBlocks();
             }
         }
         else if (button.id == BUTTON_UPGRADE_SET)
@@ -907,6 +1010,8 @@ public class GuiOneBlock extends GuiContainer
             if (selectedSet != null)
             {
                 container.upgradeSet(selectedSet.id);
+                // Обновляем фон при улучшении
+                initBackgroundBlocks();
             }
         }
     }
@@ -930,6 +1035,10 @@ public class GuiOneBlock extends GuiContainer
             if (pendingDisableChest != null && generator.isDisableChestGeneration() == pendingDisableChest)
             {
                 pendingDisableChest = null;
+            }
+            if (pendingDisableSapling != null && generator.isDisableSaplingGeneration() == pendingDisableSapling)
+            {
+                pendingDisableSapling = null;
             }
         }
     }
@@ -986,7 +1095,6 @@ public class GuiOneBlock extends GuiContainer
             fontRenderer.drawString(activeSetString + ":", rightTextX, infoRowY, 0xA0B0C0);
             fontRenderer.drawString(activeSetName, rightTextX, infoRowY + fontRenderer.FONT_HEIGHT + 2, 0xFFFFFF);
 
-            // Центральная часть - условия разблокировки для выбранного набора
             if (!visibleSets.isEmpty())
             {
                 BlockSetConfig.BlockSetDefinition set = getBlockSetDefinition();
@@ -995,15 +1103,12 @@ public class GuiOneBlock extends GuiContainer
                     if (data != null)
                     {
                         int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
-                        // Показываем условия только если набор НЕ разблокирован
                         if (currentLevel <= 0 && set.unlockConditions != null &&
                                 !set.unlockConditions.conditions.isEmpty())
                         {
-                            // Вычисляем центр
                             int totalWidth = contentWidth;
                             int centerX = contentLeft + totalWidth / 2;
 
-                            // Находим максимальную ширину текста условий
                             int maxConditionWidth = 0;
                             for (BlockSetConfig.UnlockConditionDefinition condition : set.unlockConditions.conditions)
                             {
@@ -1013,15 +1118,12 @@ public class GuiOneBlock extends GuiContainer
                                 if (width > maxConditionWidth) maxConditionWidth = width;
                             }
 
-                            // Добавляем отступы для заголовка
                             String unlockConditionsTitle = I18n.format("gui.oneblockultima.unlock_conditions");
                             int titleWidth = fontRenderer.getStringWidth(unlockConditionsTitle);
                             if (titleWidth > maxConditionWidth) maxConditionWidth = titleWidth;
 
-                            // Увеличиваем немного для комфорта
                             maxConditionWidth += 20;
 
-                            // Рисуем условия по центру
                             int conditionsX = centerX - maxConditionWidth / 2;
                             int conditionsY = infoRowY;
                             drawUnlockConditions(set, conditionsX, conditionsY, maxConditionWidth, generator);
@@ -1122,7 +1224,7 @@ public class GuiOneBlock extends GuiContainer
 
             if (hoveredEntryLeft == null && hoveredStackLeft.isEmpty() && hoveredMobEntryLeft == null &&
                     hoveredEntryRight == null && hoveredStackRight.isEmpty() && hoveredMobEntryRight == null) {
-                return; // Нечего показывать
+                return;
             }
 
             if (!hoveredStackLeft.isEmpty())
@@ -1139,7 +1241,7 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredMobEntryLeft != null)
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<String>();
+                java.util.List<String> tooltip = new java.util.ArrayList<>();
                 String mobName = hoveredMobNameLeft;
                 if (mobName == null || mobName.isEmpty())
                 {
@@ -1179,7 +1281,7 @@ public class GuiOneBlock extends GuiContainer
             }
             else if (hoveredMobEntryRight != null)
             {
-                java.util.List<String> tooltip = new java.util.ArrayList<String>();
+                java.util.List<String> tooltip = new java.util.ArrayList<>();
                 String mobName = hoveredMobNameRight;
                 if (mobName == null || mobName.isEmpty())
                 {
@@ -1216,19 +1318,12 @@ public class GuiOneBlock extends GuiContainer
             return;
         }
 
-        // Получаем данные игрока
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
         if (data == null) return;
 
-        // Проверяем, разблокирован ли уже набор
         int currentLevel = generator == null ? 0 : generator.getSetLevel(set.id);
-        if (currentLevel > 0) return; // Если разблокирован - не показываем условия
+        if (currentLevel > 0) return;
 
-        String prefix = "all".equalsIgnoreCase(set.unlockConditions.mode) ?
-                I18n.format("gui.oneblockultima.conditions.require_all") :
-                I18n.format("gui.oneblockultima.conditions.require_any");
-
-        // Центрируем текст
         String title = I18n.format("gui.oneblockultima.unlock_conditions");
         int titleWidth = fontRenderer.getStringWidth(title);
         int startX = x + (maxWidth - titleWidth) / 2;
@@ -1245,7 +1340,6 @@ public class GuiOneBlock extends GuiContainer
             String status = satisfied ? " ✓" : " ✗";
             String fullText = " - " + conditionText + status;
 
-            // Центрируем каждое условие
             int textWidth = fontRenderer.getStringWidth(fullText);
             int textX = x + (maxWidth - textWidth) / 2;
             fontRenderer.drawString(fullText, textX, y, color);
@@ -1253,7 +1347,6 @@ public class GuiOneBlock extends GuiContainer
         }
     }
 
-    // 2. Исправленный метод formatUnlockCondition
     private String formatUnlockCondition(BlockSetConfig.UnlockConditionDefinition condition, IOneBlockPlayerData data, TileEntityOneBlockGenerator generator)
     {
         if (condition == null) return "";
@@ -1283,7 +1376,6 @@ public class GuiOneBlock extends GuiContainer
         {
             return visibleSets.get(selectedSetIndex);
         }
-
         return null;
     }
 
@@ -1358,7 +1450,6 @@ public class GuiOneBlock extends GuiContainer
                 {
                     int maxScroll = getMaxMobScroll(set, nextLevel);
                     mobScrollNext = Math.max(0, Math.min(mobScrollNext + delta, maxScroll));
-                    return;
                 }
             }
         }
@@ -1406,15 +1497,44 @@ public class GuiOneBlock extends GuiContainer
         int setContentBottom = this.height - guiTop;
 
         if (activeView == VIEW_SETTINGS) {
+            // 1. Рисуем фон из блоков
+            int remainingHeight = tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap - titleBottom;
+            renderProceduralBackground(
+                    guiLeft,
+                    titleBottom,
+                    xSize,
+                    remainingHeight
+            );
+
+            // 2. Рисуем полупрозрачный тёмный фон поверх
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
-            drawRect(guiLeft, titleBottom, guiLeft + xSize, tabsBottom + (buttonHeight + buttonGap) * 2 + buttonGap, 0xFF252A30);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize,
+                    remainingHeight + titleBottom, 0xCC1F2328);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
         }
         else {
+            // 1. Рисуем фон из блоков для области info
+            renderProceduralBackground(
+                    guiLeft,
+                    titleBottom,
+                    xSize,
+                    infoBottom - titleBottom
+            );
+
+            // 2. Рисуем фон из блоков для области content
+            renderProceduralBackground(
+                    guiLeft,
+                    infoBottom,
+                    xSize,
+                    setContentBottom - infoBottom
+            );
+
+            // 3. Рисуем полупрозрачный тёмный фон поверх
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
-            drawRect(guiLeft, titleBottom, guiLeft + xSize, infoBottom, 0xFF252A30);
+            drawRect(guiLeft, titleBottom, guiLeft + xSize, infoBottom, 0xCC1F2328);
+            drawRect(guiLeft, infoBottom, guiLeft + xSize, setContentBottom, 0xCC1F2328);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
-            drawRect(guiLeft, infoBottom, guiLeft + xSize, setContentBottom, 0xFF1F2328);
+            drawRect(guiLeft, infoBottom, guiLeft + xSize, infoBottom + 1, 0xFF2E3A45);
         }
     }
 

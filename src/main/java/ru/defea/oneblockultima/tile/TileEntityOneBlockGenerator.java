@@ -19,16 +19,10 @@ import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.util.BlockUtil;
-import java.util.HashMap;
-import java.util.Map;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class TileEntityOneBlockGenerator extends TileEntity
 {
@@ -42,6 +36,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
     private boolean disableFluidGeneration = false;
     private boolean disableMobGeneration = false;
     private boolean disableChestGeneration = false;
+    private boolean disableSaplingGeneration = false;
     private final Map<String, Integer> setLevels = new HashMap<>();
     private long lastNonPlayerBreakTick = Long.MIN_VALUE;
     private boolean nonPlayerBreakCooldownActive = false;
@@ -374,6 +369,10 @@ public class TileEntityOneBlockGenerator extends TileEntity
         {
             return false;
         }
+        if (disableSaplingGeneration && isSaplingEntry(entry))
+        {
+            return false;
+        }
         return true;
     }
 
@@ -385,6 +384,16 @@ public class TileEntityOneBlockGenerator extends TileEntity
         }
         String registry = entry.registry.toLowerCase(Locale.ROOT);
         return registry.contains("chest") || registry.contains("barrel");
+    }
+
+    private boolean isSaplingEntry(BlockSetConfig.BlockEntryDefinition entry)
+    {
+        if (entry == null || entry.registry == null)
+        {
+            return false;
+        }
+        String registry = entry.registry.toLowerCase(Locale.ROOT);
+        return registry.contains("sapling");
     }
 
     private int resolveGenerationLevel()
@@ -478,6 +487,17 @@ public class TileEntityOneBlockGenerator extends TileEntity
     public boolean isDisableChestGeneration()
     {
         return disableChestGeneration;
+    }
+
+    public void setDisableSaplingGeneration(boolean disableSaplingGeneration)
+    {
+        this.disableSaplingGeneration = disableSaplingGeneration;
+        markDirty();
+    }
+
+    public boolean isDisableSaplingGeneration()
+    {
+        return disableSaplingGeneration;
     }
 
     public void setSelectedSetId(String selectedSetId)
@@ -782,10 +802,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
     public void setOwnerId(UUID ownerId)
     {
         this.ownerId = ownerId;
-        if (ownerId != null)
-        {
-            addMember(ownerId);
-        }
+        this.memberIds.clear();
         markDirty();
     }
 
@@ -797,6 +814,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
         compound.setBoolean("disableFluidGeneration", disableFluidGeneration);
         compound.setBoolean("disableMobGeneration", disableMobGeneration);
         compound.setBoolean("disableChestGeneration", disableChestGeneration);
+        compound.setBoolean("disableSaplingGeneration", disableSaplingGeneration);
         if (ownerId != null)
         {
             compound.setUniqueId("ownerId", ownerId);
@@ -855,6 +873,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
         disableFluidGeneration = compound.getBoolean("disableFluidGeneration");
         disableMobGeneration = compound.getBoolean("disableMobGeneration");
         disableChestGeneration = compound.getBoolean("disableChestGeneration");
+        disableSaplingGeneration = compound.getBoolean("disableSaplingGeneration");
         if (compound.hasUniqueId("ownerId"))
         {
             ownerId = compound.getUniqueId("ownerId");

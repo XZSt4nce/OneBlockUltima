@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima.command;
 
+import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -28,7 +29,7 @@ public class CommandAddUltimaBalance extends CommandBase
     {
         if (args.length != 1)
         {
-            sender.sendMessage(new TextComponentTranslation("command.addUltimaBalance.usage", getUsage(sender)));
+            sender.sendMessage(new TextComponentTranslation("§c" + I18n.format("command.usage"), getUsage(sender)));
             return;
         }
 

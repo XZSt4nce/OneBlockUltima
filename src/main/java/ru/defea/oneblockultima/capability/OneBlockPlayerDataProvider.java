@@ -4,8 +4,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumFacing;
 import net.minecraftforge.common.capabilities.*;
-import ru.defea.oneblockultima.OneBlockUltima;
-import scala.Int;
 
 import javax.annotation.Nullable;
 import java.util.Map;

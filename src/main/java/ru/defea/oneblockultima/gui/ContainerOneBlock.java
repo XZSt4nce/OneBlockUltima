@@ -3,7 +3,6 @@ package ru.defea.oneblockultima.gui;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
@@ -55,27 +54,27 @@ public class ContainerOneBlock extends Container
         return playerIn.getDistanceSq(generatorPos.getX() + 0.5D, generatorPos.getY() + 0.5D, generatorPos.getZ() + 0.5D) <= 64.0D;
     }
 
-    public boolean selectSet(String setId)
+    public void selectSet(String setId)
     {
         if (world.isRemote)
         {
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.SELECT_SET, setId));
-            return true; // Возвращаем true, чтобы клиент не показывал ошибку
+            return; // Возвращаем true, чтобы клиент не показывал ошибку
         }
 
-        return applySelectSet(setId);
+        applySelectSet(setId);
     }
 
-    public boolean upgradeSet(String setId)
+    public void upgradeSet(String setId)
     {
         if (world.isRemote)
         {
             applyLocalBalancePreview(setId);
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.UPGRADE_SET, setId));
-            return true; // Возвращаем true, чтобы клиент не показывал ошибку
+            return; // Возвращаем true, чтобы клиент не показывал ошибку
         }
 
-        return applyUpgradeSet(setId);
+        applyUpgradeSet(setId);
     }
 
     private void applyLocalBalancePreview(String setId)
@@ -115,40 +114,51 @@ public class ContainerOneBlock extends Container
         ModEvents.syncDisplayedCurrency(player, data.getCurrency());
     }
 
-    public boolean toggleFluidGeneration()
+    public void toggleFluidGeneration()
     {
         if (world.isRemote)
         {
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_FLUIDS, ""));
-            return true;
+            return;
         }
 
-        return applyToggleFluidGeneration();
+        applyToggleFluidGeneration();
     }
 
-    public boolean toggleMobGeneration()
+    public void toggleMobGeneration()
     {
         if (world.isRemote)
         {
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_MOBS, ""));
-            return true;
+            return;
         }
 
-        return applyToggleMobGeneration();
+        applyToggleMobGeneration();
     }
 
-    public boolean toggleChestGeneration()
+    public void toggleChestGeneration()
     {
         if (world.isRemote)
         {
             ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_CHESTS, ""));
-            return true;
+            return;
         }
 
-        return applyToggleChestGeneration();
+        applyToggleChestGeneration();
     }
 
-    public boolean applySelectSet(String setId)
+    public void toggleSaplingGeneration()
+    {
+        if (world.isRemote)
+        {
+            ModMessages.sendToServer(new PacketOneBlockAction(generatorPos, PacketOneBlockAction.Action.TOGGLE_SAPLINGS, ""));
+            return;
+        }
+
+        applyToggleSaplingGeneration();
+    }
+
+    public void applySelectSet(String setId)
     {
         System.out.println("[OneBlock] applySelectSet called with setId: " + setId);
 
@@ -156,21 +166,21 @@ public class ContainerOneBlock extends Container
         if (generator == null)
         {
             System.out.println("[OneBlock] Generator is NULL!");
-            return false;
+            return;
         }
 
         BlockSetConfig.BlockSetDefinition set = BlockSetConfig.get().getSet(setId);
         if (set == null)
         {
             System.out.println("[OneBlock] Set is NULL in config!");
-            return false;
+            return;
         }
 
         int currentLevel = generator.getSetLevel(setId);
         if (currentLevel <= 0)
         {
             System.out.println("[OneBlock] Set not unlocked! Level: " + currentLevel);
-            return false;
+            return;
         }
 
         // Проверяем, не выбран ли уже этот набор
@@ -178,7 +188,7 @@ public class ContainerOneBlock extends Container
         if (setId.equals(currentSelected))
         {
             System.out.println("[OneBlock] Set already selected: " + setId);
-            return false;
+            return;
         }
 
         System.out.println("[OneBlock] Setting selectedSetId on generator...");
@@ -186,11 +196,15 @@ public class ContainerOneBlock extends Container
         if (!generator.ensureOwnership(player.getUniqueID()))
         {
             generator.setSelectedSetId(currentSelected);
-            return false;
+            return;
         }
 
         System.out.println("[OneBlock] Generator selectedSetId is now: " + generator.getSelectedSetId());
 
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         detectAndSendChanges();
 
         if (player instanceof EntityPlayerMP)
@@ -207,7 +221,6 @@ public class ContainerOneBlock extends Container
             // Синхронизируем данные игрока
             PacketSyncPlayerData.sendToPlayer(player);
         }
-        return true;
     }
 
     public boolean applyUpgradeSet(String setId)
@@ -236,7 +249,7 @@ public class ContainerOneBlock extends Container
         {
             System.out.println("[OneBlock] Player data is NULL!");
             if (player instanceof EntityPlayerMP)
-            return false;
+                return false;
         }
 
         int currentLevel = generator.getSetLevel(setId);
@@ -386,57 +399,71 @@ public class ContainerOneBlock extends Container
         return true;
     }
 
-    public boolean applyToggleFluidGeneration()
+    public void applyToggleFluidGeneration()
     {
         TileEntityOneBlockGenerator generator = getGenerator();
         if (generator == null)
         {
-            return false;
+            return;
         }
 
         generator.setDisableFluidGeneration(!generator.isDisableFluidGeneration());
-        if (player instanceof EntityPlayerMP)
+        if (world.isAirBlock(generator.getPos().up()))
         {
-            EntityPlayerMP playerMP = (EntityPlayerMP) player;
-            net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
-            if (packet != null)
-            {
-                playerMP.connection.sendPacket(packet);
-            }
+            generator.tryGenerateBlock();
         }
-        return true;
+        updateTileEntity(generator);
     }
 
-    public boolean applyToggleMobGeneration()
+    public void applyToggleMobGeneration()
     {
         TileEntityOneBlockGenerator generator = getGenerator();
         if (generator == null)
         {
-            return false;
+            return;
         }
 
         generator.setDisableMobGeneration(!generator.isDisableMobGeneration());
-        if (player instanceof EntityPlayerMP)
+        if (world.isAirBlock(generator.getPos().up()))
         {
-            EntityPlayerMP playerMP = (EntityPlayerMP) player;
-            net.minecraft.network.play.server.SPacketUpdateTileEntity packet = generator.getUpdatePacket();
-            if (packet != null)
-            {
-                playerMP.connection.sendPacket(packet);
-            }
+            generator.tryGenerateBlock();
         }
-        return true;
+        updateTileEntity(generator);
     }
 
-    public boolean applyToggleChestGeneration()
+    public void applyToggleChestGeneration()
     {
         TileEntityOneBlockGenerator generator = getGenerator();
         if (generator == null)
         {
-            return false;
+            return;
         }
 
         generator.setDisableChestGeneration(!generator.isDisableChestGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
+        updateTileEntity(generator);
+    }
+
+    public void applyToggleSaplingGeneration()
+    {
+        TileEntityOneBlockGenerator generator = getGenerator();
+        if (generator == null)
+        {
+            return;
+        }
+
+        generator.setDisableSaplingGeneration(!generator.isDisableSaplingGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
+        updateTileEntity(generator);
+    }
+
+    private void updateTileEntity(TileEntityOneBlockGenerator generator) {
         if (player instanceof EntityPlayerMP)
         {
             EntityPlayerMP playerMP = (EntityPlayerMP) player;
@@ -446,7 +473,6 @@ public class ContainerOneBlock extends Container
                 playerMP.connection.sendPacket(packet);
             }
         }
-        return true;
     }
 
     public TileEntityOneBlockGenerator getGenerator()

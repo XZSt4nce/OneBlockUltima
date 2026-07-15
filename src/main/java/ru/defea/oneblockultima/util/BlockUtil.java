@@ -32,8 +32,8 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import ru.defea.oneblockultima.OneBlockUltima;
-import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.block.BlockCustomPortalFrame;
+import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
@@ -96,9 +96,8 @@ public final class BlockUtil
             state = normalizeLiquidState(state);
         }
 
-        Block block = state.getBlock();
         state = getReplacementStateForGeneratorPlacement(state, world.getBlockState(pos.down()));
-        block = state.getBlock();
+        Block block = state.getBlock();
         
         // Для BlockContainer блоков с NBT тегами - создаем TileEntity ДО размещения
         TileEntity preCreatedTileEntity = null;
@@ -132,28 +131,26 @@ public final class BlockUtil
                             LootTableManager manager = world.getLootTableManager();
                             LootTable table = manager.getLootTableFromLocation(loc);
 
-                            if (table != null) {
-                                LootContext.Builder contextBuilder = new LootContext.Builder((net.minecraft.world.WorldServer) world);
-                                LootContext context = contextBuilder.build();
+                            LootContext.Builder contextBuilder = new LootContext.Builder((net.minecraft.world.WorldServer) world);
+                            LootContext context = contextBuilder.build();
 
-                                table.fillInventory(inv, world.rand, context);
-                                nbt.removeTag(lootTableKey);
-                                preCreatedTileEntity = tileEntity;
-                                tileEntity.markDirty();
-                            }
+                            table.fillInventory(inv, world.rand, context);
+                            nbt.removeTag(lootTableKey);
+                            preCreatedTileEntity = tileEntity;
+                            tileEntity.markDirty();
                         }
                     }
-                    
-                    OneBlockUltima.getLogger().info("[Generator] Pre-configured TileEntity at " + pos + " with NBT tags");
+
+                    OneBlockUltima.getLogger().info("[Generator] Pre-configured TileEntity at {} with NBT tags", pos);
                 }
                 else
                 {
-                    OneBlockUltima.getLogger().warn("[Generator] createNewTileEntity returned null for block " + block.getRegistryName());
+                    OneBlockUltima.getLogger().warn("[Generator] createNewTileEntity returned null for block {}", block.getRegistryName());
                 }
             }
             catch (Exception e)
             {
-                OneBlockUltima.getLogger().error("[Generator] Failed to pre-configure TileEntity for block at " + pos, e);
+                OneBlockUltima.getLogger().error("[Generator] Failed to pre-configure TileEntity for block at {}", pos, e);
             }
         }
         
@@ -169,7 +166,7 @@ public final class BlockUtil
             preCreatedTileEntity.markDirty();
         }
 
-        // Если есть NBT теги но блок не BlockContainer, пытаемся применить их после размещения
+        // Если есть NBT теги, но блок не BlockContainer, пытаемся применить их после размещения
         if (nbtTags != null && !nbtTags.hasNoTags() && !(block instanceof net.minecraft.block.BlockContainer))
         {
             applyNbtToBlock(world, pos, nbtTags);
@@ -240,59 +237,55 @@ public final class BlockUtil
         int i1 = 0;
 
         try {
+            assert nbtTagCompound != null;
             if (nbtTagCompound.hasKey("HideFlags", Constants.NBT.TAG_ANY_NUMERIC)) {
                 i1 = nbtTagCompound.getInteger("HideFlags");
             }
         } catch (Exception ignored) {}
 
-        if (hasTagCompound)
-        {
-            if ((i1 & 1) == 0)
-            {
-                try {
-                    NBTTagList nbttaglist = nbtTagCompound.hasKey("ench", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getTagList("ench", Constants.NBT.TAG_COMPOUND) : new NBTTagList();
+        if ((i1 & 1) == 0) {
+            try {
+                NBTTagList nbttaglist = nbtTagCompound.hasKey("ench", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getTagList("ench", Constants.NBT.TAG_COMPOUND) : new NBTTagList();
 
-                    for (int j = 0; j < nbttaglist.tagCount(); ++j)
-                    {
-                        NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(j);
-                        int k = nbttagcompound.getShort("id");
-                        int l = nbttagcompound.getShort("lvl");
-                        Enchantment enchantment = Enchantment.getEnchantmentByID(k);
+                for (int j = 0; j < nbttaglist.tagCount(); ++j) {
+                    NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(j);
+                    int k = nbttagcompound.getShort("id");
+                    int l = nbttagcompound.getShort("lvl");
+                    Enchantment enchantment = Enchantment.getEnchantmentByID(k);
 
-                        if (enchantment != null)
-                        {
-                            tooltip.add(enchantment.getTranslatedName(l));
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-
-            if (hasDisplayName)
-            {
-                NBTTagCompound nbttagcompound1 = nbtTagCompound.getCompoundTag("display");
-
-                if (nbttagcompound1.hasKey("color", Constants.NBT.TAG_INT))
-                {
-                    if (advanced.isAdvanced())
-                    {
-                        tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.color", String.format("#%06X", nbttagcompound1.getInteger("color"))));
-                    }
-                    else
-                    {
-                        tooltip.add(TextFormatting.ITALIC + net.minecraft.util.text.translation.I18n.translateToLocal("block.dyed"));
+                    if (enchantment != null) {
+                        tooltip.add(enchantment.getTranslatedName(l));
                     }
                 }
+            } catch (Exception ignored) {
+            }
+        }
 
-                if (nbttagcompound1.getTagId("Lore") == 9)
+        if (hasDisplayName)
+        {
+            NBTTagCompound nbttagcompound1 = nbtTagCompound.getCompoundTag("display");
+
+            if (nbttagcompound1.hasKey("color", Constants.NBT.TAG_INT))
+            {
+                if (advanced.isAdvanced())
                 {
-                    NBTTagList nbttaglist3 = nbttagcompound1.getTagList("Lore", 8);
+                    tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.color", String.format("#%06X", nbttagcompound1.getInteger("color"))));
+                }
+                else
+                {
+                    tooltip.add(TextFormatting.ITALIC + net.minecraft.util.text.translation.I18n.translateToLocal("block.dyed"));
+                }
+            }
 
-                    if (!nbttaglist3.hasNoTags())
+            if (nbttagcompound1.getTagId("Lore") == 9)
+            {
+                NBTTagList nbttaglist3 = nbttagcompound1.getTagList("Lore", 8);
+
+                if (!nbttaglist3.hasNoTags())
+                {
+                    for (int l1 = 0; l1 < nbttaglist3.tagCount(); ++l1)
                     {
-                        for (int l1 = 0; l1 < nbttaglist3.tagCount(); ++l1)
-                        {
-                            tooltip.add(TextFormatting.DARK_PURPLE + "" + TextFormatting.ITALIC + nbttaglist3.getStringTagAt(l1));
-                        }
+                        tooltip.add(TextFormatting.DARK_PURPLE + "" + TextFormatting.ITALIC + nbttaglist3.getStringTagAt(l1));
                     }
                 }
             }
@@ -311,7 +304,6 @@ public final class BlockUtil
                 {
                     AttributeModifier attributemodifier = entry.getValue();
                     double d0 = attributemodifier.getAmount();
-                    boolean flag = false;
 
                     double d1;
 
@@ -324,18 +316,14 @@ public final class BlockUtil
                         d1 = d0 * 100.0D;
                     }
 
-                    if (flag)
+                    if (d0 > 0.0D)
                     {
-                        tooltip.add(" " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.equals." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
-                    }
-                    else if (d0 > 0.0D)
-                    {
-                        tooltip.add(TextFormatting.BLUE + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.plus." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
+                        tooltip.add(TextFormatting.BLUE + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.plus." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + entry.getKey())));
                     }
                     else if (d0 < 0.0D)
                     {
                         d1 = d1 * -1.0D;
-                        tooltip.add(TextFormatting.RED + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.take." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + (String)entry.getKey())));
+                        tooltip.add(TextFormatting.RED + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.take." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + entry.getKey())));
                     }
                 }
             }
@@ -469,16 +457,16 @@ public final class BlockUtil
                 IBlockState state = world.getBlockState(pos);
                 world.notifyBlockUpdate(pos, state, state, 3);
 
-                OneBlockUltima.getLogger().info("[Generator] Applied NBT tags to TileEntity at " + pos + ": " + nbtTags);
+                OneBlockUltima.getLogger().info("[Generator] Applied NBT tags to TileEntity at {}: {}", pos, nbtTags);
             }
             else
             {
-                OneBlockUltima.getLogger().debug("[Generator] No TileEntity found at " + pos + " for NBT application");
+                OneBlockUltima.getLogger().debug("[Generator] No TileEntity found at {} for NBT application", pos);
             }
         }
         catch (Exception e)
         {
-            OneBlockUltima.getLogger().error("[Generator] Failed to apply NBT tags to block at " + pos, e);
+            OneBlockUltima.getLogger().error("[Generator] Failed to apply NBT tags to block at {}", pos, e);
         }
     }
 
@@ -542,7 +530,7 @@ public final class BlockUtil
                         Block forestryBlock = ((ItemBlock) item).getBlock();
                         // noinspection ConstantConditions
                         if (forestryBlock != null && forestryBlock != Blocks.AIR) {
-                            OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry block via ItemBlock: " + forestryBlock.getRegistryName());
+                            OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry block via ItemBlock: {}", forestryBlock.getRegistryName());
                             block = forestryBlock;
                         }
                     }
@@ -555,32 +543,32 @@ public final class BlockUtil
 
             if (block == null || block == Blocks.AIR)
             {
-                OneBlockUltima.getLogger().warn("[BlockUtil] Could not resolve block for registry: " + entry.registry);
+                OneBlockUltima.getLogger().warn("[BlockUtil] Could not resolve block for registry: {}", entry.registry);
                 return null;
             }
         }
 
         try
         {
-            IBlockState state = null;
+            IBlockState state;
 
             // Для Forestry саженцев всегда используем default state (meta игнорируется)
             if (entry.registry != null && entry.registry.toLowerCase().contains("forestry") &&
                     entry.registry.toLowerCase().contains("sapling"))
             {
                 state = block.getDefaultState();
-                OneBlockUltima.getLogger().info("[BlockUtil] Using default state for Forestry sapling: " + state);
+                OneBlockUltima.getLogger().info("[BlockUtil] Using default state for Forestry sapling: {}", state);
             }
             else
             {
                 state = block.getStateFromMeta(entry.meta);
             }
 
-            if (state == null || state.getBlock() == Blocks.AIR)
+            if (state.getBlock() == Blocks.AIR)
             {
                 state = block.getDefaultState();
             }
-            if (state == null || state.getBlock() == Blocks.AIR)
+            if (state.getBlock() == Blocks.AIR)
             {
                 return null;
             }
@@ -590,14 +578,14 @@ public final class BlockUtil
                 return block.getDefaultState();
             }
 
-            OneBlockUltima.getLogger().debug("[BlockUtil] Resolved block: " + entry.registry + " -> " + block.getRegistryName() + " with meta: " + entry.meta);
+            OneBlockUltima.getLogger().debug("[BlockUtil] Resolved block: {} -> {} with meta: {}", entry.registry, block.getRegistryName(), entry.meta);
             return state;
         }
         catch (Exception ex)
         {
-            OneBlockUltima.getLogger().debug("[BlockUtil] Exception getting state from meta for " + entry.registry + ", using default state", ex);
+            OneBlockUltima.getLogger().debug("[BlockUtil] Exception getting state from meta for {}, using default state", entry.registry, ex);
             IBlockState defaultState = block.getDefaultState();
-            return defaultState == null || defaultState.getBlock() == Blocks.AIR ? null : defaultState;
+            return defaultState.getBlock() == Blocks.AIR ? null : defaultState;
         }
     }
 
@@ -609,43 +597,45 @@ public final class BlockUtil
         }
 
         String normalized = registry.toLowerCase(Locale.ROOT);
-        if ("minecraft:carrot".equals(normalized) || "carrot".equals(normalized))
-        {
-            return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:carrots"));
-        }
-        if ("minecraft:potato".equals(normalized) || "potato".equals(normalized))
-        {
-            return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:potatoes"));
-        }
-        if ("minecraft:wheat_seeds".equals(normalized) || "wheat_seeds".equals(normalized) || "minecraft:wheat".equals(normalized) || "wheat".equals(normalized))
-        {
-            return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:wheat"));
-        }
-        if ("minecraft:beetroot_seeds".equals(normalized) || "beetroot_seeds".equals(normalized) || "minecraft:beetroot".equals(normalized) || "beetroot".equals(normalized))
-        {
-            return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:beetroots"));
-        }
-        if ("minecraft:reeds".equals(normalized) || "reeds".equals(normalized) || "minecraft:sugar_cane".equals(normalized) || "sugar_cane".equals(normalized))
-        {
-            Block reeds = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:reeds"));
-            if (reeds != null)
-            {
-                return reeds;
-            }
-            return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:sugar_cane"));
+        switch (normalized) {
+            case "minecraft:carrot":
+            case "carrot":
+                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:carrots"));
+            case "minecraft:potato":
+            case "potato":
+                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:potatoes"));
+            case "minecraft:wheat_seeds":
+            case "wheat_seeds":
+            case "minecraft:wheat":
+            case "wheat":
+                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:wheat"));
+            case "minecraft:beetroot_seeds":
+            case "beetroot_seeds":
+            case "minecraft:beetroot":
+            case "beetroot":
+                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:beetroots"));
+            case "minecraft:reeds":
+            case "reeds":
+            case "minecraft:sugar_cane":
+            case "sugar_cane":
+                Block reeds = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:reeds"));
+                if (reeds != null) {
+                    return reeds;
+                }
+                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:sugar_cane"));
         }
 
         if (normalized.contains("forestry") && normalized.contains("sapling"))
         {
-            OneBlockUltima.getLogger().info("[BlockUtil] Trying to resolve Forestry sapling: " + registry);
+            OneBlockUltima.getLogger().info("[BlockUtil] Trying to resolve Forestry sapling: {}", registry);
 
             // Самый надежный способ - через ItemBlock
             try {
                 Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(registry));
                 if (item instanceof ItemBlock) {
                     Block block = ((ItemBlock) item).getBlock();
-                    if (block != null && block != Blocks.AIR) {
-                        OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via ItemBlock: " + block.getRegistryName());
+                    if (block != Blocks.AIR) {
+                        OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via ItemBlock: {}", block.getRegistryName());
                         return block;
                     }
                 }
@@ -655,7 +645,7 @@ public final class BlockUtil
             try {
                 Block b = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("forestry:sapling"));
                 if (b != null && b != Blocks.AIR) {
-                    OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via direct lookup: " + b.getRegistryName());
+                    OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via direct lookup: {}", b.getRegistryName());
                     return b;
                 }
             } catch (Exception ignored) {}
@@ -687,11 +677,11 @@ public final class BlockUtil
             // Применяем обновленные теги
             entity.readFromNBT(entityNbt);
 
-            OneBlockUltima.getLogger().info("[Mob Spawn] Applied NBT tags to entity: " + entity.getName());
+            OneBlockUltima.getLogger().info("[Mob Spawn] Applied NBT tags to entity: {}", entity.getName());
         }
         catch (Exception e)
         {
-            OneBlockUltima.getLogger().error("[Mob Spawn] Failed to apply NBT tags to entity: " + entity.getName(), e);
+            OneBlockUltima.getLogger().error("[Mob Spawn] Failed to apply NBT tags to entity: {}", entity.getName(), e);
         }
     }
 }

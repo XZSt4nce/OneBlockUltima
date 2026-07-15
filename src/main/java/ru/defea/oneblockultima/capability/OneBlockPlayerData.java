@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima.capability;
 
-import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 
 import java.util.HashMap;
@@ -31,7 +30,7 @@ public class OneBlockPlayerData implements IOneBlockPlayerData
     @Override
     public boolean spendCurrency(int amount)
     {
-        if (amount <= 0 || currency < amount)
+        if (amount < 0 || currency < amount)
         {
             return false;
         }

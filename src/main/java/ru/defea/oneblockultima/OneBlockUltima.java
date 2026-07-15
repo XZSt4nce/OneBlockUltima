@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima;
 
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
@@ -8,12 +9,10 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import org.apache.logging.log4j.Logger;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
-import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
-import ru.defea.oneblockultima.command.CommandAddUltimaBalance;
-import ru.defea.oneblockultima.command.CommandDeclineGeneratorInvite;
-import ru.defea.oneblockultima.command.CommandInviteGeneratorMember;
+import ru.defea.oneblockultima.command.*;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
+import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.network.ModMessages;
 import ru.defea.oneblockultima.tile.ModTileEntities;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
@@ -26,7 +25,9 @@ import ru.defea.oneblockultima.world.OneBlockWorldType;
 public class OneBlockUltima
 {
     public static final String MODID = "oneblockultima";
-    public static final String NAME = "OneBlock Ultima";
+    public static final String NAME = "OneBlockUltima";
+
+    public static final CreativeTabs modTab = new ModTab(NAME);
 
     @Mod.Instance(MODID)
     public static OneBlockUltima instance;
@@ -52,6 +53,8 @@ public class OneBlockUltima
         OneBlockWorldType.init();
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
         proxy.preInit();
+
+        GuiSetsConfig.loadStaticCustomNames();
         logger.info("{} загружается...", NAME);
     }
 
@@ -68,5 +71,6 @@ public class OneBlockUltima
         event.registerServerCommand(new CommandInviteGeneratorMember());
         event.registerServerCommand(new CommandAcceptGeneratorInvite());
         event.registerServerCommand(new CommandDeclineGeneratorInvite());
+        event.registerServerCommand(new CommandSetOwner());
     }
 }
