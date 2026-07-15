@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
@@ -26,7 +25,6 @@ import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
-import ru.defea.oneblockultima.BlockSetConfigGui;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
@@ -35,11 +33,9 @@ import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+
+import static ru.defea.oneblockultima.util.ModelUtil.*;
 
 public class GuiOneBlock extends GuiContainer
 {
@@ -98,7 +94,7 @@ public class GuiOneBlock extends GuiContainer
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
 
     private int cellSize = 18;
-    private static int cellPadding = 1;
+    private int cellPadding = 1;
     private int blockCols = 4;
     private int mobCols = 2;
     private final int SCROLLBAR_WIDTH = 6;
@@ -122,9 +118,8 @@ public class GuiOneBlock extends GuiContainer
     private final int SECTION_GAP = 8;
 
     // Поля для процедурного фона
-    private List<BlockSetConfig.BlockEntryDefinition> backgroundBlocks = new ArrayList<>();
-    private int backgroundTextureSize = 32;
-    private boolean backgroundInitialized = false;
+    private final List<BlockSetConfig.BlockEntryDefinition> backgroundBlocks = new ArrayList<>();
+    private final int backgroundTextureSize = 32;
 
     public GuiOneBlock(EntityPlayer player, World world, BlockPos generatorPos)
     {
@@ -225,10 +220,9 @@ public class GuiOneBlock extends GuiContainer
         int blockAreaWidth = Math.max(40, halfWidth - 8);
         int mobAreaWidth = Math.max(40, halfWidth - 8);
 
-        int maxBlockCols = Math.max(2, blockAreaWidth / 20);
-        blockCols = Math.min(6, maxBlockCols);
+        blockCols = Math.max(2, blockAreaWidth / 20);
 
-        mobCols = Math.min(blockCols, 3);
+        mobCols = blockCols;
 
         cellPadding = Math.max(1, Math.min(2, blockAreaWidth / 80));
         cellSize = Math.max(14, Math.min(20, (mobAreaWidth - (mobCols - 1) * cellPadding) / mobCols));
@@ -292,8 +286,6 @@ public class GuiOneBlock extends GuiContainer
             OneBlockUltima.getLogger().warn("No blocks found for background, adding defaults");
             addDefaultBackgroundBlocks();
         }
-
-        backgroundInitialized = true;
     }
 
     private boolean isFullBlock(net.minecraft.block.Block block, int meta)
@@ -456,7 +448,7 @@ public class GuiOneBlock extends GuiContainer
             {
                 try
                 {
-                    sprite = mc.getTextureMapBlocks().getAtlasSprite(block.getRegistryName().toString());
+                    sprite = mc.getTextureMapBlocks().getAtlasSprite(Objects.requireNonNull(block.getRegistryName()).toString());
                 }
                 catch (Exception ignored) {}
             }
@@ -725,16 +717,16 @@ public class GuiOneBlock extends GuiContainer
                         drawRect(cellX, cellY, cellX + 1, cellY + cellSize, mobBorderColor);
                         drawRect(cellX + cellSize - 1, cellY, cellX + cellSize, cellY + cellSize, mobBorderColor);
 
-                        Entity testEntity = null;
+                        Entity entity = null;
                         try
                         {
                             World mcWorld = Minecraft.getMinecraft().world;
-                            testEntity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
-                            if (testEntity instanceof EntityLivingBase)
+                            entity = EntityList.createEntityByIDFromName(new ResourceLocation(mobEntry.registry), mcWorld);
+                            if (entity instanceof EntityLivingBase)
                             {
                                 int centerX = cellX + cellSize / 2;
                                 int centerY = cellY + cellSize / 2 + cellPadding;
-                                drawEntityOnScreen(centerX, centerY, 18, testEntity);
+                                drawEntityOnScreen(centerX, centerY, entity, cellSize - 2 * cellPadding);
                             }
                         }
                         catch (Exception ignored) { }
@@ -745,18 +737,18 @@ public class GuiOneBlock extends GuiContainer
                             {
                                 hoveredMobEntryLeft = mobEntry;
                                 hoveredMobNameLeft = null;
-                                if (testEntity != null)
+                                if (entity != null)
                                 {
-                                    try { hoveredMobNameLeft = testEntity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
+                                    try { hoveredMobNameLeft = entity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
                                 }
                             }
                             else
                             {
                                 hoveredMobEntryRight = mobEntry;
                                 hoveredMobNameRight = null;
-                                if (testEntity != null)
+                                if (entity != null)
                                 {
-                                    try { hoveredMobNameRight = testEntity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
+                                    try { hoveredMobNameRight = entity.getDisplayName().getUnformattedText(); } catch (Exception ignored) { }
                                 }
                             }
                         }
@@ -777,167 +769,6 @@ public class GuiOneBlock extends GuiContainer
                 }
             }
         }
-    }
-
-    private static void drawEntityOnScreen(int posX, int posY, int scale, Entity entity)
-    {
-        if (!(entity instanceof EntityLivingBase)) return;
-        EntityLivingBase ent = (EntityLivingBase) entity;
-
-        float origRenderYawOffset = ent.renderYawOffset;
-        float origPrevRotationYaw = ent.prevRotationYaw;
-        float origRotationYaw = ent.rotationYaw;
-        float origRotationYawHead = ent.rotationYawHead;
-        float origPrevRotationYawHead = ent.prevRotationYawHead;
-        float origRotationPitch = ent.rotationPitch;
-        float origPrevRotationPitch = ent.prevRotationPitch;
-        float origLimbSwing = ent.limbSwing;
-        float origLimbSwingAmount = ent.limbSwingAmount;
-        float origPrevLimbSwingAmount = ent.prevLimbSwingAmount;
-
-        GlStateManager.enableColorMaterial();
-        GlStateManager.pushMatrix();
-        try
-        {
-            GlStateManager.translate(posX, posY, 50.0F);
-
-            float finalScale = getScale(scale, ent);
-
-            GlStateManager.scale(-finalScale, finalScale, finalScale);
-            GlStateManager.rotate(170.0F, 0.3F, 0.0F, 1.0F);
-
-            ent.renderYawOffset = 0.0F;
-            ent.prevRotationYaw = 0.0F;
-            ent.rotationYaw = 0.0F;
-            ent.rotationYawHead = 0.0F;
-            ent.prevRotationYawHead = 0.0F;
-            ent.rotationPitch = 0.0F;
-            ent.prevRotationPitch = 0.0F;
-            ent.limbSwing = 0.0F;
-            ent.limbSwingAmount = 0.0F;
-            ent.prevLimbSwingAmount = 0.0F;
-
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableRescaleNormal();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableDepth();
-            GlStateManager.enableCull();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-
-            RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
-            float prevPlayerViewY = renderManager.playerViewY;
-            renderManager.setPlayerViewY(180.0F);
-            renderManager.setRenderShadow(false);
-            renderManager.renderEntity(ent, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-            renderManager.setRenderShadow(true);
-            renderManager.setPlayerViewY(prevPlayerViewY);
-
-            GlStateManager.disableCull();
-            GlStateManager.disableDepth();
-            GlStateManager.disableRescaleNormal();
-        }
-        catch (Exception ignored) { }
-        finally
-        {
-            GlStateManager.popMatrix();
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
-            GlStateManager.disableTexture2D();
-            GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
-            GlStateManager.disableColorMaterial();
-            GlStateManager.disableLighting();
-
-            ent.renderYawOffset = origRenderYawOffset;
-            ent.prevRotationYaw = origPrevRotationYaw;
-            ent.rotationYaw = origRotationYaw;
-            ent.rotationYawHead = origRotationYawHead;
-            ent.prevRotationYawHead = origPrevRotationYawHead;
-            ent.rotationPitch = origRotationPitch;
-            ent.prevRotationPitch = origPrevRotationPitch;
-            ent.limbSwing = origLimbSwing;
-            ent.limbSwingAmount = origLimbSwingAmount;
-            ent.prevLimbSwingAmount = origPrevLimbSwingAmount;
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        }
-    }
-
-    private static float getScale(int scale, EntityLivingBase ent) {
-        scale = scale / 2 - cellPadding * 2;
-        float heightScale = scale / ent.height;
-        float widthScale = scale / ent.width;
-        return Math.min(heightScale, widthScale);
-    }
-
-    private static void renderBlockModelToGUI(net.minecraft.block.state.IBlockState state, int x, int y, int size)
-    {
-        try
-        {
-            Minecraft mc = Minecraft.getMinecraft();
-            BlockRendererDispatcher blockRenderer = mc.getBlockRendererDispatcher();
-
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 100.0F);
-            GlStateManager.scale(size / 16.0F, size / 16.0F, size / 16.0F);
-            GlStateManager.rotate(180F, 1F, 0F, 0F);
-            RenderHelper.enableGUIStandardItemLighting();
-            blockRenderer.renderBlockBrightness(state, 1.0F);
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.popMatrix();
-        }
-        catch (Exception ignored) { }
-    }
-
-    private static void renderFluidSprite(net.minecraftforge.fluids.Fluid fluid, int x, int y, int w, int h)
-    {
-        if (fluid == null) return;
-        Minecraft mc = Minecraft.getMinecraft();
-        TextureAtlasSprite sprite = null;
-        try
-        {
-            ResourceLocation tex = fluid.getStill();
-            if (tex == null) tex = fluid.getFlowing();
-            if (tex != null)
-            {
-                TextureMap map = mc.getTextureMapBlocks();
-                sprite = map.getAtlasSprite(tex.toString());
-            }
-        }
-        catch (Exception ignored) { }
-
-        if (sprite == null) return;
-
-        try
-        {
-            GlStateManager.pushMatrix();
-            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-
-            float minU = sprite.getMinU();
-            float maxU = sprite.getMaxU();
-            float minV = sprite.getMinV();
-            float maxV = sprite.getMaxV();
-
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-
-            Tessellator tess = Tessellator.getInstance();
-            BufferBuilder buf = tess.getBuffer();
-            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-            buf.pos(x, y + h, 0.0D).tex(minU, maxV).endVertex();
-            buf.pos(x + w, y + h, 0.0D).tex(maxU, maxV).endVertex();
-            buf.pos(x + w, y, 0.0D).tex(maxU, minV).endVertex();
-            buf.pos(x, y, 0.0D).tex(minU, minV).endVertex();
-            tess.draw();
-
-            GlStateManager.disableBlend();
-            GlStateManager.disableAlpha();
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-            GlStateManager.popMatrix();
-        }
-        catch (Exception ignored) { }
     }
 
     @Override
@@ -1099,14 +930,7 @@ public class GuiOneBlock extends GuiContainer
 
     private String getLocalizedSetName(BlockSetConfig.BlockSetDefinition set)
     {
-        if (set == null || set.id == null)
-        {
-            return "-";
-        }
-
-        String key = "gui.oneblockultima.set." + set.id;
-        String localized = I18n.format(key);
-        return localized.equals(key) ? set.id : localized;
+        return GuiSetsConfig.getLocalizedSetNameStatic(set);
     }
 
     @Override
@@ -1156,7 +980,7 @@ public class GuiOneBlock extends GuiContainer
         }
         else if (button.id == BUTTON_OPEN_CONFIG_EDITOR)
         {
-            mc.displayGuiScreen(new BlockSetConfigGui(this));
+            mc.displayGuiScreen(new GuiSetsConfig(this));
         }
         else if (button.id == BUTTON_PREV_SET)
         {
@@ -1674,17 +1498,18 @@ public class GuiOneBlock extends GuiContainer
 
         if (activeView == VIEW_SETTINGS) {
             // 1. Рисуем фон из блоков
+            int remainingHeight = tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap - titleBottom;
             renderProceduralBackground(
                     guiLeft,
                     titleBottom,
                     xSize,
-                    tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap - titleBottom
+                    remainingHeight
             );
 
             // 2. Рисуем полупрозрачный тёмный фон поверх
             drawRect(guiLeft, guiTop, guiLeft + xSize, titleBottom, 0xFF22272E);
             drawRect(guiLeft, titleBottom, guiLeft + xSize,
-                    tabsBottom + (buttonHeight + buttonGap) * 3 + buttonGap, 0xCC1F2328);
+                    remainingHeight + titleBottom, 0xCC1F2328);
             drawRect(guiLeft + panelGap, titleBottom, guiLeft + xSize - panelGap, tabsBottom, 0xFF2E3A45);
         }
         else {

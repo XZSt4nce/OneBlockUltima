@@ -201,6 +201,10 @@ public class ContainerOneBlock extends Container
 
         System.out.println("[OneBlock] Generator selectedSetId is now: " + generator.getSelectedSetId());
 
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         detectAndSendChanges();
 
         if (player instanceof EntityPlayerMP)
@@ -404,6 +408,10 @@ public class ContainerOneBlock extends Container
         }
 
         generator.setDisableFluidGeneration(!generator.isDisableFluidGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         updateTileEntity(generator);
     }
 
@@ -416,6 +424,10 @@ public class ContainerOneBlock extends Container
         }
 
         generator.setDisableMobGeneration(!generator.isDisableMobGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         updateTileEntity(generator);
     }
 
@@ -428,6 +440,10 @@ public class ContainerOneBlock extends Container
         }
 
         generator.setDisableChestGeneration(!generator.isDisableChestGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         updateTileEntity(generator);
     }
 
@@ -440,6 +456,10 @@ public class ContainerOneBlock extends Container
         }
 
         generator.setDisableSaplingGeneration(!generator.isDisableSaplingGeneration());
+        if (world.isAirBlock(generator.getPos().up()))
+        {
+            generator.tryGenerateBlock();
+        }
         updateTileEntity(generator);
     }
 

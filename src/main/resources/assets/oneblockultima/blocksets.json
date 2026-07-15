@@ -10,8 +10,8 @@
         { "registry": "minecraft:stone", "meta": 0, "baseLevel": 2, "baseChance": 10, "currency": 2 },
         { "registry": "minecraft:coal_ore", "meta": 0, "baseLevel": 2, "baseChance": 2, "currency": 5 },
         { "registry": "minecraft:iron_ore", "meta": 0, "baseLevel": 2, "baseChance": 1, "currency": 5 },
-        { "registry": "minecraft:water", "meta": 0, "baseLevel": 3, "baseChance": 1, "currency": 5 },
-        { "registry": "oneblockultima:custom_bedrock", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 5, "dropItem": "minecraft:bedrock" }
+        { "registry": "minecraft:water", "meta": 0, "baseLevel": 3, "baseChance": 1, "currency": 0 },
+        { "registry": "minecraft:bedrock", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 5, "dropItem": "minecraft:bedrock" }
       ],
       "mobs": [
         { "registry": "minecraft:zombie", "baseLevel": 3, "baseChance": 5, "count": 1 },
@@ -76,7 +76,7 @@
         { "registry": "minecraft:redstone_ore", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 5 },
         { "registry": "minecraft:emerald_ore", "meta": 0, "baseLevel": 6, "baseChance": 1, "currency": 15 },
         { "registry": "minecraft:diamond_ore", "meta": 0, "baseLevel": 7, "baseChance": 1, "currency": 15 },
-        { "registry": "minecraft:chest", "meta": 0, "baseLevel": 10, "baseChance": 1, "currency": 5,
+        { "registry": "minecraft:chest", "meta": 0, "baseLevel": 10, "baseChance": 1, "currency": 0,
           "nbtTags": {
             "LootTable":"minecraft:chests/simple_dungeon"
           }
@@ -187,7 +187,7 @@
         { "registry": "thermalfoundation:ore_fluid", "meta": 4, "baseLevel": 2, "baseChance": 1, "currency": 5 },
         { "registry": "draconicevolution:draconium_ore", "meta": 2, "baseLevel": 3, "baseChance": 1, "currency": 5 },
         { "registry": "minecraft:chorus_plant", "meta": 0, "baseLevel": 4, "baseChance": 1, "currency": 5 },
-        { "registry": "oneblockultima:custom_end_portal_frame", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 10, "dropItem": "minecraft:end_portal_frame" }
+        { "registry": "minecraft:end_portal_frame", "meta": 0, "baseLevel": 5, "baseChance": 1, "currency": 10, "dropItem": "minecraft:end_portal_frame" }
       ],
       "mobs": [
         { "registry": "minecraft:enderman", "baseLevel": 1, "baseChance": 10, "count": 1 },

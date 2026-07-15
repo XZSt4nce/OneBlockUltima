@@ -12,6 +12,7 @@ import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.command.*;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
+import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.network.ModMessages;
 import ru.defea.oneblockultima.tile.ModTileEntities;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
@@ -52,6 +53,8 @@ public class OneBlockUltima
         OneBlockWorldType.init();
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
         proxy.preInit();
+
+        GuiSetsConfig.loadStaticCustomNames();
         logger.info("{} загружается...", NAME);
     }
 

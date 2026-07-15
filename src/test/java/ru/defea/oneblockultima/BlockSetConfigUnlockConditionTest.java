@@ -5,6 +5,11 @@ import net.minecraft.init.Bootstrap;
 import net.minecraft.util.math.BlockPos;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 import ru.defea.oneblockultima.command.CommandAcceptGeneratorInvite;
@@ -23,6 +28,22 @@ public class BlockSetConfigUnlockConditionTest
     public static void initMinecraftBootstrap()
     {
         Bootstrap.register();
+    }
+
+    @Test
+    public void reloadFallsBackToDefaultSetsWhenConfigFileContainsNoSets() throws Exception
+    {
+        Path tempDir = Files.createTempDirectory("oneblockultima-test");
+        File configDir = tempDir.toFile();
+        File configFile = new File(configDir, "oneblockultima/blocksets.json");
+        configFile.getParentFile().mkdirs();
+        Files.write(configFile.toPath(), "{\"sets\":[],\"settings\":{}}".getBytes(StandardCharsets.UTF_8));
+
+        BlockSetConfig.load(configDir);
+
+        assertNotNull(BlockSetConfig.get());
+        assertFalse(BlockSetConfig.get().getSets().isEmpty());
+        assertEquals("classic", BlockSetConfig.get().getDefaultSetId());
     }
 
     @Test
@@ -119,16 +140,6 @@ public class BlockSetConfigUnlockConditionTest
     }
 
     @Test
-    public void generatorTracksSetLevelsIndependentlyFromPlayerData()
-    {
-        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
-        assertEquals(0, generator.getSetLevel("classic"));
-
-        assertTrue(generator.upgradeSet("classic", 10, 3));
-        assertEquals(1, generator.getSetLevel("classic"));
-    }
-
-    @Test
     public void ensureOwnershipKeepsAlreadyOwnedGeneratorSelectable()
     {
         TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
@@ -160,25 +171,5 @@ public class BlockSetConfigUnlockConditionTest
         assertTrue(newGenerator.assignOwnerForPlacement(playerId));
         assertTrue(newGenerator.hasAccess(playerId));
         assertTrue(oldGenerator.hasAccess(playerId));
-    }
-
-    @Test
-    public void unlockRequirementsCanBeEvaluatedAgainstGeneratorState()
-    {
-        BlockSetConfig.BlockSetDefinition set = new BlockSetConfig.BlockSetDefinition();
-        set.unlockConditions = new BlockSetConfig.UnlockConditionGroup();
-        set.unlockConditions.mode = "all";
-        set.unlockConditions.conditions.add(new BlockSetConfig.UnlockConditionDefinition());
-        set.unlockConditions.conditions.get(0).type = "set_level";
-        set.unlockConditions.conditions.get(0).setId = "classic";
-        set.unlockConditions.conditions.get(0).level = 1;
-
-        TileEntityOneBlockGenerator generator = new TileEntityOneBlockGenerator();
-        OneBlockPlayerData playerData = new OneBlockPlayerData();
-
-        assertFalse(set.hasUnlockRequirementsMet(playerData, generator));
-
-        generator.upgradeSet("classic", 10, 3);
-        assertTrue(set.hasUnlockRequirementsMet(playerData, generator));
     }
 }

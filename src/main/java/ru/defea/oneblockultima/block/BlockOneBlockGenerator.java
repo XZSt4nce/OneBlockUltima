@@ -35,6 +35,7 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     public static final BlockPos FLUID_BARRIER_POS = GENERATED_BLOCK_POS.up();
 
     private static final AxisAlignedBB COLLISION_AABB = new AxisAlignedBB(0.0D, 0.0D, 0.0D, 1.0D, 2.0D, 1.0D);
+    private static final AxisAlignedBB HIGHLIGHT_AABB = new AxisAlignedBB(0.0D, 1.0D, 0.0D, 1.0D, 2.0D, 1.0D);
 
     public BlockOneBlockGenerator()
     {
@@ -51,6 +52,11 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     @Override
     public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ)
     {
+        if (player.isSneaking())
+        {
+            return false;
+        }
+
         if (world.isRemote)
         {
             return true;
@@ -104,6 +110,12 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
         return new AxisAlignedBB(0.0D, 0.0D, 0.0D, 1.0D, 0.001D, 1.0D);
     }
 
+    @Override
+    public AxisAlignedBB getSelectedBoundingBox(IBlockState state, World worldIn, BlockPos pos)
+    {
+        return HIGHLIGHT_AABB.offset(pos);
+    }
+
     @Nullable
     @Override
     public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos)
@@ -121,8 +133,8 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
     @Override
     public RayTraceResult collisionRayTrace(IBlockState blockState, World worldIn, BlockPos pos, Vec3d start, Vec3d end)
     {
-        // Make the block untargetable to avoid raytrace crashes when player looks at it
-        return null;
+        AxisAlignedBB bb = new AxisAlignedBB(0.0D, 1.0D, 0.0D, 1.0D, 2.0D, 1.0D);
+        return rayTrace(pos, start, end, bb);
     }
 
     @Override

@@ -30,7 +30,7 @@ public class OneBlockPlayerData implements IOneBlockPlayerData
     @Override
     public boolean spendCurrency(int amount)
     {
-        if (amount <= 0 || currency < amount)
+        if (amount < 0 || currency < amount)
         {
             return false;
         }
