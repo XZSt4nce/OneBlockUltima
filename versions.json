@@ -1,0 +1,15 @@
+{
+  "homepage": "https://github.com/XZSt4nce/OneBlockUltima/releases/latest",
+  "<mcversion>": {
+    "1.1.0": "First beta version", 
+    "1.1.1": "Second beta version (bugs fixed)",
+    "1.1.2": "More compatibility with mods, bugs fixed"
+    "1.1.3": "Added NBT tags to config, updated UI, bugs fixed",
+    "2.0.0": "New generator's features: Generation setting. You can disable fluid, mobs, saplings or chests generation; New JSON editor for blocksets config; Support for the metas array; Support for additional conditions for unlocking sets; Ownership and membership; Claiming free generator; Generation cooldown when block generating from non player. Bugs fixed, UI improved, foolproof, save of \"One Block\" world has mod's logo"
+", 
+  },
+  "promos": {
+    "1.12.2-latest": "2.0.0",
+    "1.12.2-recommended": "2.0.0"
+  }
+}
