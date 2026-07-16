@@ -46,6 +46,7 @@ import ru.defea.oneblockultima.gui.GuiOneBlock;
 import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
+import ru.defea.oneblockultima.update.UpdateChecker;
 import ru.defea.oneblockultima.util.BlockUtil;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
@@ -600,6 +601,8 @@ public final class ModEvents
         {
             return;
         }
+
+        UpdateChecker.checkForUpdates((EntityPlayerMP) event.player);
 
         World world = event.player.world;
         if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)

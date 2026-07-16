@@ -174,6 +174,9 @@ command.declineGeneratorInvite.not_near_generator=You must be near the generator
 command.declineGeneratorInvite.no_invite=You don't have a pending invite for this generator.
 command.declineGeneratorInvite.declined=You declined the invitation.
 command.setOwner.success=Generator owner changed
+
+oneblockultima.update.available=§6[OneBlockUltima] §eNew version available: §a%s §e(current: §c%s§e)
+oneblockultima.update.link=§b%s
 generator.access.denied=You don't have access to this generator.
 
 item.graviton.name=Graviton
