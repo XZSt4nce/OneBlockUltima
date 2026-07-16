@@ -1023,6 +1023,21 @@ public final class ModEvents
             return;
         }
 
+        if (breaker != null && entry.generatorPos != null)
+        {
+            TileEntity genTile = world.getTileEntity(entry.generatorPos);
+            if (genTile instanceof TileEntityOneBlockGenerator)
+            {
+                TileEntityOneBlockGenerator gen = (TileEntityOneBlockGenerator) genTile;
+                if (!gen.hasAccess(breaker))
+                {
+                    event.setCanceled(true);
+                    trySendAccessDeniedMessage(breaker, entry.generatorPos, world.getTotalWorldTime());
+                    return;
+                }
+            }
+        }
+
         OneBlockUltima.getLogger().warn("[BreakDebug] Generated entry found for {} -> generator {} set={} level={}", event.getPos(), entry.generatorPos, entry.setId, entry.level);
 
         pendingMobSpawnEntries.put(event.getPos(), entry);
