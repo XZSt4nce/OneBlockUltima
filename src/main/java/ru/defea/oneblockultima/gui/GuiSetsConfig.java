@@ -318,7 +318,18 @@ public class GuiSetsConfig extends GuiScreen
             {
                 if (block != null && block.registry != null && !block.registry.isEmpty())
                 {
-                    registries.add(block.registry);
+                    List<Integer> metaValues = block.getMetaValues();
+                    if (metaValues.isEmpty())
+                    {
+                        registries.add(block.registry);
+                    }
+                    else
+                    {
+                        for (int m : metaValues)
+                        {
+                            registries.add(block.registry + ":" + m);
+                        }
+                    }
                 }
             }
         }
@@ -1214,20 +1225,19 @@ public class GuiSetsConfig extends GuiScreen
                 if (reg == null) continue;
 
                 String registry = reg.toString();
-                if (existingBlocks.contains(registry))
-                {
-                    continue;
-                }
                 String registryId = reg.getResourcePath();
                 String modId = reg.getResourceDomain();
 
-                OneBlockUltima.getLogger().info("[DEBUG] registry id: " + registryId);
                 if (modFilter != null && !modId.toLowerCase(Locale.ROOT).contains(modFilter)) continue;
                 if (idFilter != null && !registryId.toLowerCase(Locale.ROOT).contains(idFilter)) continue;
 
                 Fluid fluid = block instanceof IFluidBlock ? ((IFluidBlock) block).getFluid() : FluidRegistry.lookupFluidForBlock(block);
                 if (fluid != null)
                 {
+                    if (existingBlocks.contains(registry))
+                    {
+                        continue;
+                    }
                     String name = fluid.getLocalizedName(new FluidStack(fluid, 1000));
 
                     if (!emptyQuery && !searchTerms.isEmpty() && !matchesSearchTerms(name, searchTerms))
@@ -1242,15 +1252,32 @@ public class GuiSetsConfig extends GuiScreen
                 Item item = Item.getItemFromBlock(block);
                 if (item == null || item == Items.AIR) continue;
 
-                String name = "";
-                try { name = new ItemStack(item, 1).getDisplayName(); } catch (Exception ignored) {}
-
-                if (!emptyQuery && !searchTerms.isEmpty() && !matchesSearchTerms(name, searchTerms))
+                NonNullList<ItemStack> subItems = NonNullList.create();
+                item.getSubItems(CreativeTabs.SEARCH, subItems);
+                if (subItems.isEmpty())
                 {
-                    continue;
+                    subItems.add(new ItemStack(item, 1, 0));
                 }
 
-                searchResults.add(new SearchResult(registry, name, modId, new ItemStack(item, 1)));
+                for (ItemStack subStack : subItems)
+                {
+                    if (subStack.isEmpty() || subStack.getItem() != item) continue;
+
+                    if (existingBlocks.contains(registry + ":" + subStack.getMetadata()))
+                    {
+                        continue;
+                    }
+
+                    String name = "";
+                    try { name = subStack.getDisplayName(); } catch (Exception ignored) {}
+
+                    if (!emptyQuery && !searchTerms.isEmpty() && !matchesSearchTerms(name, searchTerms))
+                    {
+                        continue;
+                    }
+
+                    searchResults.add(new SearchResult(registry, name, modId, subStack.copy()));
+                }
             }
 
             for (Item item : ForgeRegistries.ITEMS)
@@ -1859,7 +1886,7 @@ public class GuiSetsConfig extends GuiScreen
         {
             BlockSetConfig.BlockElementDefinition entry = new BlockSetConfig.BlockElementDefinition();
             entry.registry = result.registry;
-            entry.meta = 0;
+            entry.meta = result.stack != null && !result.stack.isEmpty() ? result.stack.getMetadata() : 0;
             entry.baseLevel = baseLevel;
             entry.baseChance = baseChance;
             entry.currency = currency;
