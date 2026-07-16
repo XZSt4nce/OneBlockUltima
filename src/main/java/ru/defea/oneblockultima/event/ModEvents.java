@@ -906,6 +906,13 @@ public final class ModEvents
                                     {
                                         heldItem.shrink(1);
                                     }
+
+                                    TileEntity placedTE = event.getWorld().getTileEntity(placePos);
+                                    if (placedTE instanceof TileEntityOneBlockGenerator)
+                                    {
+                                        ((TileEntityOneBlockGenerator) placedTE).assignOwnerForPlacement(player.getUniqueID());
+                                    }
+
                                     event.setCanceled(true);
                                     return;
                                 }
