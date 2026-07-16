@@ -1,10 +1,11 @@
 <img src="images/oneblock_logo.png" alt="Логотип мода" style="width: 100%; max-width: 1024px; height: auto;">
-<h1>Language</h1>
-[English|<a href="./README_RUS.MD">Русский</a>]
-<h1>Description</h1><br/>
-This mod will give you a unique survival experience in a world where there is only one block. It adds a <b>new type of "One Block" world</b> that will regenerate whenever you break it. By clicking on the generated block, you will open the generator menu, where you can select a set, open new ones and improve the already opened sets. The mod also adds a balance, which you replenish by destroying blocks.<br/>
+<h1>Язык</h1>
+[<a href="./README.MD">English</a>|Русский]
+<h1>Описание</h1><br/>
+Данный мод подарит вам уникальный опыт выживания в мире, в котором есть всего лишь один блок. Он добавляет <b>новый тип мира "Один блок"</b>, который будет перегенерироваться всякий раз, когда вы его ломаете. Нажав на ПКМ на генерируемый блок, вы откроете меню генератора, где сможете выбрать набор, открыть новые и улучшить уже открытые наборы. Также мод добавляет баланс, который вы пополняете за разрушение блоков.
 <br/>
-The mod is compatible with other mods, and it already has basic support:
+<br/>
+Мод совместим с другими модами и в нём уже есть базовая поддержка:
 <ul>
     <li>Industrial Craft 2</li>
     <li>Draconic Evolution</li>
@@ -21,8 +22,9 @@ The mod is compatible with other mods, and it already has basic support:
     <li>Farmer's Delight Legacy</li>
     <li>Pam's HarvestCraft</li>
 </ul>
-<u>If desired</u>, you can edit the <i>configuration of the sets</i>.
-<h2>Where the mod is distributed</h2>
+<u>При желании</u>, можно редактировать <i>конфигурацию наборов</i>
+
+<h2>Где распространяется мод</h2>
 <ul>
     <li><a href="https://github.com/XZSt4nce/oneblockultima/releases/">GitHub</a>
     <li><a href="https://tlmods.org/ru/mods/one-block-ultima/">TLauncher</a>
@@ -30,15 +32,15 @@ The mod is compatible with other mods, and it already has basic support:
 </li>
 </ul>
 
-<h1>How to download mod</h1>
+<h1>Как скачать мод</h1>
 <ol>
-    <li>Download and install <a href="https://files.minecraftforge.net/net/minecraftforge/forge">Minecraft Forge</a></li>
-    <li>Download mod</li>
-    <li>Without unpacking, place on the path C:\Users\USER_NAME\AppData\Roaming\.minecraft\mods</li>
-    <li>Done</li>
+    <li>Скачай и установи <a href="https://files.minecraftforge.net/net/minecraftforge/forge">Minecraft Forge</a></li>
+    <li>Скачай мод</li>
+    <li>Не распаковывая поместите по пути C:\Users\ИМЯ_ПОЛЬЗОВАТЕЛЯ\AppData\Roaming\.minecraft\mods</li>
+    <li>Готово</li>
 </ol>
 
-<h1>Screenshots</h1>
+<h1>Скриншоты</h1>
 <img src="images/one_block.png" alt="Один блок" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/sky_island.png" alt="Остров в небе" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/classic.png" alt="Классический набор" style="width: 100%; max-width: 1280px; height: auto;">
@@ -49,10 +51,10 @@ The mod is compatible with other mods, and it already has basic support:
 <img src="images/add_block.png" alt="Добавление блока" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/add_mob.png" alt="Добавление моба" style="width: 100%; max-width: 1280px; height: auto;">
 
-<h1>For developers</h1>
-The latest versions of the mod for specific versions of Minecraft are separated into separate branches
+<h1>Для разработчиков</h1>
+Последние версии мода для конкретных версий майнкрафта выделены в отдельные ветки
 
-Branches:
+Ветки:
 <ul>
     <li><a href="https://github.com/XZSt4nce/OneBlockUltima/tree/forge_1.12.2">Forge 1.12.2</a></li>
 </ul>
