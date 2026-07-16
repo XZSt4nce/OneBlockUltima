@@ -34,4 +34,5 @@ servers.dat
 # OS
 .DS_Store
 Thumbs.db
+/build-output.txt
 /build-test-output.txt

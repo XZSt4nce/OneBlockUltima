@@ -1,4 +1,4 @@
-<img src="src/main/resources/oneblock_logo.png" alt="Логотип мода" style="width: 100%; max-width: 1024px; height: auto;">
+<img src="images/oneblock_logo.png" alt="Логотип мода" style="width: 100%; max-width: 1024px; height: auto;">
 <h1>Описание</h1><br/>
 Данный мод подарит вам уникальный опыт выживания в мире, в котором есть всего лишь один блок. Он добавляет <b>новый тип мира "Один блок"</b>, который будет перегенерироваться всякий раз, когда вы его ломаете. Нажав на ПКМ на генерируемый блок, вы откроете меню генератора, где сможете выбрать набор, открыть новые и улучшить уже открытые наборы. Также мод добавляет баланс, который вы пополняете за разрушение блоков.
 <br/>
@@ -47,3 +47,11 @@
 <img src="images/set_edit.png" alt="Редактирование набора" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/add_block.png" alt="Добавление блока" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/add_mob.png" alt="Добавление моба" style="width: 100%; max-width: 1280px; height: auto;">
+
+<h1>Для разработчиков</h1>
+Последние версии мода для конкретных версий майнкрафта выделены в отдельные ветки
+
+Ветки:
+<ul>
+    <li><a href="https://github.com/XZSt4nce/OneBlockUltima/tree/forge_1.12.2">Forge 1.12.2</a></li>
+</ul>
