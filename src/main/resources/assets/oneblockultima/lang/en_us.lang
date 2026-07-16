@@ -1,5 +1,4 @@
 tile.one_block_generator.name=One Block Generator
-generator.one_block=One block
 itemGroup.OneBlockUltima=OneBlockUltima
 
 advancements.one_block_generator.craft.title=All out of nothing
@@ -7,7 +6,6 @@ advancements.one_block_generator.craft.description=Create block generator
 
 gui.oneblockultima.select=Select
 gui.oneblockultima.upgrade=Upgrade
-gui.oneblockultima.balance=Balance
 gui.oneblockultima.active_set=Active set
 gui.oneblockultima.possible_blocks=Possible blocks
 gui.oneblockultima.mobs=Mobs
@@ -41,7 +39,6 @@ gui.oneblockultima.set.cooking=Cooking
 
 gui.oneblockultima.current_level=Current Level
 gui.oneblockultima.next_level=Next Level
-gui.oneblockultima.next_level_preview=Next level preview
 
 # Управление наборами
 gui.oneblockultima.config.sets_title=Manage Sets
@@ -52,8 +49,6 @@ gui.oneblockultima.config.edit=Edit
 gui.oneblockultima.config.set_name=Set Name
 gui.oneblockultima.config.set_id=Identifier
 gui.oneblockultima.config.unlock_cost=Unlock Cost
-gui.oneblockultima.config.blocks=Blocks
-gui.oneblockultima.config.mobs=Mobs
 gui.oneblockultima.config.add_block=Add Block
 gui.oneblockultima.config.add_mob=Add Mob
 gui.oneblockultima.config.remove=Remove
@@ -66,9 +61,6 @@ gui.oneblockultima.config.saved=Set saved
 gui.oneblockultima.config.error.empty_id=Identifier cannot be empty
 gui.oneblockultima.config.error.duplicate_id=A set with this identifier already exists
 gui.oneblockultima.config.error.invalid_cost=Invalid cost
-gui.oneblockultima.config.filter.all=All
-gui.oneblockultima.config.filter.blocks=Blocks
-gui.oneblockultima.config.filter.mobs=Mobs
 gui.oneblockultima.config.search.no_results=No results found
 gui.oneblockultima.config.search.help=@Mod &ID
 gui.oneblockultima.config.required_mods=Required mods
@@ -88,58 +80,34 @@ gui.oneblockultima.config.confirm=Confirm
 gui.oneblockultima.config.confirm_delete_message=Do you really want to delete the set %s?
 
 gui.oneblockultima.config.edit_currency=Edit currency
-gui.oneblockultima.config.current_currency=Current currency
 gui.oneblockultima.config.currency_updated=Currency updated
-gui.oneblockultima.config.edit_currency_short=✎
 gui.oneblockultima.config.base_level=Level
-gui.oneblockultima.config.meta=Meta
 gui.oneblockultima.config.currency=Currency
 gui.oneblockultima.config.error.invalid_currency=Invalid currency value
 
-gui.oneblockultima.config.title=Blocksets Configuration
-gui.oneblockultima.config.description=registry – the block/mob/item ID/nnmeta – block subtype (number from 0 to 15) or metas – meta values array/nnbaseLevel – at what level the block/mob appears/nnbaseChance – base percentage chance of occurrence/nncurrency – how much balance increases when destroyed/nncount – the number of mobs appearing/nndropItem – item that drops and is shown in the menu/nnbtTags – NBT tags/nnunlockCost – cost to unlock the set/nnunlockConditions – additional conditions to unlock the set/nnunlockConditions.mode – condition check mode (any/all)/nnunlockConditions.conditions[].type – condition type: set_level, broken_blocks, broken_blocks_total/nnunlockConditions.conditions[].setId – set id for set_level and broken_blocks, omit for broken_blocks_total/nnunlockConditions.conditions[].level – level required for set_level, omit otherwise/nnunlockConditions.conditions[].count – required count for broken_blocks or broken_blocks_total, omit for set_level
-gui.oneblockultima.config.path=Config file path:
 gui.oneblockultima.reset_default=Reset Default
 gui.oneblockultima.save=Save
-gui.oneblockultima.open=Open config folder
-gui.oneblockultima.reload=Reload
 gui.oneblockultima.cancel=Cancel
 gui.oneblockultima.tabs.sets=Sets
 gui.oneblockultima.tabs.settings=Settings
-gui.oneblockultima.settings.description=Configure generation behavior and open the blocksets.json editor
-gui.oneblockultima.settings.hint=Changes apply immediately after you press a toggle.
 gui.oneblockultima.settings.fluid=Fluid generation
 gui.oneblockultima.settings.mobs=Mob generation
 gui.oneblockultima.settings.chests=Chest generation
 gui.oneblockultima.settings.saplings=Sapling generation
 gui.oneblockultima.settings.open_editor=Manage config
 gui.oneblockultima.settings.back=Back
-gui.oneblockultima.settings.edit=Edit
-gui.oneblockultima.settings.choice_title=Configuration actions
-gui.oneblockultima.settings.editor_title=Blocksets JSON Editor
 gui.oneblockultima.settings.enabled=enabled
 gui.oneblockultima.settings.disabled=disabled
 
 gui.oneblockultima.unlock_conditions=Unlock Conditions
-gui.oneblockultima.conditions.require_all=Requires all:
-gui.oneblockultima.conditions.require_any=Requires any:
 gui.oneblockultima.condition.set_level=%s level %d/%d
 gui.oneblockultima.condition.broken_blocks=Break %d blocks in %s
 gui.oneblockultima.condition.broken_blocks_total=Break %d blocks total
 gui.oneblockultima.condition.unknown=Unknown condition: %s
 
-gui.oneblockultima.status.edit_instruction=Edit settings and press Save.
 gui.oneblockultima.status.reset_success=Reset successful
 gui.oneblockultima.status.reset_failed=Reset failed
-gui.oneblockultima.status.delete_failed=Delete failed
-gui.oneblockultima.status.open_failed=Open failed
 gui.oneblockultima.status.save_failed=Failed to save config
-gui.oneblockultima.status.invalid_json=Invalid JSON syntax
-gui.oneblockultima.status.reloaded=Config reloaded
-gui.oneblockultima.status.reload_failed=Reload failed
-gui.oneblockultima.status.modified=Modified
-gui.oneblockultima.status.unmodified=Unmodified
-gui.oneblockultima.status.name_updated=Name updated for current language
 
 gui.oneblockultima.msg.need=Not enough currency! Need
 gui.oneblockultima.msg.have=Have
@@ -186,7 +154,6 @@ item.far_star.name=Far star
 item.compressed_mineral.name=Compressed mineral
 item.higgs_boson.name=Higgs boson
 item.space_soup.name=Space soup
-item.guide_to_void.name=A guide to the void
 
 item.protein.name=Protein
 item.super_protein.name=Super protein

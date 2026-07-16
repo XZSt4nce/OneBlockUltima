@@ -1,5 +1,4 @@
 tile.one_block_generator.name=One Block Generator
-generator.one_block=Один блок
 itemGroup.OneBlockUltima=OneBlockUltima
 
 advancements.one_block_generator.craft.title=Всё из ничего
@@ -7,7 +6,6 @@ advancements.one_block_generator.craft.description=Создайте генера
 
 gui.oneblockultima.select=Выбрать
 gui.oneblockultima.upgrade=Улучшить
-gui.oneblockultima.balance=Баланс
 gui.oneblockultima.active_set=Активный набор
 gui.oneblockultima.possible_blocks=Возможные блоки
 gui.oneblockultima.mobs=Мобы
@@ -41,7 +39,6 @@ gui.oneblockultima.set.cooking=Кулинарный
 
 gui.oneblockultima.current_level=Текущий уровень
 gui.oneblockultima.next_level=Следующий уровень
-gui.oneblockultima.next_level_preview=Превью следующего уровня
 
 # Управление наборами
 gui.oneblockultima.config.sets_title=Управление наборами
@@ -52,8 +49,6 @@ gui.oneblockultima.config.edit=Редактировать
 gui.oneblockultima.config.set_name=Название набора
 gui.oneblockultima.config.set_id=Идентификатор
 gui.oneblockultima.config.unlock_cost=Стоимость разблокировки
-gui.oneblockultima.config.blocks=Блоки
-gui.oneblockultima.config.mobs=Мобы
 gui.oneblockultima.config.add_block=Добавить блок
 gui.oneblockultima.config.add_mob=Добавить моба
 gui.oneblockultima.config.remove=Удалить
@@ -66,9 +61,6 @@ gui.oneblockultima.config.saved=Набор сохранён
 gui.oneblockultima.config.error.empty_id=Идентификатор не может быть пустым
 gui.oneblockultima.config.error.duplicate_id=Набор с таким идентификатором уже существует
 gui.oneblockultima.config.error.invalid_cost=Некорректная стоимость
-gui.oneblockultima.config.filter.all=Все
-gui.oneblockultima.config.filter.blocks=Блоки
-gui.oneblockultima.config.filter.mobs=Мобы
 gui.oneblockultima.config.search.no_results=Ничего не найдено
 gui.oneblockultima.config.search.help=@Мод &Идентификатор
 gui.oneblockultima.config.required_mods=Требуемые моды
@@ -88,58 +80,34 @@ gui.oneblockultima.config.confirm=Подтвердить
 gui.oneblockultima.config.confirm_delete_message=Вы действительно хотите удалить набор %s?
 
 gui.oneblockultima.config.edit_currency=Редактировать стоимость
-gui.oneblockultima.config.current_currency=Текущая стоимость
 gui.oneblockultima.config.currency_updated=Стоимость обновлена
-gui.oneblockultima.config.edit_currency_short=✎
 gui.oneblockultima.config.base_level=Уровень
-gui.oneblockultima.config.meta=Мета
 gui.oneblockultima.config.currency=Валюта
 gui.oneblockultima.config.error.invalid_currency=Некорректное значение валюты
 
-gui.oneblockultima.config.title=Конфигурация наборов
-gui.oneblockultima.config.description=registry – идентификатор блока/моба/предмета/nnmeta – подвид блока (число от 0 до 15) или metas – массив мета-значений/nnbaseLevel – на каком уровне появляется блок/моб/nnbaseChance – базовый процент шанса выпадения/nncurrency – на сколько повысится баланс за разрушение/nncount – количество появляющихся мобов/nndropItem – предмет, который будет выпадать и отображаться в меню/nnnbtTags – NBT теги/nnunlockCost – стоимость разблокировки набора/nnunlockConditions – дополнительные условия для разблокировки набора/nnunlockConditions.mode – режим проверки условий (any/all)/nnunlockConditions.conditions[].type – тип условия: set_level, broken_blocks, broken_blocks_total/nnunlockConditions.conditions[].setId – id набора для set_level и broken_blocks, не указывайте для broken_blocks_total/nnunlockConditions.conditions[].level – требуемый уровень для set_level, не указывайте для остальных/nnunlockConditions.conditions[].count – требуемое количество для broken_blocks или broken_blocks_total, не указывайте для set_level
-gui.oneblockultima.config.path=Путь к файлу конфигурации:
 gui.oneblockultima.reset_default=Сбросить по умолчанию
 gui.oneblockultima.save=Сохранить
-gui.oneblockultima.open=Открыть папку с конфигом
-gui.oneblockultima.reload=Перезагрузить
 gui.oneblockultima.cancel=Отмена
 gui.oneblockultima.tabs.sets=Наборы
 gui.oneblockultima.tabs.settings=Настройки
-gui.oneblockultima.settings.description=Настройте генерацию и откройте редактор blocksets.json
-gui.oneblockultima.settings.hint=Изменения применяются сразу после нажатия на кнопку.
 gui.oneblockultima.settings.fluid=Генерация жидкостей
 gui.oneblockultima.settings.mobs=Генерация мобов
 gui.oneblockultima.settings.chests=Генерация сундуков
 gui.oneblockultima.settings.saplings=Генерация саженцев
 gui.oneblockultima.settings.open_editor=Управление конфигом
 gui.oneblockultima.settings.back=Назад
-gui.oneblockultima.settings.edit=Редактировать
-gui.oneblockultima.settings.choice_title=Действия с конфигурацией
-gui.oneblockultima.settings.editor_title=Редактор blocksets.json
 gui.oneblockultima.settings.enabled=вкл.
 gui.oneblockultima.settings.disabled=выкл.
 
 gui.oneblockultima.unlock_conditions=Условия разблокировки
-gui.oneblockultima.conditions.require_all=Требует все:
-gui.oneblockultima.conditions.require_any=Требует любое:
 gui.oneblockultima.condition.set_level=%s уровень %d/%d
 gui.oneblockultima.condition.broken_blocks=Сломать %d блоков в %s
 gui.oneblockultima.condition.broken_blocks_total=Сломать %d блоков всего
 gui.oneblockultima.condition.unknown=Неизвестное условие: %s
 
-gui.oneblockultima.status.edit_instruction=Измените настройки и нажмите Сохранить.
 gui.oneblockultima.status.reset_success=Сброс успешен
 gui.oneblockultima.status.reset_failed=Не удалось сбросить
-gui.oneblockultima.status.delete_failed=Не удалось удалить
-gui.oneblockultima.status.open_failed=Не удалось открыть
 gui.oneblockultima.status.save_failed=Не удалось сохранить конфиг
-gui.oneblockultima.status.invalid_json=Неверный синтаксис JSON
-gui.oneblockultima.status.reloaded=Конфиг перезагружен
-gui.oneblockultima.status.reload_failed=Не удалось перезагрузить конфиг
-gui.oneblockultima.status.modified=Изменено
-gui.oneblockultima.status.unmodified=Не изменено
-gui.oneblockultima.status.name_updated=Название обновлено для текущего языка
 
 gui.oneblockultima.msg.need=Недостаточно средств! Нужно
 gui.oneblockultima.msg.have=Имеется
@@ -186,7 +154,6 @@ item.far_star.name=Далёкая звезда
 item.compressed_mineral.name=Сжатый минерал
 item.higgs_boson.name=Бозон Хиггса
 item.space_soup.name=Космический суп
-item.guide_to_void.name=Путеводитель по пустоте
 
 item.protein.name=Протеин
 item.super_protein.name=Супер протеин
