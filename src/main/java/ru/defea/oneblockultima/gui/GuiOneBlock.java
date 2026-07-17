@@ -32,7 +32,9 @@ import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
+import java.awt.Desktop;
 import java.io.IOException;
+import java.net.URI;
 import java.util.*;
 
 import static ru.defea.oneblockultima.util.ModelUtil.*;
@@ -50,8 +52,11 @@ public class GuiOneBlock extends GuiContainer
     private static final int BUTTON_TOGGLE_MOBS = 8;
     private static final int BUTTON_TOGGLE_CHESTS = 9;
     private static final int BUTTON_TOGGLE_SAPLINGS = 10;
+    private static final int BUTTON_TAB_DONATE = 11;
+    private static final int BUTTON_DONATE_BASE = 12;
     private static final int VIEW_SETS = 0;
     private static final int VIEW_SETTINGS = 1;
+    private static final int VIEW_DONATE = 2;
 
     private static final int GREEN_COLOR = 0x00EE00;
     private static final int ORANGE_COLOR = 0xFFAA00;
@@ -66,15 +71,19 @@ public class GuiOneBlock extends GuiContainer
     private GuiButton upgradeButton;
     private GuiButton tabSetsButton;
     private GuiButton tabSettingsButton;
+    private GuiButton tabDonateButton;
     private GuiButton openConfigEditorButton;
     private GuiButton toggleFluidButton;
     private GuiButton toggleMobsButton;
     private GuiButton toggleChestsButton;
     private GuiButton toggleSaplingsButton;
+    private GuiButton[] donateButtons;
     private Boolean pendingDisableFluid = null;
     private Boolean pendingDisableMob = null;
     private Boolean pendingDisableChest = null;
     private Boolean pendingDisableSapling = null;
+    private String donateStatusMessage = null;
+    private int donateStatusTicks = 0;
     private int activeView = VIEW_SETS;
     private int blockScroll = 0;
     private int mobScroll = 0;
@@ -92,6 +101,7 @@ public class GuiOneBlock extends GuiContainer
     private String hoveredMobNameRight = null;
 
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
+    private static final ResourceLocation SBP_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/sbp.png");
 
     private int cellSize = 18;
     private int cellPadding = 1;
@@ -809,9 +819,9 @@ public class GuiOneBlock extends GuiContainer
         buttonList.clear();
         rowInterval = fontRenderer.FONT_HEIGHT + 4;
 
-        int tabGap = xSize / 24;
-        int tabWidth = xSize / 5;
-        int totalTabWidth = tabWidth * 2 + tabGap;
+        int tabGap = xSize / 36;
+        int tabWidth = xSize / 7;
+        int totalTabWidth = tabWidth * 3 + tabGap * 2;
         int tabX = guiLeft + (xSize - totalTabWidth) / 2;
         int tabY = guiTop + tabRowY + textHeight / 2;
         int infoButtonsY = guiTop + infoRowY + rowInterval * 2;
@@ -822,6 +832,7 @@ public class GuiOneBlock extends GuiContainer
 
         tabSetsButton = new GuiButton(BUTTON_TAB_SETS, tabX, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.sets"));
         tabSettingsButton = new GuiButton(BUTTON_TAB_SETTINGS, tabX + tabWidth + tabGap, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.settings"));
+        tabDonateButton = new GuiButton(BUTTON_TAB_DONATE, tabX + (tabWidth + tabGap) * 2, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.donate"));
         prevButton = new GuiButton(BUTTON_PREV_SET, leftButtonX, infoButtonsY, 20, buttonHeight, "<");
         nextButton = new GuiButton(BUTTON_NEXT_SET, leftButtonX + 26, infoButtonsY, 20, buttonHeight, ">");
         selectButton = new GuiButton(BUTTON_SELECT_SET, leftButtonX, infoButtonsY + buttonHeight + buttonGap, selectWidth, buttonHeight, I18n.format("gui.oneblockultima.select"));
@@ -835,8 +846,18 @@ public class GuiOneBlock extends GuiContainer
         toggleSaplingsButton = new GuiButton(BUTTON_TOGGLE_SAPLINGS, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + buttonHeight + buttonGap, buttonWidth, buttonHeight, "");
         openConfigEditorButton = new GuiButton(BUTTON_OPEN_CONFIG_EDITOR, guiLeft + contentLeft + settingWidth / 2 + buttonGap, settingsButtonStartY + (buttonHeight + buttonGap) * 2, buttonWidth, buttonHeight, I18n.format("gui.oneblockultima.settings.open_editor"));
 
+        int donateBtnX = guiLeft + contentLeft + 72;
+        int donateBtnWidth = contentWidth - 72 - 4;
+        int donateBtnY = guiTop + infoRowY + rowInterval * 5;
+        donateButtons = new GuiButton[DonateMethod.METHODS.length];
+        for (int i = 0; i < DonateMethod.METHODS.length; i++)
+        {
+            donateButtons[i] = new GuiButton(BUTTON_DONATE_BASE + i, donateBtnX, donateBtnY + (buttonHeight + buttonGap) * i, donateBtnWidth, buttonHeight, DonateMethod.METHODS[i].text);
+        }
+
         buttonList.add(tabSetsButton);
         buttonList.add(tabSettingsButton);
+        buttonList.add(tabDonateButton);
         buttonList.add(prevButton);
         buttonList.add(nextButton);
         buttonList.add(selectButton);
@@ -846,6 +867,10 @@ public class GuiOneBlock extends GuiContainer
         buttonList.add(toggleMobsButton);
         buttonList.add(toggleChestsButton);
         buttonList.add(toggleSaplingsButton);
+        for (GuiButton btn : donateButtons)
+        {
+            buttonList.add(btn);
+        }
         updateViewButtons();
 
         // Инициализируем фон ПОСЛЕ того, как выбран набор
@@ -855,17 +880,27 @@ public class GuiOneBlock extends GuiContainer
     private void updateViewButtons()
     {
         boolean setsView = activeView == VIEW_SETS;
+        boolean settingsView = activeView == VIEW_SETTINGS;
+        boolean donateView = activeView == VIEW_DONATE;
         if (prevButton != null) prevButton.visible = setsView;
         if (nextButton != null) nextButton.visible = setsView;
         if (selectButton != null) selectButton.visible = setsView;
         if (upgradeButton != null) upgradeButton.visible = setsView;
         if (tabSetsButton != null) tabSetsButton.enabled = !setsView;
-        if (tabSettingsButton != null) tabSettingsButton.enabled = setsView;
-        if (openConfigEditorButton != null) openConfigEditorButton.visible = !setsView;
-        if (toggleFluidButton != null) toggleFluidButton.visible = !setsView;
-        if (toggleMobsButton != null) toggleMobsButton.visible = !setsView;
-        if (toggleChestsButton != null) toggleChestsButton.visible = !setsView;
-        if (toggleSaplingsButton != null) toggleSaplingsButton.visible = !setsView;
+        if (tabSettingsButton != null) tabSettingsButton.enabled = !settingsView;
+        if (tabDonateButton != null) tabDonateButton.enabled = !donateView;
+        if (openConfigEditorButton != null) openConfigEditorButton.visible = settingsView;
+        if (toggleFluidButton != null) toggleFluidButton.visible = settingsView;
+        if (toggleMobsButton != null) toggleMobsButton.visible = settingsView;
+        if (toggleChestsButton != null) toggleChestsButton.visible = settingsView;
+        if (toggleSaplingsButton != null) toggleSaplingsButton.visible = settingsView;
+        if (donateButtons != null)
+        {
+            for (GuiButton btn : donateButtons)
+            {
+                btn.visible = donateView;
+            }
+        }
 
         TileEntityOneBlockGenerator generator = container.getGenerator();
         if (toggleFluidButton != null)
@@ -950,6 +985,11 @@ public class GuiOneBlock extends GuiContainer
             activeView = VIEW_SETTINGS;
             updateViewButtons();
         }
+        else if (button.id == BUTTON_TAB_DONATE)
+        {
+            activeView = VIEW_DONATE;
+            updateViewButtons();
+        }
         else if (button.id == BUTTON_TOGGLE_FLUIDS)
         {
             boolean currentDisabled = container.getGenerator() != null && container.getGenerator().isDisableFluidGeneration();
@@ -981,6 +1021,10 @@ public class GuiOneBlock extends GuiContainer
         else if (button.id == BUTTON_OPEN_CONFIG_EDITOR)
         {
             mc.displayGuiScreen(new GuiSetsConfig(this));
+        }
+        else if (button.id >= BUTTON_DONATE_BASE && button.id < BUTTON_DONATE_BASE + DonateMethod.METHODS.length)
+        {
+            handleDonateClick(DonateMethod.METHODS[button.id - BUTTON_DONATE_BASE]);
         }
         else if (button.id == BUTTON_PREV_SET)
         {
@@ -1020,6 +1064,14 @@ public class GuiOneBlock extends GuiContainer
     public void updateScreen()
     {
         super.updateScreen();
+        if (donateStatusTicks > 0)
+        {
+            donateStatusTicks--;
+            if (donateStatusTicks <= 0)
+            {
+                donateStatusMessage = null;
+            }
+        }
         refreshActiveSetFromGenerator();
         TileEntityOneBlockGenerator generator = container.getGenerator();
         if (generator != null)
@@ -1088,7 +1140,7 @@ public class GuiOneBlock extends GuiContainer
             activeSetName = activeSetDef == null ? activeSetId : getLocalizedSetName(activeSetDef);
         }
 
-        if (activeView != VIEW_SETTINGS)
+        if (activeView == VIEW_SETS)
         {
             String activeSetString = I18n.format("gui.oneblockultima.active_set");
             int rightTextX = contentWidth - fontRenderer.getStringWidth(activeSetString);
@@ -1135,6 +1187,12 @@ public class GuiOneBlock extends GuiContainer
 
         if (activeView == VIEW_SETTINGS)
         {
+            return;
+        }
+
+        if (activeView == VIEW_DONATE)
+        {
+            drawDonateView();
             return;
         }
 
@@ -1483,6 +1541,69 @@ public class GuiOneBlock extends GuiContainer
         int visibleRows = Math.min(rows, Math.max(1, areaHeight / (cellSize + cellPadding)));
 
         return Math.max(0, rows - visibleRows);
+    }
+
+    private void handleDonateClick(DonateMethod method)
+    {
+        if (method.type == DonateMethod.Type.LINK)
+        {
+            try
+            {
+                Desktop.getDesktop().browse(new URI(method.value));
+            }
+            catch (Exception e)
+            {
+                donateStatusMessage = I18n.format("gui.oneblockultima.donate.open_failed");
+                donateStatusTicks = 200;
+            }
+        }
+        else
+        {
+            GuiOneBlock.setClipboardString(method.value);
+            donateStatusMessage = I18n.format("gui.oneblockultima.donate.copied", method.value);
+            donateStatusTicks = 200;
+        }
+    }
+
+    private void drawDonateView()
+    {
+        int y = infoRowY;
+        int centerX = contentLeft + contentWidth / 2;
+
+        String thankYou = I18n.format("gui.oneblockultima.donate.thank_you");
+        drawCenteredString(fontRenderer, thankYou, centerX, y, 0x55FF55);
+        y += rowInterval * 2;
+
+        String line1 = I18n.format("gui.oneblockultima.donate.line1");
+        drawCenteredString(fontRenderer, line1, centerX, y, 0xCCCCCC);
+        y += rowInterval;
+
+        String line2 = I18n.format("gui.oneblockultima.donate.line2");
+        drawCenteredString(fontRenderer, line2, centerX, y, 0xCCCCCC);
+        y += rowInterval;
+
+        String line3 = I18n.format("gui.oneblockultima.donate.line3");
+        drawCenteredString(fontRenderer, line3, centerX, y, 0xCCCCCC);
+        y += rowInterval;
+
+        int qrSize = 64;
+        int qrX = contentLeft + 4;
+        int qrY = y;
+
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        mc.getTextureManager().bindTexture(SBP_TEXTURE);
+        drawModalRectWithCustomSizedTexture(qrX, qrY, 0, 0, qrSize, qrSize, qrSize, qrSize);
+
+        String sbpLabel = "\u0421\u0411\u041F";
+        int labelWidth = fontRenderer.getStringWidth(sbpLabel);
+        fontRenderer.drawStringWithShadow(sbpLabel, qrX + qrSize / 2.0F - labelWidth / 2.0F, qrY + qrSize + 4, 0xFFFFFF);
+
+        if (donateStatusMessage != null && donateStatusTicks > 0)
+        {
+            int statusY = ySize - buttonGap - fontRenderer.FONT_HEIGHT;
+            int statusColor = 0x55FF55;
+            drawCenteredString(fontRenderer, donateStatusMessage, contentLeft + contentWidth / 2, statusY, statusColor);
+        }
     }
 
     @Override

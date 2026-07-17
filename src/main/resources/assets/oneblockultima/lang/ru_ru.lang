@@ -100,6 +100,14 @@ gui.oneblockultima.save=Сохранить
 gui.oneblockultima.cancel=Отмена
 gui.oneblockultima.tabs.sets=Наборы
 gui.oneblockultima.tabs.settings=Настройки
+gui.oneblockultima.tabs.donate=Поддержать
+
+gui.oneblockultima.donate.thank_you=Спасибо за игру в OneBlock Ultima!
+gui.oneblockultima.donate.line1=Если вам нравится мод, вы можете
+gui.oneblockultima.donate.line2=поддержать разработчика, чтобы помочь
+gui.oneblockultima.donate.line3=с обновлениями и новыми функциями.
+gui.oneblockultima.donate.copied=Скопировано: %s
+gui.oneblockultima.donate.open_failed=Не удалось открыть ссылку
 gui.oneblockultima.settings.fluid=Генерация жидкостей
 gui.oneblockultima.settings.mobs=Генерация мобов
 gui.oneblockultima.settings.chests=Генерация сундуков
