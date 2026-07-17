@@ -64,8 +64,8 @@ gui.oneblockultima.config.error.invalid_cost=Некорректная стоим
 gui.oneblockultima.config.search.no_results=Ничего не найдено
 gui.oneblockultima.config.search.help=@Мод &Идентификатор
 gui.oneblockultima.config.required_mods=Требуемые моды
-gui.oneblockultima.config.required_mods_type_all=ВСЕ
-gui.oneblockultima.config.required_mods_type_any=ЛЮБОЙ
+gui.oneblockultima.config.all=ВСЕ
+gui.oneblockultima.config.any=ЛЮБОЙ
 gui.oneblockultima.config.required_mods_edit=Изменить требуемые моды
 gui.oneblockultima.config.required_mods_title=Требуемые моды
 gui.oneblockultima.config.required_mods_add_title=Добавить требуемые моды
@@ -84,6 +84,16 @@ gui.oneblockultima.config.currency_updated=Стоимость обновлена
 gui.oneblockultima.config.base_level=Уровень
 gui.oneblockultima.config.currency=Валюта
 gui.oneblockultima.config.error.invalid_currency=Некорректное значение валюты
+
+gui.oneblockultima.config.unlock_conditions_edit=Условия разблокировки
+gui.oneblockultima.config.unlock_conditions_title=Условия разблокировки
+gui.oneblockultima.config.unlock_conditions_empty=Условия не заданы
+gui.oneblockultima.config.unlock_conditions_saved=Условия разблокировки сохранены
+gui.oneblockultima.config.unlock_conditions_level=Уровень
+gui.oneblockultima.config.unlock_conditions_count=Количество
+gui.oneblockultima.config.unlock_conditions_type_set_level=Уровень набора
+gui.oneblockultima.config.unlock_conditions_type_broken_blocks=Сломано блоков в наборе
+gui.oneblockultima.config.unlock_conditions_type_broken_blocks_total=Всего сломано блоков
 
 gui.oneblockultima.reset_default=Сбросить по умолчанию
 gui.oneblockultima.save=Сохранить

@@ -56,6 +56,14 @@ public class GuiSetsConfig extends GuiScreen
     private static final int BUTTON_REQUIRED_MODS_SAVE = 15;
     private static final int BUTTON_REQUIRED_MODS_DELETE = 16;
     private static final int BUTTON_REQUIRED_MODS_ADD = 17;
+    private static final int BUTTON_UNLOCK_CONDITIONS_TOGGLE = 18;
+    private static final int BUTTON_UNLOCK_CONDITIONS_BACK = 19;
+    private static final int BUTTON_UNLOCK_CONDITIONS_SAVE = 20;
+    private static final int BUTTON_UNLOCK_CONDITIONS_ADD = 21;
+    private static final int BUTTON_UNLOCK_CONDITIONS_DELETE = 22;
+    private static final int BUTTON_EDIT_UNLOCK_CONDITIONS = 23;
+    private static final int BUTTON_UNLOCK_CONDITIONS_CYCLE_TYPE = 24;
+    private static final int BUTTON_UNLOCK_CONDITIONS_CYCLE_SET = 25;
 
     private static final ResourceLocation COIN_TEXTURE = new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png");
 
@@ -66,6 +74,7 @@ public class GuiSetsConfig extends GuiScreen
     private static final int VIEW_EDIT_CURRENCY = 4;
     private static final int VIEW_REQUIRED_MODS_EDITOR = 5;
     private static final int VIEW_REQUIRED_MODS_ADD = 6;
+    private static final int VIEW_UNLOCK_CONDITIONS = 7;
 
     private static class BlockDisplayEntry
     {
@@ -132,6 +141,12 @@ public class GuiSetsConfig extends GuiScreen
     private GuiButton requiredModsSaveButton;
     private GuiButton requiredModsDeleteButton;
     private GuiButton requiredModsAddButton;
+    private GuiButton editUnlockConditionsButton;
+    private GuiButton unlockConditionsToggleButton;
+    private GuiButton unlockConditionsBackButton;
+    private GuiButton unlockConditionsSaveButton;
+    private GuiButton unlockConditionsAddButton;
+    private GuiButton unlockConditionsDeleteButton;
 
     private String statusMessage = "";
     private int statusTimer = 0;
@@ -151,6 +166,19 @@ public class GuiSetsConfig extends GuiScreen
     private boolean requiredModsEditorInitialized = false;
     private final Set<String> selectedRequiredModsForRemoval = new LinkedHashSet<>();
     private final Set<String> selectedRequiredModsToAdd = new LinkedHashSet<>();
+
+    private String unlockConditionsEditorMode = "any";
+    private final List<BlockSetConfig.UnlockConditionDefinition> unlockConditionsEditorConditions = new ArrayList<>();
+    private int selectedUnlockConditionIndex = -1;
+    private int unlockConditionsScrollOffset = 0;
+    private GuiTextField unlockConditionsLevelField;
+    private GuiTextField unlockConditionsCountField;
+    private List<BlockSetConfig.BlockSetDefinition> availableSetsForConditions = new ArrayList<>();
+    private String newConditionTypeToAdd = "broken_blocks_total";
+    private String newConditionSetId = "";
+    private GuiButton unlockConditionsCycleTypeButton;
+    private GuiButton unlockConditionsCycleSetButton;
+
     private Map<String, Map<String, String>> setLocalizedNames = new HashMap<>();
 
     private final int pad = 8;
@@ -262,6 +290,8 @@ public class GuiSetsConfig extends GuiScreen
         if (editCurrencyField != null) editCurrencyField.setFocused(false);
         if (editLevelField != null) editLevelField.setFocused(false);
         if (editChanceField != null) editChanceField.setFocused(false);
+        if (unlockConditionsLevelField != null) unlockConditionsLevelField.setFocused(false);
+        if (unlockConditionsCountField != null) unlockConditionsCountField.setFocused(false);
     }
 
     private void reloadSetsFromConfig()
@@ -456,8 +486,8 @@ public class GuiSetsConfig extends GuiScreen
     private String getRequiredModsEditorTypeLabel()
     {
         return requiredModsEditorType == BlockSetConfig.SetRequiredModsDefinition.TYPE.ANY
-                ? I18n.format("gui.oneblockultima.config.required_mods_type_any")
-                : I18n.format("gui.oneblockultima.config.required_mods_type_all");
+                ? I18n.format("gui.oneblockultima.config.any")
+                : I18n.format("gui.oneblockultima.config.all");
     }
 
     private String getRequiredModsButtonLabel(BlockSetConfig.SetRequiredModsDefinition requiredMods)
@@ -468,9 +498,22 @@ public class GuiSetsConfig extends GuiScreen
         }
 
         String typeLabel = requiredMods.getType() == BlockSetConfig.SetRequiredModsDefinition.TYPE.ANY
-                ? I18n.format("gui.oneblockultima.config.required_mods_type_any")
-                : I18n.format("gui.oneblockultima.config.required_mods_type_all");
+                ? I18n.format("gui.oneblockultima.config.any")
+                : I18n.format("gui.oneblockultima.config.all");
         return typeLabel + " (" + requiredMods.getMods().size() + ")";
+    }
+
+    private String getUnlockConditionsButtonLabel(BlockSetConfig.UnlockConditionGroup conditions)
+    {
+        if (conditions == null || conditions.conditions == null || conditions.conditions.isEmpty())
+        {
+            return I18n.format("gui.oneblockultima.config.unlock_conditions_edit");
+        }
+
+        String typeLabel = "any".equalsIgnoreCase(conditions.mode)
+                ? I18n.format("gui.oneblockultima.config.any")
+                : I18n.format("gui.oneblockultima.config.all");
+        return typeLabel + " (" + conditions.conditions.size() + ")";
     }
 
     private void applyRequiredModsFromFields()
@@ -583,6 +626,44 @@ public class GuiSetsConfig extends GuiScreen
         changeView(VIEW_REQUIRED_MODS_ADD);
     }
 
+    private void openUnlockConditionsEditor()
+    {
+        if (editingSet == null)
+        {
+            return;
+        }
+
+        unlockConditionsEditorConditions.clear();
+        if (editingSet.unlockConditions != null && editingSet.unlockConditions.conditions != null)
+        {
+            unlockConditionsEditorMode = editingSet.unlockConditions.mode != null ? editingSet.unlockConditions.mode : "any";
+            for (BlockSetConfig.UnlockConditionDefinition cond : editingSet.unlockConditions.conditions)
+            {
+                if (cond == null) continue;
+                BlockSetConfig.UnlockConditionDefinition copy = new BlockSetConfig.UnlockConditionDefinition();
+                copy.type = cond.type;
+                copy.setId = cond.setId;
+                copy.level = cond.level;
+                copy.count = cond.count;
+                unlockConditionsEditorConditions.add(copy);
+            }
+        }
+        else
+        {
+            unlockConditionsEditorMode = "any";
+        }
+        selectedUnlockConditionIndex = -1;
+        unlockConditionsScrollOffset = 0;
+
+        availableSetsForConditions.clear();
+        if (sets != null)
+        {
+            availableSetsForConditions.addAll(sets);
+        }
+
+        changeView(VIEW_UNLOCK_CONDITIONS);
+    }
+
     private void removeSelectedRequiredMods()
     {
         if (selectedRequiredModsForRemoval.isEmpty())
@@ -637,6 +718,457 @@ public class GuiSetsConfig extends GuiScreen
         statusMessage = I18n.format("gui.oneblockultima.config.required_mods_saved");
         statusTimer = 60;
         changeView(VIEW_SET_DETAILS);
+    }
+
+    private void initUnlockConditionsView()
+    {
+        if (unlockConditionsLevelField == null)
+        {
+            unlockConditionsLevelField = new GuiTextField(12, fontRenderer, 0, 0, 0, btnHeight);
+            unlockConditionsCountField = new GuiTextField(13, fontRenderer, 0, 0, 0, btnHeight);
+        }
+
+        unlockConditionsLevelField.setVisible(false);
+        unlockConditionsCountField.setVisible(false);
+        unlockConditionsLevelField.setFocused(false);
+        unlockConditionsCountField.setFocused(false);
+
+        boolean needsSet = "set_level".equals(newConditionTypeToAdd) || "broken_blocks".equals(newConditionTypeToAdd);
+        boolean canAdd = canAddNewCondition(newConditionTypeToAdd);
+
+        String toggleLabel = "any".equalsIgnoreCase(unlockConditionsEditorMode)
+                ? I18n.format("gui.oneblockultima.config.any")
+                : I18n.format("gui.oneblockultima.config.all");
+        String cycleTypeLabel = I18n.format("gui.oneblockultima.config.unlock_conditions_type_" + newConditionTypeToAdd);
+        String addLabel = I18n.format("gui.oneblockultima.config.add");
+        String deleteLabel = I18n.format("gui.oneblockultima.config.remove");
+        String backLabel = I18n.format("gui.oneblockultima.settings.back");
+        String saveLabel = I18n.format("gui.oneblockultima.save");
+
+        int toggleBtnW = fontRenderer.getStringWidth(toggleLabel) + pad * 2;
+        int typeBtnW = fontRenderer.getStringWidth(cycleTypeLabel) + pad * 2;
+        int addBtnW = fontRenderer.getStringWidth(addLabel) + pad * 2;
+        int smallBtnW = Math.max(fontRenderer.getStringWidth(deleteLabel), fontRenderer.getStringWidth(backLabel));
+        smallBtnW = Math.max(smallBtnW, fontRenderer.getStringWidth(saveLabel)) + pad * 2;
+
+        int row1Y = pad + textHeight + gap;
+        int row1TotalW = toggleBtnW + gap + typeBtnW;
+        int row1StartX = (width - row1TotalW) / 2;
+
+        unlockConditionsToggleButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_TOGGLE, row1StartX, row1Y, toggleBtnW, btnHeight, toggleLabel);
+        unlockConditionsCycleTypeButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_CYCLE_TYPE, row1StartX + toggleBtnW + gap, row1Y, typeBtnW, btnHeight, cycleTypeLabel);
+
+        buttonList.add(unlockConditionsToggleButton);
+        buttonList.add(unlockConditionsCycleTypeButton);
+
+        int fieldWidth = Math.max(60, Math.min(100, width / 8));
+        int row2Y = row1Y + btnHeight + gap;
+
+        if (needsSet)
+        {
+            List<BlockSetConfig.BlockSetDefinition> availableSets = getAvailableSetsForType(newConditionTypeToAdd);
+            if (newConditionSetId.isEmpty() && !availableSets.isEmpty())
+            {
+                newConditionSetId = availableSets.get(0).id;
+            }
+
+            String cycleSetLabel = getSetNameForConditions(newConditionSetId);
+            int setBtnW = Math.max(fontRenderer.getStringWidth(cycleSetLabel) + pad * 2, 80);
+            String valueLabelText = "set_level".equals(newConditionTypeToAdd)
+                    ? I18n.format("gui.oneblockultima.config.unlock_conditions_level") + ":"
+                    : I18n.format("gui.oneblockultima.config.unlock_conditions_count") + ":";
+            int valueLabelW = fontRenderer.getStringWidth(valueLabelText) + gap;
+            int row2TotalW = setBtnW + gap + valueLabelW + fieldWidth + gap + addBtnW;
+            int row2StartX = (width - row2TotalW) / 2;
+
+            unlockConditionsCycleSetButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_CYCLE_SET, row2StartX, row2Y, setBtnW, btnHeight, cycleSetLabel);
+            unlockConditionsCycleSetButton.enabled = !availableSets.isEmpty();
+            buttonList.add(unlockConditionsCycleSetButton);
+
+            int valueFieldX = row2StartX + setBtnW + gap + valueLabelW;
+            if ("set_level".equals(newConditionTypeToAdd))
+            {
+                unlockConditionsLevelField.x = valueFieldX;
+                unlockConditionsLevelField.y = row2Y;
+                unlockConditionsLevelField.width = fieldWidth;
+                unlockConditionsLevelField.height = btnHeight;
+                unlockConditionsLevelField.setVisible(true);
+                unlockConditionsLevelField.setText("1");
+                unlockConditionsLevelField.setFocused(true);
+                unlockConditionsCountField.setVisible(false);
+            }
+            else
+            {
+                unlockConditionsCountField.x = valueFieldX;
+                unlockConditionsCountField.y = row2Y;
+                unlockConditionsCountField.width = fieldWidth;
+                unlockConditionsCountField.height = btnHeight;
+                unlockConditionsCountField.setVisible(true);
+                unlockConditionsCountField.setText("1");
+                unlockConditionsCountField.setFocused(true);
+                unlockConditionsLevelField.setVisible(false);
+            }
+
+            unlockConditionsAddButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_ADD, valueFieldX + fieldWidth + gap, row2Y, addBtnW, btnHeight, addLabel);
+            unlockConditionsAddButton.enabled = canAdd;
+            buttonList.add(unlockConditionsAddButton);
+        }
+        else
+        {
+            unlockConditionsCycleSetButton = null;
+
+            String valueLabelText = I18n.format("gui.oneblockultima.config.unlock_conditions_count") + ":";
+            int valueLabelW = fontRenderer.getStringWidth(valueLabelText) + gap;
+            int row2TotalW = valueLabelW + fieldWidth + gap + addBtnW;
+            int row2StartX = (width - row2TotalW) / 2;
+
+            unlockConditionsCountField.x = row2StartX + valueLabelW;
+            unlockConditionsCountField.y = row2Y;
+            unlockConditionsCountField.width = fieldWidth;
+            unlockConditionsCountField.height = btnHeight;
+            unlockConditionsCountField.setVisible(true);
+            unlockConditionsCountField.setText("1");
+            unlockConditionsCountField.setFocused(true);
+            unlockConditionsLevelField.setVisible(false);
+
+            unlockConditionsAddButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_ADD, unlockConditionsCountField.x + fieldWidth + gap, row2Y, addBtnW, btnHeight, addLabel);
+            unlockConditionsAddButton.enabled = canAdd;
+            buttonList.add(unlockConditionsAddButton);
+        }
+
+        int bottomY = height - pad - gap - btnHeight;
+        int bottomTotalW = smallBtnW * 3 + gap * 2;
+        int bottomStartX = (width - bottomTotalW) / 2;
+
+        unlockConditionsDeleteButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_DELETE, bottomStartX, bottomY, smallBtnW, btnHeight, deleteLabel);
+        unlockConditionsDeleteButton.enabled = selectedUnlockConditionIndex >= 0 && selectedUnlockConditionIndex < unlockConditionsEditorConditions.size();
+        unlockConditionsSaveButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_SAVE, bottomStartX + smallBtnW + gap, bottomY, smallBtnW, btnHeight, saveLabel);
+        unlockConditionsBackButton = new GuiButton(BUTTON_UNLOCK_CONDITIONS_BACK, bottomStartX + (smallBtnW + gap) * 2, bottomY, smallBtnW, btnHeight, backLabel);
+
+        buttonList.add(unlockConditionsDeleteButton);
+        buttonList.add(unlockConditionsSaveButton);
+        buttonList.add(unlockConditionsBackButton);
+    }
+
+    private boolean canAddNewCondition(String type)
+    {
+        if (type == null) return false;
+        switch (type)
+        {
+            case "broken_blocks_total":
+                for (BlockSetConfig.UnlockConditionDefinition c : unlockConditionsEditorConditions)
+                {
+                    if ("broken_blocks_total".equals(c.type)) return false;
+                }
+                return true;
+            case "broken_blocks":
+            case "set_level":
+                return !getAvailableSetsForType(type).isEmpty();
+            default:
+                return false;
+        }
+    }
+
+    private List<BlockSetConfig.BlockSetDefinition> getAvailableSetsForType(String type)
+    {
+        Set<String> usedSetIds = new HashSet<>();
+        for (BlockSetConfig.UnlockConditionDefinition c : unlockConditionsEditorConditions)
+        {
+            if (type.equals(c.type) && c.setId != null && !c.setId.isEmpty())
+            {
+                usedSetIds.add(c.setId);
+            }
+        }
+        List<BlockSetConfig.BlockSetDefinition> result = new ArrayList<>();
+        for (BlockSetConfig.BlockSetDefinition set : availableSetsForConditions)
+        {
+            if (set != null && !usedSetIds.contains(set.id))
+            {
+                result.add(set);
+            }
+        }
+        return result;
+    }
+
+    private int getUnlockConditionsToolbarHeight()
+    {
+        int row1Y = pad + textHeight + gap;
+        int row2Y = row1Y + btnHeight + gap;
+        return row2Y + btnHeight + gap;
+    }
+
+    private void commitUnlockConditionsEditor()
+    {
+        if (editingSet == null) return;
+
+        if (editingSet.unlockConditions == null)
+        {
+            editingSet.unlockConditions = new BlockSetConfig.UnlockConditionGroup();
+        }
+        editingSet.unlockConditions.mode = unlockConditionsEditorMode;
+        editingSet.unlockConditions.conditions = new ArrayList<>();
+        for (BlockSetConfig.UnlockConditionDefinition cond : unlockConditionsEditorConditions)
+        {
+            if (cond == null) continue;
+            BlockSetConfig.UnlockConditionDefinition copy = new BlockSetConfig.UnlockConditionDefinition();
+            copy.type = cond.type;
+            copy.setId = cond.setId;
+            copy.level = cond.level;
+            copy.count = cond.count;
+            editingSet.unlockConditions.conditions.add(copy);
+        }
+        if (editingSet.unlockConditions.conditions.isEmpty())
+        {
+            editingSet.unlockConditions = null;
+        }
+        editingSet.computedLevels = null;
+        statusMessage = I18n.format("gui.oneblockultima.config.unlock_conditions_saved");
+        statusTimer = 60;
+        changeView(VIEW_SET_DETAILS);
+    }
+
+    private void drawUnlockConditionsView(int mouseX, int mouseY)
+    {
+        drawCenteredString(fontRenderer, I18n.format("gui.oneblockultima.config.unlock_conditions_title"), width / 2, pad + textHeight / 2, 0xFFFFFF);
+
+        int listX = pad + gap;
+        int listY = getUnlockConditionsToolbarHeight();
+        int listWidth = width - pad * 2 - gap * 2 - scrollWidth;
+        int listHeight = height - listY - pad - btnHeight - gap * 2;
+
+        drawRect(listX, listY, listX + listWidth, listY + listHeight, 0xFF1A1F24);
+
+        if (unlockConditionsEditorConditions.isEmpty())
+        {
+            drawCenteredString(fontRenderer, I18n.format("gui.oneblockultima.config.unlock_conditions_empty"), width / 2, listY + listHeight / 2, 0x808080);
+        }
+        else
+        {
+            int visibleEntries = listHeight / entryHeight;
+            if (visibleEntries < 1) visibleEntries = 1;
+            int maxScroll = Math.max(0, unlockConditionsEditorConditions.size() - visibleEntries);
+            if (unlockConditionsScrollOffset > maxScroll) unlockConditionsScrollOffset = maxScroll;
+
+            for (int i = unlockConditionsScrollOffset; i < Math.min(unlockConditionsEditorConditions.size(), unlockConditionsScrollOffset + visibleEntries); i++)
+            {
+                BlockSetConfig.UnlockConditionDefinition cond = unlockConditionsEditorConditions.get(i);
+                int entryY = listY + innerPadding + (i - unlockConditionsScrollOffset) * entryHeight;
+                boolean isSelected = (i == selectedUnlockConditionIndex);
+                int bgColor = isSelected ? 0xFF3F5060 : (i % 2 == 0 ? 0xFF2A2F34 : 0xFF22272E);
+                drawRect(listX + innerPadding, entryY, listX + listWidth - innerPadding - scrollWidth, entryY + entryHeight, bgColor);
+
+                String typeLabel = getConditionTypeLabel(cond.type);
+                String setText = "";
+                String valueText = "";
+
+                String type = cond.type != null ? cond.type.toLowerCase(Locale.ROOT) : "";
+                switch (type) {
+                    case "set_level":
+                        setText = getSetNameForConditions(cond.setId);
+                        valueText = String.valueOf(cond.level);
+                        break;
+                    case "broken_blocks":
+                        setText = getSetNameForConditions(cond.setId);
+                        valueText = String.valueOf(cond.count);
+                        break;
+                    case "broken_blocks_total":
+                        valueText = String.valueOf(cond.count);
+                        break;
+                }
+
+                int textX = listX + gap;
+                fontRenderer.drawString(typeLabel, textX, entryY + innerPadding, 0xA0A0A0);
+                if (!setText.isEmpty())
+                {
+                    int typeWidth = fontRenderer.getStringWidth(typeLabel + "  ");
+                    fontRenderer.drawString(setText, textX + typeWidth, entryY + innerPadding, 0x808080);
+                }
+                int valueWidth = fontRenderer.getStringWidth(valueText);
+                fontRenderer.drawString(valueText, listX + listWidth - gap - valueWidth - scrollWidth, entryY + innerPadding, 0xA0A0A0);
+            }
+
+            if (unlockConditionsEditorConditions.size() > visibleEntries)
+            {
+                int scrollbarX = listX + listWidth - gap;
+                int scrollbarY = listY + innerPadding;
+                int scrollbarHeight = listHeight - innerPadding * 2;
+                int thumbHeight = Math.max(10, scrollbarHeight * visibleEntries / unlockConditionsEditorConditions.size());
+                int thumbY = scrollbarY + (unlockConditionsScrollOffset * (scrollbarHeight - thumbHeight) / Math.max(1, maxScroll));
+                drawRect(scrollbarX, scrollbarY, scrollbarX + scrollWidth, scrollbarY + scrollbarHeight, 0xFF2A2F34);
+                drawRect(scrollbarX, thumbY, scrollbarX + scrollWidth, thumbY + thumbHeight, 0xFF7A7F84);
+            }
+        }
+
+        if (unlockConditionsLevelField != null && unlockConditionsLevelField.getVisible())
+        {
+            boolean needsSet = "set_level".equals(newConditionTypeToAdd);
+            String valueLabelText = needsSet
+                    ? I18n.format("gui.oneblockultima.config.unlock_conditions_level") + ":"
+                    : I18n.format("gui.oneblockultima.config.unlock_conditions_count") + ":";
+            drawString(fontRenderer, valueLabelText, unlockConditionsLevelField.x - fontRenderer.getStringWidth(valueLabelText) - gap, unlockConditionsLevelField.y + btnHeight / 2 - textHeight / 2, 0xA0A0A0);
+            unlockConditionsLevelField.drawTextBox();
+        }
+        if (unlockConditionsCountField != null && unlockConditionsCountField.getVisible())
+        {
+            if (!"set_level".equals(newConditionTypeToAdd) || unlockConditionsCycleSetButton == null)
+            {
+                String valueLabelText = I18n.format("gui.oneblockultima.config.unlock_conditions_count") + ":";
+                drawString(fontRenderer, valueLabelText, unlockConditionsCountField.x - fontRenderer.getStringWidth(valueLabelText) - gap, unlockConditionsCountField.y + btnHeight / 2 - textHeight / 2, 0xA0A0A0);
+            }
+            unlockConditionsCountField.drawTextBox();
+        }
+    }
+
+    private boolean handleUnlockConditionsViewClick(int mouseX, int mouseY)
+    {
+        int listX = pad + gap;
+        int listY = getUnlockConditionsToolbarHeight();
+        int listWidth = width - pad * 2 - gap * 2 - scrollWidth;
+        int listHeight = height - listY - pad - btnHeight - gap;
+
+        if (mouseX < listX || mouseX > listX + listWidth || mouseY < listY || mouseY > listY + listHeight)
+        {
+            return false;
+        }
+
+        int visibleEntries = listHeight / entryHeight;
+        if (visibleEntries < 1) visibleEntries = 1;
+        int row = (mouseY - listY - innerPadding) / entryHeight;
+        int index = unlockConditionsScrollOffset + row;
+
+        if (index < 0 || index >= unlockConditionsEditorConditions.size())
+        {
+            selectedUnlockConditionIndex = -1;
+            if (unlockConditionsDeleteButton != null) unlockConditionsDeleteButton.enabled = false;
+            return true;
+        }
+
+        if (index == selectedUnlockConditionIndex)
+        {
+            selectedUnlockConditionIndex = -1;
+        }
+        else
+        {
+            selectedUnlockConditionIndex = index;
+        }
+        if (unlockConditionsDeleteButton != null)
+        {
+            unlockConditionsDeleteButton.enabled = selectedUnlockConditionIndex >= 0;
+        }
+        return true;
+    }
+
+    private String getConditionTypeLabel(String type)
+    {
+        if (type == null) return "";
+        switch (type.toLowerCase(Locale.ROOT))
+        {
+            case "set_level": return I18n.format("gui.oneblockultima.config.unlock_conditions_type_set_level");
+            case "broken_blocks": return I18n.format("gui.oneblockultima.config.unlock_conditions_type_broken_blocks");
+            case "broken_blocks_total": return I18n.format("gui.oneblockultima.config.unlock_conditions_type_broken_blocks_total");
+            default: return type;
+        }
+    }
+
+    private String getSetNameForConditions(String setId)
+    {
+        if (setId == null || setId.isEmpty()) return "-";
+        for (BlockSetConfig.BlockSetDefinition set : availableSetsForConditions)
+        {
+            if (set != null && setId.equals(set.id))
+            {
+                return getLocalizedSetName(set);
+            }
+        }
+        return setId;
+    }
+
+    private void addNewUnlockCondition()
+    {
+        if (!canAddNewCondition(newConditionTypeToAdd)) return;
+
+        BlockSetConfig.UnlockConditionDefinition cond = new BlockSetConfig.UnlockConditionDefinition();
+        cond.type = newConditionTypeToAdd;
+
+        if ("set_level".equals(newConditionTypeToAdd) || "broken_blocks".equals(newConditionTypeToAdd))
+        {
+            cond.setId = newConditionSetId;
+            if (cond.setId == null || cond.setId.isEmpty())
+            {
+                List<BlockSetConfig.BlockSetDefinition> available = getAvailableSetsForType(newConditionTypeToAdd);
+                if (!available.isEmpty()) cond.setId = available.get(0).id;
+                else return;
+            }
+        }
+
+        if ("set_level".equals(newConditionTypeToAdd))
+        {
+            try { cond.level = Math.max(1, Integer.parseInt(unlockConditionsLevelField.getText().trim())); }
+            catch (NumberFormatException e) { cond.level = 1; }
+        }
+        else
+        {
+            try { cond.count = Math.max(1, Integer.parseInt(unlockConditionsCountField.getText().trim())); }
+            catch (NumberFormatException e) { cond.count = 1; }
+        }
+
+        unlockConditionsEditorConditions.add(cond);
+        newConditionSetId = "";
+        initGui();
+    }
+
+    private void cycleNewConditionType()
+    {
+        switch (newConditionTypeToAdd)
+        {
+            case "broken_blocks_total":
+                newConditionTypeToAdd = "broken_blocks";
+                break;
+            case "broken_blocks":
+                newConditionTypeToAdd = "set_level";
+                break;
+            case "set_level":
+            default:
+                newConditionTypeToAdd = "broken_blocks_total";
+                break;
+        }
+        newConditionSetId = "";
+        initGui();
+    }
+
+    private void cycleNewConditionSet()
+    {
+        List<BlockSetConfig.BlockSetDefinition> available = getAvailableSetsForType(newConditionTypeToAdd);
+        if (available.isEmpty()) return;
+
+        int currentIndex = -1;
+        for (int i = 0; i < available.size(); i++)
+        {
+            if (newConditionSetId.equals(available.get(i).id))
+            {
+                currentIndex = i;
+                break;
+            }
+        }
+        int nextIndex = (currentIndex + 1) % available.size();
+        newConditionSetId = available.get(nextIndex).id;
+
+        if (unlockConditionsCycleSetButton != null)
+        {
+            unlockConditionsCycleSetButton.displayString = getSetNameForConditions(newConditionSetId);
+        }
+    }
+
+    private void removeSelectedUnlockCondition()
+    {
+        if (selectedUnlockConditionIndex < 0 || selectedUnlockConditionIndex >= unlockConditionsEditorConditions.size()) return;
+        unlockConditionsEditorConditions.remove(selectedUnlockConditionIndex);
+        if (selectedUnlockConditionIndex >= unlockConditionsEditorConditions.size())
+        {
+            selectedUnlockConditionIndex = unlockConditionsEditorConditions.size() - 1;
+        }
+        newConditionSetId = "";
+        initGui();
     }
 
     private void selectRequiredModForRemoval(String modId)
@@ -793,6 +1325,9 @@ public class GuiSetsConfig extends GuiScreen
             case VIEW_REQUIRED_MODS_ADD:
                 initRequiredModsAddView();
                 break;
+            case VIEW_UNLOCK_CONDITIONS:
+                initUnlockConditionsView();
+                break;
         }
 
         if (statusTimer > 0)
@@ -878,13 +1413,22 @@ public class GuiSetsConfig extends GuiScreen
 
         currentY += btnHeight + gap;
         int buttonWidth = Math.max(160, Math.min(260, formFieldWidth));
+        int halfButtonWidth = (buttonWidth - gap) / 2;
         editRequiredModsButton = new GuiButton(
                 BUTTON_EDIT_REQUIRED_MODS,
                 fieldX,
                 currentY,
-                buttonWidth,
+                halfButtonWidth,
                 btnHeight,
                 getRequiredModsButtonLabel(editingSet != null ? editingSet.requiredMods : null));
+
+        editUnlockConditionsButton = new GuiButton(
+                BUTTON_EDIT_UNLOCK_CONDITIONS,
+                fieldX + halfButtonWidth + gap,
+                currentY,
+                halfButtonWidth,
+                btnHeight,
+                getUnlockConditionsButtonLabel(editingSet != null ? editingSet.unlockConditions : null));
 
         if (!isNewSet && editingSet != null)
         {
@@ -900,6 +1444,7 @@ public class GuiSetsConfig extends GuiScreen
         }
 
         buttonList.add(editRequiredModsButton);
+        buttonList.add(editUnlockConditionsButton);
 
         int footerY = Math.max(pad + btnHeight + gap, height - pad - btnHeight - pad);
         int btnWidth = 0;
@@ -2014,6 +2559,10 @@ public class GuiSetsConfig extends GuiScreen
                 {
                     changeView(VIEW_SET_DETAILS);
                 }
+                else if (currentView == VIEW_UNLOCK_CONDITIONS)
+                {
+                    changeView(VIEW_SET_DETAILS);
+                }
                 else if (currentView == VIEW_SET_DETAILS)
                 {
                     savedNewSetName = "";
@@ -2144,6 +2693,47 @@ public class GuiSetsConfig extends GuiScreen
                 removeSelectedRequiredMods();
                 break;
 
+            case BUTTON_EDIT_UNLOCK_CONDITIONS:
+                if (editingSet != null)
+                {
+                    openUnlockConditionsEditor();
+                }
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_TOGGLE:
+                unlockConditionsEditorMode = "any".equalsIgnoreCase(unlockConditionsEditorMode) ? "all" : "any";
+                if (unlockConditionsToggleButton != null)
+                {
+                    unlockConditionsToggleButton.displayString = "any".equalsIgnoreCase(unlockConditionsEditorMode)
+                            ? I18n.format("gui.oneblockultima.config.any")
+                            : I18n.format("gui.oneblockultima.config.all");
+                }
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_BACK:
+                changeView(VIEW_SET_DETAILS);
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_SAVE:
+                commitUnlockConditionsEditor();
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_ADD:
+                addNewUnlockCondition();
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_DELETE:
+                removeSelectedUnlockCondition();
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_CYCLE_TYPE:
+                cycleNewConditionType();
+                break;
+
+            case BUTTON_UNLOCK_CONDITIONS_CYCLE_SET:
+                cycleNewConditionSet();
+                break;
+
             case BUTTON_REMOVE_ENTRY:
                 removeSelectedEntry();
                 break;
@@ -2170,6 +2760,7 @@ public class GuiSetsConfig extends GuiScreen
             case VIEW_EDIT_CURRENCY: drawEditCurrencyView(mouseX, mouseY); break;
             case VIEW_REQUIRED_MODS_EDITOR: drawRequiredModsEditorView(mouseX, mouseY); break;
             case VIEW_REQUIRED_MODS_ADD: drawRequiredModsAddView(mouseX, mouseY); break;
+            case VIEW_UNLOCK_CONDITIONS: drawUnlockConditionsView(mouseX, mouseY); break;
         }
 
         if (!statusMessage.isEmpty())
@@ -2292,13 +2883,19 @@ public class GuiSetsConfig extends GuiScreen
         unlockCostField.drawTextBox();
 
         currentY += btnHeight + gap;
-        drawString(fontRenderer, I18n.format("gui.oneblockultima.config.required_mods") + ":", formMargin, currentY + btnHeight / 2 - textHeight / 2, 0xA0A0A0);
         if (editRequiredModsButton != null)
         {
             editRequiredModsButton.x = formFieldX;
             editRequiredModsButton.y = currentY;
             editRequiredModsButton.displayString = getRequiredModsButtonLabel(editingSet != null ? editingSet.requiredMods : null);
             editRequiredModsButton.drawButton(mc, mouseX, mouseY, 1.0F);
+        }
+        if (editUnlockConditionsButton != null)
+        {
+            editUnlockConditionsButton.x = formFieldX + editRequiredModsButton.width + gap;
+            editUnlockConditionsButton.y = currentY;
+            editUnlockConditionsButton.displayString = getUnlockConditionsButtonLabel(editingSet != null ? editingSet.unlockConditions : null);
+            editUnlockConditionsButton.drawButton(mc, mouseX, mouseY, 1.0F);
         }
 
         int listY = currentY + btnHeight + gap;
@@ -2975,6 +3572,11 @@ public class GuiSetsConfig extends GuiScreen
             if (editChanceField != null) editChanceField.mouseClicked(mouseX, mouseY, mouseButton);
             if (editCurrencyField != null) editCurrencyField.mouseClicked(mouseX, mouseY, mouseButton);
         }
+        else if (currentView == VIEW_UNLOCK_CONDITIONS)
+        {
+            if (unlockConditionsLevelField != null) unlockConditionsLevelField.mouseClicked(mouseX, mouseY, mouseButton);
+            if (unlockConditionsCountField != null) unlockConditionsCountField.mouseClicked(mouseX, mouseY, mouseButton);
+        }
     }
 
     @Override
@@ -3026,6 +3628,15 @@ public class GuiSetsConfig extends GuiScreen
                 boolean handled = handleRequiredModsAddViewClick(mouseX, mouseY);
                 if (handled)
                 {
+                    return;
+                }
+            }
+            else if (currentView == VIEW_UNLOCK_CONDITIONS)
+            {
+                boolean handled = handleUnlockConditionsViewClick(mouseX, mouseY);
+                if (handled)
+                {
+                    handleTextFieldClicks(mouseX, mouseY, mouseButton);
                     return;
                 }
             }
@@ -3134,6 +3745,26 @@ public class GuiSetsConfig extends GuiScreen
             editCurrencyField.textboxKeyTyped(typedChar, keyCode);
             return;
         }
+        if (unlockConditionsLevelField != null && unlockConditionsLevelField.isFocused())
+        {
+            if (keyCode == Keyboard.KEY_RETURN)
+            {
+                addNewUnlockCondition();
+                return;
+            }
+            unlockConditionsLevelField.textboxKeyTyped(typedChar, keyCode);
+            return;
+        }
+        if (unlockConditionsCountField != null && unlockConditionsCountField.isFocused())
+        {
+            if (keyCode == Keyboard.KEY_RETURN)
+            {
+                addNewUnlockCondition();
+                return;
+            }
+            unlockConditionsCountField.textboxKeyTyped(typedChar, keyCode);
+            return;
+        }
 
         if (keyCode == Keyboard.KEY_ESCAPE)
         {
@@ -3142,6 +3773,10 @@ public class GuiSetsConfig extends GuiScreen
                 changeView(VIEW_SET_DETAILS);
             }
             else if (currentView == VIEW_REQUIRED_MODS_EDITOR)
+            {
+                changeView(VIEW_SET_DETAILS);
+            }
+            else if (currentView == VIEW_UNLOCK_CONDITIONS)
             {
                 changeView(VIEW_SET_DETAILS);
             }
@@ -3253,6 +3888,25 @@ public class GuiSetsConfig extends GuiScreen
                     requiredModsScrollOffset = Math.max(0, Math.min(maxScroll, requiredModsScrollOffset + delta));
                 }
             }
+            else if (currentView == VIEW_UNLOCK_CONDITIONS)
+            {
+                int listX = pad + gap;
+                int listY = getUnlockConditionsToolbarHeight();
+                int listWidth = width - pad * 2 - gap * 2 - scrollWidth;
+                int listHeight = height - listY - pad - btnHeight - gap;
+
+                int mouseX = Mouse.getEventX() * width / mc.displayWidth;
+                int mouseY = height - Mouse.getEventY() * height / mc.displayHeight - 1;
+
+                if (mouseX >= listX && mouseX <= listX + listWidth &&
+                        mouseY >= listY && mouseY <= listY + listHeight)
+                {
+                    int visibleEntries = listHeight / entryHeight;
+                    if (visibleEntries < 1) visibleEntries = 1;
+                    int maxScroll = Math.max(0, unlockConditionsEditorConditions.size() - visibleEntries);
+                    unlockConditionsScrollOffset = Math.max(0, Math.min(maxScroll, unlockConditionsScrollOffset + delta));
+                }
+            }
         }
     }
 
@@ -3269,6 +3923,8 @@ public class GuiSetsConfig extends GuiScreen
         if (entrySearchField != null) entrySearchField.updateCursorCounter();
         if (currencyField != null) currencyField.updateCursorCounter();
         if (editCurrencyField != null) editCurrencyField.updateCursorCounter();
+        if (unlockConditionsLevelField != null) unlockConditionsLevelField.updateCursorCounter();
+        if (unlockConditionsCountField != null) unlockConditionsCountField.updateCursorCounter();
 
         if (statusTimer > 0)
         {

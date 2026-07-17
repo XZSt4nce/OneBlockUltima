@@ -64,8 +64,8 @@ gui.oneblockultima.config.error.invalid_cost=Invalid cost
 gui.oneblockultima.config.search.no_results=No results found
 gui.oneblockultima.config.search.help=@Mod &ID
 gui.oneblockultima.config.required_mods=Required mods
-gui.oneblockultima.config.required_mods_type_all=ALL
-gui.oneblockultima.config.required_mods_type_any=ANY
+gui.oneblockultima.config.all=ALL
+gui.oneblockultima.config.any=ANY
 gui.oneblockultima.config.required_mods_edit=Edit required mods
 gui.oneblockultima.config.required_mods_title=Required mods
 gui.oneblockultima.config.required_mods_add_title=Add required mods
@@ -84,6 +84,16 @@ gui.oneblockultima.config.currency_updated=Currency updated
 gui.oneblockultima.config.base_level=Level
 gui.oneblockultima.config.currency=Currency
 gui.oneblockultima.config.error.invalid_currency=Invalid currency value
+
+gui.oneblockultima.config.unlock_conditions_edit=Unlock conditions
+gui.oneblockultima.config.unlock_conditions_title=Unlock Conditions
+gui.oneblockultima.config.unlock_conditions_empty=No conditions set
+gui.oneblockultima.config.unlock_conditions_saved=Unlock conditions saved
+gui.oneblockultima.config.unlock_conditions_level=Level
+gui.oneblockultima.config.unlock_conditions_count=Count
+gui.oneblockultima.config.unlock_conditions_type_set_level=Set level
+gui.oneblockultima.config.unlock_conditions_type_broken_blocks=Broken blocks in set
+gui.oneblockultima.config.unlock_conditions_type_broken_blocks_total=Total broken blocks
 
 gui.oneblockultima.reset_default=Reset Default
 gui.oneblockultima.save=Save
