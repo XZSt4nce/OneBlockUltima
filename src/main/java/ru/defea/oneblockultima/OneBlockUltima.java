@@ -6,7 +6,9 @@ import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.command.*;
@@ -15,6 +17,7 @@ import ru.defea.oneblockultima.gui.GuiHandler;
 import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.network.ModMessages;
 import ru.defea.oneblockultima.tile.ModTileEntities;
+import ru.defea.oneblockultima.update.UpdateChecker;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
 
 @Mod(
@@ -39,6 +42,10 @@ public class OneBlockUltima
 
     public static Logger getLogger()
     {
+        if (logger == null)
+        {
+            logger = LogManager.getLogger(MODID);
+        }
         return logger;
     }
 
@@ -72,5 +79,11 @@ public class OneBlockUltima
         event.registerServerCommand(new CommandAcceptGeneratorInvite());
         event.registerServerCommand(new CommandDeclineGeneratorInvite());
         event.registerServerCommand(new CommandSetOwner());
+    }
+
+    @Mod.EventHandler
+    public void serverStopping(FMLServerStoppingEvent event)
+    {
+        UpdateChecker.shutdown();
     }
 }

@@ -46,6 +46,7 @@ import ru.defea.oneblockultima.gui.GuiOneBlock;
 import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
+import ru.defea.oneblockultima.update.UpdateChecker;
 import ru.defea.oneblockultima.util.BlockUtil;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
@@ -75,6 +76,8 @@ public final class ModEvents
     private static final Map<BlockPos, UUID> pendingGeneratorOwners = new HashMap<>();
     private static final Map<String, Long> lastAccessDeniedMessageTicks = new HashMap<>();
     private static final Map<BlockPos, GeneratedBlockRegistry.GeneratedBlockEntry> pendingMobSpawnEntries = new HashMap<>();
+    private static final Map<BlockPos, UUID> lastBreakPlayers = new HashMap<>();
+    private static int lastBreakCleanupTick = 0;
 
     @SideOnly(Side.CLIENT)
     private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<>();
@@ -599,6 +602,8 @@ public final class ModEvents
             return;
         }
 
+        UpdateChecker.checkForUpdates((EntityPlayerMP) event.player);
+
         World world = event.player.world;
         if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
         {
@@ -713,6 +718,12 @@ public final class ModEvents
                 ((TileEntityOneBlockGenerator) tileEntity).tickInvites();
             }
         }
+
+        if (!lastBreakPlayers.isEmpty() && ++lastBreakCleanupTick >= 200)
+        {
+            lastBreakCleanupTick = 0;
+            lastBreakPlayers.clear();
+        }
     }
 
     @SubscribeEvent
@@ -733,6 +744,50 @@ public final class ModEvents
         {
             event.setResult(Event.Result.DENY);
         }
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoinWorld(net.minecraftforge.event.entity.EntityJoinWorldEvent event)
+    {
+        if (event.getWorld().isRemote)
+        {
+            return;
+        }
+
+        if (!(event.getEntity() instanceof net.minecraft.entity.item.EntityItem))
+        {
+            return;
+        }
+
+        net.minecraft.entity.item.EntityItem entityItem = (net.minecraft.entity.item.EntityItem) event.getEntity();
+        World world = event.getWorld();
+
+        if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
+        {
+            return;
+        }
+
+        BlockPos pos = new BlockPos(entityItem.posX, entityItem.posY, entityItem.posZ);
+        UUID breakerId = lastBreakPlayers.get(pos);
+        if (breakerId == null)
+        {
+            return;
+        }
+
+        EntityPlayer player = world.getPlayerEntityByUUID(breakerId);
+        if (player == null)
+        {
+            return;
+        }
+
+        net.minecraft.item.ItemStack stack = entityItem.getItem();
+        if (stack.isEmpty())
+        {
+            return;
+        }
+
+        player.inventory.addItemStackToInventory(stack);
+        event.setCanceled(true);
     }
 
     @SubscribeEvent
@@ -854,6 +909,13 @@ public final class ModEvents
                                     {
                                         heldItem.shrink(1);
                                     }
+
+                                    TileEntity placedTE = event.getWorld().getTileEntity(placePos);
+                                    if (placedTE instanceof TileEntityOneBlockGenerator)
+                                    {
+                                        ((TileEntityOneBlockGenerator) placedTE).assignOwnerForPlacement(player.getUniqueID());
+                                    }
+
                                     event.setCanceled(true);
                                     return;
                                 }
@@ -919,7 +981,11 @@ public final class ModEvents
         BlockPos pos = event.getPos();
         World world = event.getWorld();
         EntityPlayer breaker = event.getPlayer();
-        OneBlockUltima.getLogger().warn("[BreakDebug] onBlockBreak entered at {} by player={} remote={}", pos, breaker != null ? breaker.getName() : "null", world.isRemote);
+
+        if (breaker != null && world.provider.getDimension() == 0 && world.getWorldInfo().getTerrainType() == OneBlockWorldType.ONE_BLOCK)
+        {
+            lastBreakPlayers.put(pos, breaker.getUniqueID());
+        }
 
         if (world.getBlockState(pos).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
         {
@@ -958,6 +1024,21 @@ public final class ModEvents
         {
             OneBlockUltima.getLogger().warn("[BreakDebug] No generated entry found for broken block {}", event.getPos());
             return;
+        }
+
+        if (breaker != null && entry.generatorPos != null)
+        {
+            TileEntity genTile = world.getTileEntity(entry.generatorPos);
+            if (genTile instanceof TileEntityOneBlockGenerator)
+            {
+                TileEntityOneBlockGenerator gen = (TileEntityOneBlockGenerator) genTile;
+                if (!gen.hasAccess(breaker))
+                {
+                    event.setCanceled(true);
+                    trySendAccessDeniedMessage(breaker, entry.generatorPos, world.getTotalWorldTime());
+                    return;
+                }
+            }
         }
 
         OneBlockUltima.getLogger().warn("[BreakDebug] Generated entry found for {} -> generator {} set={} level={}", event.getPos(), entry.generatorPos, entry.setId, entry.level);
@@ -1031,27 +1112,22 @@ public final class ModEvents
         GeneratedBlockRegistry registry = GeneratedBlockRegistry.get(world);
         GeneratedBlockRegistry.GeneratedBlockEntry entry = registry.getEntry(pos);
         GeneratedBlockRegistry.GeneratedBlockEntry savedEntry = pendingMobSpawnEntries.remove(pos);
-        if (entry == null && savedEntry == null)
+
+        boolean isTrackedBlock = entry != null || savedEntry != null;
+        GeneratedBlockRegistry.GeneratedBlockEntry mobSpawnEntry = entry != null ? entry : savedEntry;
+
+        if (!isTrackedBlock)
         {
             return;
         }
 
-        GeneratedBlockRegistry.GeneratedBlockEntry mobSpawnEntry = entry != null ? entry : savedEntry;
-
-        EntityPlayer player = event.getHarvester();
-        if (player == null)
-        {
-            OneBlockUltima.getLogger().warn("[BreakDebug] onHarvestDrops entered at {} with harvester=null", event.getPos());
-        }
-        else
-        {
-            OneBlockUltima.getLogger().warn("[BreakDebug] onHarvestDrops entered at {} by player={}", event.getPos(), player.getName());
-        }
+        UUID breakerId = lastBreakPlayers.remove(pos);
+        EntityPlayer player = breakerId != null ? world.getPlayerEntityByUUID(breakerId) : event.getHarvester();
 
         // Mob spawn and registry removal now handled in onBlockBreak
 
         // Получаем стандартные дропы
-        java.util.List<net.minecraft.item.ItemStack> drops = new java.util.ArrayList<>(event.getDrops());
+        List<net.minecraft.item.ItemStack> drops = new java.util.ArrayList<>(event.getDrops());
 
         // Проверяем, есть ли реальные дропы
         boolean hasRealDrops = false;
@@ -1091,7 +1167,6 @@ public final class ModEvents
 
         if (player == null)
         {
-            OneBlockUltima.getLogger().warn("[BreakDebug] Non-player harvest detected at {} for generator {}", event.getPos(), mobSpawnEntry.generatorPos);
             TileEntity generatedTile = world.getTileEntity(mobSpawnEntry.generatorPos);
             if (generatedTile instanceof TileEntityOneBlockGenerator)
             {

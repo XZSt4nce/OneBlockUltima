@@ -13,9 +13,9 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-version = '1.12.2-2.1.0-forge'
+version = '2.1.1'
 group = 'ru.defea.oneblockultima'
-archivesBaseName = 'OneBlockUltima'
+archivesBaseName = 'OneBlockUltima-forge-1.12.2'
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 

@@ -1,0 +1,200 @@
+package ru.defea.oneblockultima;
+
+import static org.junit.Assert.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.junit.*;
+
+import net.minecraft.init.Bootstrap;
+import ru.defea.oneblockultima.config.BlockSetConfig;
+import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
+import ru.defea.oneblockultima.capability.OneBlockPlayerData;
+
+public class OneBlockPlayerDataTest {
+
+    @BeforeClass
+    public static void setUp() {
+        Bootstrap.register();
+    }
+
+    private OneBlockPlayerData newData() {
+        return new OneBlockPlayerData();
+    }
+
+    @Test
+    public void freshPlayerDataHasZeroBalance() {
+        OneBlockPlayerData data = newData();
+        assertEquals(0, data.getCurrency());
+    }
+
+    @Test
+    public void addingCurrencyIncreasesBalance() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void addingNegativeOrZeroCurrencyIsIgnored() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(-5);
+        assertEquals(0, data.getCurrency());
+        data.addCurrency(0);
+        assertEquals(0, data.getCurrency());
+    }
+
+    @Test
+    public void spendingCurrencyDecreasesBalance() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertTrue(data.spendCurrency(50));
+        assertEquals(50, data.getCurrency());
+    }
+
+    @Test
+    public void spendingMoreThanBalanceFails() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertFalse(data.spendCurrency(150));
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void spendingNegativeAmountFails() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertFalse(data.spendCurrency(-10));
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void exactSpendDrainsBalance() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertTrue(data.spendCurrency(100));
+        assertEquals(0, data.getCurrency());
+    }
+
+    @Test
+    public void breakingBlocksIncrementsTotalAndPerSet() {
+        OneBlockPlayerData data = newData();
+        data.addBrokenBlocks("classic", 5);
+        assertEquals(5, data.getBrokenBlocksCount());
+        assertEquals(5, data.getBrokenBlocksCount("classic"));
+    }
+
+    @Test
+    public void breakingBlocksMultipleSets() {
+        OneBlockPlayerData data = newData();
+        data.addBrokenBlocks("classic", 3);
+        data.addBrokenBlocks("nether", 7);
+        assertEquals(10, data.getBrokenBlocksCount());
+        assertEquals(3, data.getBrokenBlocksCount("classic"));
+        assertEquals(7, data.getBrokenBlocksCount("nether"));
+    }
+
+    @Test
+    public void breakingZeroOrNegativeBlocksIsIgnored() {
+        OneBlockPlayerData data = newData();
+        data.addBrokenBlocks("classic", 0);
+        assertEquals(0, data.getBrokenBlocksCount());
+        data.addBrokenBlocks("classic", -5);
+        assertEquals(0, data.getBrokenBlocksCount());
+    }
+
+    @Test
+    public void upgradeSetIncreasesLevelAndSpendsCurrency() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertTrue(data.upgradeSet("classic", 50, 10));
+        assertEquals(2, data.getSetLevel("classic"));
+        assertEquals(50, data.getCurrency());
+    }
+
+    @Test
+    public void upgradeSetFailsAtMaxLevel() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertFalse(data.upgradeSet("classic", 50, 1));
+        assertEquals(1, data.getSetLevel("classic"));
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void upgradeSetFailsWithInsufficientFunds() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertFalse(data.upgradeSet("classic", 200, 10));
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void upgradeSetFailsWithZeroCost() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        assertTrue(data.upgradeSet("classic", 0, 10));
+        assertEquals(2, data.getSetLevel("classic"));
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void copyFromCopiesAllFields() {
+        OneBlockPlayerData source = newData();
+        source.setCurrency(500);
+        source.addBrokenBlocks("classic", 30);
+        source.addBrokenBlocks("nether", 20);
+        source.upgradeSet("classic", 0, 10);
+        source.upgradeSet("classic", 0, 10);
+        source.upgradeSet("nether", 0, 10);
+
+        OneBlockPlayerData target = newData();
+        target.copyFrom(source);
+
+        assertEquals(500, target.getCurrency());
+        assertEquals(50, target.getBrokenBlocksCount());
+        assertEquals(30, target.getBrokenBlocksCount("classic"));
+        assertEquals(20, target.getBrokenBlocksCount("nether"));
+        assertEquals(3, target.getSetLevel("classic"));
+        assertEquals(1, target.getSetLevel("nether"));
+    }
+
+    @Test
+    public void copyFromWithNullIsNoOp() {
+        OneBlockPlayerData data = newData();
+        data.addCurrency(100);
+        data.copyFrom(null);
+        assertEquals(100, data.getCurrency());
+    }
+
+    @Test
+    public void setCurrencyClampsNegative() {
+        OneBlockPlayerData data = newData();
+        data.setCurrency(-10);
+        assertEquals(0, data.getCurrency());
+    }
+
+    @Test
+    public void setBrokenBlocksBySetClampsNegative() {
+        OneBlockPlayerData data = newData();
+        Map<String, Integer> blocks = new HashMap<>();
+        blocks.put("classic", -5);
+        blocks.put("nether", 10);
+        data.setBrokenBlocksBySet(blocks);
+        assertEquals(0, data.getBrokenBlocksCount("classic"));
+        assertEquals(10, data.getBrokenBlocksCount("nether"));
+    }
+
+    @Test
+    public void getSetLevelReturnsOneForDefaultSet() {
+        OneBlockPlayerData data = newData();
+        assertEquals(1, data.getSetLevel("classic"));
+    }
+
+    @Test
+    public void getSetLevelReturnsZeroForUnknownSet() {
+        OneBlockPlayerData data = newData();
+        assertEquals(0, data.getSetLevel("nonexistent"));
+    }
+}
