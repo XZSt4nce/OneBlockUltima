@@ -8,6 +8,7 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.command.*;
@@ -41,6 +42,10 @@ public class OneBlockUltima
 
     public static Logger getLogger()
     {
+        if (logger == null)
+        {
+            logger = LogManager.getLogger(MODID);
+        }
         return logger;
     }
 

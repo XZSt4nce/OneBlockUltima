@@ -356,7 +356,16 @@ public final class BlockSetConfig
         try
         {
             ResourceLocation loc = new ResourceLocation(registry);
-            return Loader.isModLoaded(loc.getResourceDomain());
+            String domain = loc.getResourceDomain();
+            if ("minecraft".equals(domain))
+            {
+                return true;
+            }
+            if (Loader.instance() == null)
+            {
+                return false;
+            }
+            return Loader.isModLoaded(domain);
         }
         catch (Exception e)
         {
@@ -476,7 +485,7 @@ public final class BlockSetConfig
                     {
                         continue;
                     }
-                    if (!Loader.isModLoaded(modId))
+                    if (!isModLoadedSafe(modId))
                     {
                         return false;
                     }
@@ -490,12 +499,24 @@ public final class BlockSetConfig
                 {
                     continue;
                 }
-                if (Loader.isModLoaded(modId))
+                if (isModLoadedSafe(modId))
                 {
                     return true;
                 }
             }
             return false;
+        }
+
+        private static boolean isModLoadedSafe(String modId)
+        {
+            try
+            {
+                return Loader.isModLoaded(modId);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
         }
 
         public List<String> getMods()
