@@ -1,14 +1,20 @@
 package ru.defea.oneblockultima;
 
-import static org.junit.Assert.*;
-
-import java.util.*;
-
 import net.minecraft.init.Bootstrap;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.config.BlockSetConfig.*;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.Assert.*;
 
 public class BlockSetDefinitionTest {
 

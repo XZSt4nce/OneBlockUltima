@@ -61,7 +61,10 @@ public class OneBlockUltima
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
         proxy.preInit();
 
-        GuiSetsConfig.loadStaticCustomNames();
+        if (net.minecraftforge.fml.common.FMLCommonHandler.instance().getSide() == net.minecraftforge.fml.relauncher.Side.CLIENT)
+        {
+            GuiSetsConfig.loadStaticCustomNames();
+        }
         logger.info("{} загружается...", NAME);
     }
 

@@ -1,16 +1,14 @@
 package ru.defea.oneblockultima;
 
-import static org.junit.Assert.*;
+import net.minecraft.init.Bootstrap;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.*;
-
-import net.minecraft.init.Bootstrap;
-import ru.defea.oneblockultima.config.BlockSetConfig;
-import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
-import ru.defea.oneblockultima.capability.OneBlockPlayerData;
+import static org.junit.Assert.*;
 
 public class OneBlockPlayerDataTest {
 
