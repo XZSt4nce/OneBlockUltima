@@ -1,13 +1,14 @@
 package ru.defea.oneblockultima;
 
-import static org.junit.Assert.*;
-
 import net.minecraft.init.Bootstrap;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
-import org.junit.*;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry.GeneratedBlockEntry;
+
+import static org.junit.Assert.*;
 
 public class GeneratedBlockRegistryTest {
 

@@ -1,16 +1,16 @@
 package ru.defea.oneblockultima;
 
-import static org.junit.Assert.*;
-
 import net.minecraft.init.Bootstrap;
 import net.minecraft.nbt.NBTTagCompound;
-import org.junit.*;
-
+import org.junit.BeforeClass;
+import org.junit.Test;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.junit.Assert.*;
 
 public class TileEntityOneBlockGeneratorTest
 {

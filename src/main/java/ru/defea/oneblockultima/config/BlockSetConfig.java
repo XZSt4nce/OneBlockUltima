@@ -390,7 +390,7 @@ public final class BlockSetConfig
             return false;
         }
 
-        return EntityList.getClassFromName(registry) != null;
+        return EntityList.getClass(new ResourceLocation(registry)) != null;
     }
 
     public SettingsDefinition getSettings()

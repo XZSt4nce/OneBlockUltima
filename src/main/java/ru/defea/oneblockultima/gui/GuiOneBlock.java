@@ -32,9 +32,10 @@ import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.util.BlockUtil;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.*;
 
 import static ru.defea.oneblockultima.util.ModelUtil.*;
@@ -1113,7 +1114,7 @@ public class GuiOneBlock extends GuiContainer
         drawCenteredString(fontRenderer, title, xSize / 2, textHeight, 0xFFFFFF);
 
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(container.getPlayer());
-        int currency = ru.defea.oneblockultima.event.ModEvents.getDisplayedCurrency(container.getPlayer());
+        int currency = ru.defea.oneblockultima.event.ModEventsClient.getDisplayedCurrency(container.getPlayer());
         String balanceValue = String.valueOf(currency);
         int balanceWidth = fontRenderer.getStringWidth(balanceValue);
         int iconSize = 12;

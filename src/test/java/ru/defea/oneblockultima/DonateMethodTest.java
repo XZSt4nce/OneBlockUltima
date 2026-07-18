@@ -1,8 +1,9 @@
 package ru.defea.oneblockultima;
 
-import static org.junit.Assert.*;
 import org.junit.Test;
 import ru.defea.oneblockultima.gui.DonateMethod;
+
+import static org.junit.Assert.*;
 
 public class DonateMethodTest {
 
