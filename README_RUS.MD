@@ -41,15 +41,17 @@
 </ol>
 
 <h1>Скриншоты</h1>
+<img src="images/rus/world_type.png" alt="Тип мира" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/one_block.png" alt="Один блок" style="width: 100%; max-width: 1280px; height: auto;">
 <img src="images/sky_island.png" alt="Остров в небе" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/classic.png" alt="Классический набор" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/plain.png" alt="Набор Равнина " style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/settings.png" alt="Настройки" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/sets_edit.png" alt="Список наборов" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/set_edit.png" alt="Редактирование набора" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/add_block.png" alt="Добавление блока" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/add_mob.png" alt="Добавление моба" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/classic.png" alt="Классический набор" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/plain.png" alt="Набор Равнина " style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/settings.png" alt="Настройки" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/sets_edit.png" alt="Список наборов" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/set_edit.png" alt="Редактирование набора" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/add_block.png" alt="Добавление блока" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/add_mob.png" alt="Добавление моба" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/rus/unlock_conditions.png" alt="Условия разблокировки" style="width: 100%; max-width: 1280px; height: auto;">
 
 <h1>Для разработчиков</h1>
 Последние версии мода для конкретных версий майнкрафта выделены в отдельные ветки

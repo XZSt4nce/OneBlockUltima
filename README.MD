@@ -1,4 +1,4 @@
-<img src="images/oneblock_logo.png" alt="Логотип мода" style="width: 100%; max-width: 1024px; height: auto;">
+<img src="images/oneblock_logo.png" alt="Mod's logo" style="width: 100%; max-width: 1024px; height: auto;">
 <h1>Language</h1>
 [English|<a href="./README_RUS.MD">Русский</a>]
 <h1>Description</h1><br/>
@@ -39,15 +39,17 @@ The mod is compatible with other mods, and it already has basic support:
 </ol>
 
 <h1>Screenshots</h1>
-<img src="images/one_block.png" alt="Один блок" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/sky_island.png" alt="Остров в небе" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/classic.png" alt="Классический набор" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/plain.png" alt="Набор Равнина " style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/settings.png" alt="Настройки" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/sets_edit.png" alt="Список наборов" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/set_edit.png" alt="Редактирование набора" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/add_block.png" alt="Добавление блока" style="width: 100%; max-width: 1280px; height: auto;">
-<img src="images/add_mob.png" alt="Добавление моба" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/world_type.png" alt="World type" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/one_block.png" alt="One block" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/sky_island.png" alt="Sky island" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/classic.png" alt="Classic sec" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/plain.png" alt="Plain set " style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/settings.png" alt="Settings" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/sets_edit.png" alt="Sets list" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/set_edit.png" alt="Set editing" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/add_block.png" alt="Block adding" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/add_mob.png" alt="Mob adding" style="width: 100%; max-width: 1280px; height: auto;">
+<img src="images/eng/unlock_conditions.png" alt="Unlock conditions" style="width: 100%; max-width: 1280px; height: auto;">
 
 <h1>For developers</h1>
 The latest versions of the mod for specific versions of Minecraft are separated into separate branches
