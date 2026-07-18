@@ -1,4 +1,5 @@
 tile.one_block_generator.name=One Block Generator
+generator.one_block=Один Блок
 itemGroup.OneBlockUltima=OneBlockUltima
 
 advancements.one_block_generator.craft.title=Всё из ничего
