@@ -19,6 +19,7 @@ public final class ModMessages
         network = NetworkRegistry.INSTANCE.newSimpleChannel(OneBlockUltima.MODID);
         network.registerMessage(PacketOneBlockAction.Handler.class, PacketOneBlockAction.class, 0, Side.SERVER);
         network.registerMessage(PacketSyncPlayerData.Handler.class, PacketSyncPlayerData.class, 1, Side.CLIENT);
+        network.registerMessage(PacketSyncBlockSetConfig.Handler.class, PacketSyncBlockSetConfig.class, 2, Side.CLIENT);
     }
 
     public static void sendToServer(IMessage message)

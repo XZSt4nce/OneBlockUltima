@@ -86,6 +86,7 @@ public class GuiOneBlock extends GuiContainer
     private String donateStatusMessage = null;
     private int donateStatusTicks = 0;
     private int activeView = VIEW_SETS;
+    private boolean settingsTabVisible = true;
     private int blockScroll = 0;
     private int mobScroll = 0;
     private int blockScrollNext = 0;
@@ -785,8 +786,6 @@ public class GuiOneBlock extends GuiContainer
     @Override
     public void initGui()
     {
-        BlockSetConfig.reload();
-
         this.xSize = this.width - 40;
         this.ySize = this.height - 40;
         super.initGui();
@@ -822,7 +821,9 @@ public class GuiOneBlock extends GuiContainer
 
         int tabGap = xSize / 36;
         int tabWidth = xSize / 7;
-        int totalTabWidth = tabWidth * 3 + tabGap * 2;
+        settingsTabVisible = net.minecraft.client.Minecraft.getMinecraft().isIntegratedServerRunning();
+        int visibleTabs = settingsTabVisible ? 3 : 2;
+        int totalTabWidth = tabWidth * visibleTabs + tabGap * (visibleTabs - 1);
         int tabX = guiLeft + (xSize - totalTabWidth) / 2;
         int tabY = guiTop + tabRowY + textHeight / 2;
         int infoButtonsY = guiTop + infoRowY + rowInterval * 2;
@@ -832,8 +833,16 @@ public class GuiOneBlock extends GuiContainer
         int settingWidth = contentWidth;
 
         tabSetsButton = new GuiButton(BUTTON_TAB_SETS, tabX, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.sets"));
-        tabSettingsButton = new GuiButton(BUTTON_TAB_SETTINGS, tabX + tabWidth + tabGap, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.settings"));
-        tabDonateButton = new GuiButton(BUTTON_TAB_DONATE, tabX + (tabWidth + tabGap) * 2, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.donate"));
+        if (settingsTabVisible)
+        {
+            tabSettingsButton = new GuiButton(BUTTON_TAB_SETTINGS, tabX + tabWidth + tabGap, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.settings"));
+            tabDonateButton = new GuiButton(BUTTON_TAB_DONATE, tabX + (tabWidth + tabGap) * 2, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.donate"));
+        }
+        else
+        {
+            tabSettingsButton = null;
+            tabDonateButton = new GuiButton(BUTTON_TAB_DONATE, tabX + tabWidth + tabGap, tabY, tabWidth, buttonHeight, I18n.format("gui.oneblockultima.tabs.donate"));
+        }
         prevButton = new GuiButton(BUTTON_PREV_SET, leftButtonX, infoButtonsY, 20, buttonHeight, "<");
         nextButton = new GuiButton(BUTTON_NEXT_SET, leftButtonX + 26, infoButtonsY, 20, buttonHeight, ">");
         selectButton = new GuiButton(BUTTON_SELECT_SET, leftButtonX, infoButtonsY + buttonHeight + buttonGap, selectWidth, buttonHeight, I18n.format("gui.oneblockultima.select"));
@@ -857,7 +866,10 @@ public class GuiOneBlock extends GuiContainer
         }
 
         buttonList.add(tabSetsButton);
-        buttonList.add(tabSettingsButton);
+        if (settingsTabVisible)
+        {
+            buttonList.add(tabSettingsButton);
+        }
         buttonList.add(tabDonateButton);
         buttonList.add(prevButton);
         buttonList.add(nextButton);
@@ -880,6 +892,10 @@ public class GuiOneBlock extends GuiContainer
 
     private void updateViewButtons()
     {
+        if (!settingsTabVisible && activeView == VIEW_SETTINGS)
+        {
+            activeView = VIEW_SETS;
+        }
         boolean setsView = activeView == VIEW_SETS;
         boolean settingsView = activeView == VIEW_SETTINGS;
         boolean donateView = activeView == VIEW_DONATE;
@@ -983,6 +999,10 @@ public class GuiOneBlock extends GuiContainer
         }
         else if (button.id == BUTTON_TAB_SETTINGS)
         {
+            if (!settingsTabVisible)
+            {
+                return;
+            }
             activeView = VIEW_SETTINGS;
             updateViewButtons();
         }

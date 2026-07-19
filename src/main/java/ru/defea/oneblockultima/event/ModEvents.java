@@ -31,6 +31,8 @@ import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
+import ru.defea.oneblockultima.network.ModMessages;
+import ru.defea.oneblockultima.network.PacketSyncBlockSetConfig;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 import ru.defea.oneblockultima.update.UpdateChecker;
@@ -353,6 +355,22 @@ public final class ModEvents
         }
 
         UpdateChecker.checkForUpdates((EntityPlayerMP) event.player);
+
+        try
+        {
+            String json = BlockSetConfig.get().toJson();
+            OneBlockUltima.getLogger().info("[Sync] BlockSetConfig JSON length: " + (json != null ? json.length() : "null"));
+            if (json != null && !json.isEmpty())
+            {
+                PacketSyncBlockSetConfig packet = new PacketSyncBlockSetConfig(json);
+                OneBlockUltima.getLogger().info("[Sync] Sending BlockSetConfig packet to " + event.player.getName());
+                ModMessages.sendToPlayer(packet, (EntityPlayerMP) event.player);
+            }
+        }
+        catch (Exception e)
+        {
+            OneBlockUltima.getLogger().error("[Sync] Failed to send BlockSetConfig", e);
+        }
 
         World world = event.player.world;
         if (world.provider.getDimension() != 0 || world.getWorldInfo().getTerrainType() != OneBlockWorldType.ONE_BLOCK)
