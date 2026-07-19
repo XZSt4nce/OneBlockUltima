@@ -35,6 +35,11 @@ public final class BlockSetConfig
             .registerTypeAdapter(SetRequiredModsDefinition.class, new SetRequiredModsDefinitionAdapter())
             .create();
 
+    private static final Gson COMPACT_GSON = new GsonBuilder()
+            .registerTypeAdapter(NBTTagCompound.class, new NBTTagCompoundAdapter())
+            .registerTypeAdapter(SetRequiredModsDefinition.class, new SetRequiredModsDefinitionAdapter())
+            .create();
+
     private static BlockSetConfig instance;
     static File configFile;
 
@@ -309,6 +314,28 @@ public final class BlockSetConfig
     public List<BlockSetDefinition> getSets()
     {
         return sets == null ? Collections.emptyList() : sets;
+    }
+
+    public String toJson()
+    {
+        return COMPACT_GSON.toJson(this);
+    }
+
+    public static void loadFromServerJson(String json)
+    {
+        try
+        {
+            BlockSetConfig loaded = GSON.fromJson(json, BlockSetConfig.class);
+            if (loaded != null)
+            {
+                loaded.buildIndex();
+                instance = loaded;
+            }
+        }
+        catch (Exception e)
+        {
+            OneBlockUltima.getLogger().error("Failed to load server blockset config", e);
+        }
     }
 
     public BlockSetDefinition getSet(String id)
