@@ -1,14 +1,13 @@
 package ru.defea.oneblockultima.command;
 
-import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
@@ -19,57 +18,59 @@ import java.util.List;
 public class CommandAcceptGeneratorInvite extends CommandBase
 {
     @Override
-    public String getName()
+    public String getCommandName()
     {
         return "acceptGeneratorInvite";
     }
 
     @Override
-    public String getUsage(ICommandSender sender)
+    public String getCommandUsage(ICommandSender sender)
     {
         return "/acceptGeneratorInvite";
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException
+    public void processCommand(ICommandSender sender, String[] args)
     {
-        if (!(sender.getCommandSenderEntity() instanceof EntityPlayerMP))
+        if (!((Entity)sender instanceof EntityPlayerMP))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.acceptGeneratorInvite.only_player")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.acceptGeneratorInvite.only_player")));
             return;
         }
 
-        EntityPlayerMP player = (EntityPlayerMP) sender.getCommandSenderEntity();
-        World world = player.world;
-        BlockPos generatorPos = new BlockPos(player.getPosition().getX(), player.getPosition().getY() - 1, player.getPosition().getZ());
+        EntityPlayerMP player = (EntityPlayerMP) (Entity)sender;
+        World world = player.worldObj;
+        int genX = (int) player.posX;
+        int genY = (int) player.posY - 1;
+        int genZ = (int) player.posZ;
 
-        if (world.getBlockState(generatorPos).getBlock() != ModBlocks.ONE_BLOCK_GENERATOR)
+        if (world.getBlock(genX, genY, genZ) != ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.acceptGeneratorInvite.not_near_generator")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.acceptGeneratorInvite.not_near_generator")));
             return;
         }
 
-        TileEntity tileEntity = world.getTileEntity(generatorPos);
+        TileEntity tileEntity = world.getTileEntity(genX, genY, genZ);
         if (!(tileEntity instanceof TileEntityOneBlockGenerator))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.no_generator")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.no_generator")));
             return;
         }
 
         TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
         if (!generator.acceptInvite(player.getUniqueID()))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.acceptGeneratorInvite.no_invite")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.acceptGeneratorInvite.no_invite")));
             return;
         }
 
-        sender.sendMessage(new TextComponentString("§a" + I18n.format("command.acceptGeneratorInvite.accepted")));
+        sender.addChatMessage(new ChatComponentText("§a" + StatCollector.translateToLocal("command.acceptGeneratorInvite.accepted")));
     }
 
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos)
+    public List addTabCompletionOptions(ICommandSender sender, String[] args)
     {
-        return new ArrayList<>();
+        return new ArrayList();
     }
 
     @Override
@@ -80,7 +81,7 @@ public class CommandAcceptGeneratorInvite extends CommandBase
 
 
     @Override
-    public boolean checkPermission(MinecraftServer server, ICommandSender sender)
+    public boolean canCommandSenderUseCommand(ICommandSender sender)
     {
         return true;
     }

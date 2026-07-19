@@ -121,7 +121,11 @@ public class BlockSetConfigUnlockConditionTest
 
         assertTrue(generator.acceptInvite(invitedPlayerId));
         assertTrue(generator.hasAccess(invitedPlayerId));
-        assertFalse(generator.getPendingInvites().stream().anyMatch(invite -> invite.targetPlayerId.equals(invitedPlayerId)));
+        boolean found = false;
+        for (ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator.PendingInvite invite : generator.getPendingInvites()) {
+            if (invite.targetPlayerId.equals(invitedPlayerId)) { found = true; break; }
+        }
+        assertFalse(found);
     }
 
     @Test

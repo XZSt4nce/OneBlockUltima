@@ -1,0 +1,37 @@
+gradle.projectsLoaded {
+    rootProject.allprojects {
+        afterEvaluate {
+            def libsDir = new File(rootDir, 'libs')
+            def cacheDir = new File(gradle.gradleUserHomeDir, 'caches/minecraft')
+
+            def patchDownload = { task, srcName, subDir ->
+                if (!task) return
+                def src = new File(libsDir, srcName)
+                def dest = new File(cacheDir, subDir)
+                task.actions.clear()
+                task.doLast {
+                    dest.mkdirs()
+                    project.copy {
+                        from src
+                        into dest
+                    }
+                }
+            }
+
+            patchDownload(tasks.findByName('downloadClient'), 'minecraft-1.7.10.jar', 'net/minecraft/minecraft/1.7.10')
+            patchDownload(tasks.findByName('downloadServer'), 'minecraft_server-1.7.10.jar', 'net/minecraft/minecraft_server/1.7.10')
+
+            ['getAssetsIndex', 'getAssets'].each { name ->
+                def t = tasks.findByName(name)
+                if (t) { t.actions.clear() }
+            }
+
+            // Remove vanilla obfuscated jars from compile classpath to avoid shadowing the MCP-mapped forgeSrc jar
+            tasks.withType(JavaCompile).all {
+                classpath = classpath.filter { file ->
+                    !(file.name == 'minecraft-1.7.10.jar' || file.name == 'minecraft_server-1.7.10.jar')
+                }
+            }
+        }
+    }
+}

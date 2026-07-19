@@ -1,83 +1,59 @@
 package ru.defea.oneblockultima.item;
 
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.init.MobEffects;
-import net.minecraft.item.ItemPotion;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.NonNullList;
+import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.util.Constants;
 import ru.defea.oneblockultima.OneBlockUltima;
 
-import javax.annotation.Nullable;
+import java.util.List;
 
-public abstract class CustomPotion extends ItemPotion {
+public abstract class CustomPotion extends Item
+{
     private final PotionEffect[] potionEffects;
+    private final String name;
 
-    public CustomPotion(String name, PotionEffect[] potionEffects) {
-        setCreativeTab(OneBlockUltima.modTab);
-        this.setRegistryName(name);
-        this.setUnlocalizedName(name);
+    public CustomPotion(String name, PotionEffect[] potionEffects)
+    {
+        super();
         this.potionEffects = potionEffects;
+        this.name = name;
+        setCreativeTab(OneBlockUltima.modTab);
+        setUnlocalizedName("oneblockultima." + name);
+        setMaxStackSize(1);
     }
 
     @Override
-    public ICapabilityProvider initCapabilities(ItemStack stack, @Nullable NBTTagCompound nbt) {
-        // Добавляем эффекты при создании предмета
-        addPotionEffectsToStack(stack);
-        return super.initCapabilities(stack, nbt);
-    }
-
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (this.isInCreativeTab(tab)) {
-            ItemStack stack = new ItemStack(this);
-            items.add(stack);
-        }
-    }
-
-    @Override
-    public String getItemStackDisplayName(ItemStack stack) {
-        return net.minecraft.util.text.translation.I18n.translateToLocal(this.getUnlocalizedNameInefficiently(stack) + ".name").trim();
-    }
-
-    @Override
-    public ItemStack onItemUseFinish(ItemStack stack, World worldIn, EntityLivingBase entityLiving) {
-        ItemStack resultStack = super.onItemUseFinish(stack, worldIn, entityLiving);
-
-        if (!worldIn.isRemote) {
-            for (PotionEffect potionEffect : potionEffects)
-            {
-                entityLiving.addPotionEffect(potionEffect);
-            }
-            entityLiving.addPotionEffect(new PotionEffect(MobEffects.POISON, 30 * 20, 2));
-        }
-
-        return resultStack;
-    }
-
-    public void addPotionEffectsToStack(ItemStack stack) {
-        NBTTagCompound nbt = stack.getTagCompound();
-        if (nbt == null) {
-            nbt = new NBTTagCompound();
-        }
-
-        NBTTagList effectsList = nbt.getTagList("CustomPotionEffects", Constants.NBT.TAG_COMPOUND);
-
-        // Сохраняем эффект в NBT
-        for (PotionEffect potionEffect : potionEffects)
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player)
+    {
+        if (!world.isRemote)
         {
-            NBTTagCompound effectTag = new NBTTagCompound();
-            potionEffect.writeCustomPotionEffectToNBT(effectTag);
-            effectsList.appendTag(effectTag);
+            for (PotionEffect effect : potionEffects)
+            {
+                player.addPotionEffect(effect);
+            }
         }
+        return stack;
+    }
 
-        nbt.setTag("CustomPotionEffects", effectsList);
-        stack.setTagCompound(nbt);
+    @Override
+    public void addInformation(ItemStack stack, EntityPlayer player, List tooltipList, boolean advanced)
+    {
+        for (PotionEffect effect : potionEffects)
+        {
+            tooltipList.add(effect.getEffectName());
+        }
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void registerIcons(IIconRegister register)
+    {
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_" + name);
     }
 }

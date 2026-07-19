@@ -1,20 +1,21 @@
 package ru.defea.oneblockultima.event;
 
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.network.FMLNetworkEvent;
+import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiCreateWorld;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.resources.I18n;
+import org.lwjgl.opengl.GL11;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.WorldType;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.network.FMLNetworkEvent;
-import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.common.MinecraftForge;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
@@ -28,11 +29,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Mod.EventBusSubscriber(value = Side.CLIENT, modid = OneBlockUltima.MODID)
 public final class ModEventsClient
 {
     private ModEventsClient()
     {
+    }
+
+    public static void register()
+    {
+        MinecraftForge.EVENT_BUS.register(ModEventsClient.class);
+        FMLCommonHandler.instance().bus().register(ModEventsClient.class);
     }
 
     @SubscribeEvent
@@ -41,11 +47,16 @@ public final class ModEventsClient
         BlockSetConfig.reload();
     }
 
-    private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<>();
+    private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<UUID, Float>();
 
     @SubscribeEvent
-    public static void onRenderGameOverlay(RenderGameOverlayEvent.Text event)
+    public static void onRenderGameOverlay(RenderGameOverlayEvent.Post event)
     {
+        if (event.type != RenderGameOverlayEvent.ElementType.TEXT)
+        {
+            return;
+        }
+
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.currentScreen instanceof GuiOneBlock)
         {
@@ -57,18 +68,13 @@ public final class ModEventsClient
             return;
         }
 
-        net.minecraft.world.World world = mc.world;
-        if (world == null || !(world.getWorldType() instanceof OneBlockWorldType))
+        net.minecraft.world.World world = mc.theWorld;
+        if (world == null || !(world.getWorldInfo().getTerrainType() instanceof OneBlockWorldType))
         {
             return;
         }
 
-        if (event.getType() != RenderGameOverlayEvent.ElementType.TEXT)
-        {
-            return;
-        }
-
-        EntityPlayer player = Minecraft.getMinecraft().player;
+        EntityPlayer player = mc.thePlayer;
         if (player == null)
         {
             return;
@@ -90,7 +96,7 @@ public final class ModEventsClient
         int vMargin = 5 + radius;
         int hMargin = 8 + radius;
 
-        int x = event.getResolution().getScaledWidth() - 70 - textWidth;
+        int x = event.resolution.getScaledWidth() - 70 - textWidth;
         int y = coinSize + 12;
 
         int bgWidth = coinSize + textWidth + spaceBetween + hMargin * 2;
@@ -100,12 +106,12 @@ public final class ModEventsClient
 
         drawRoundedRect(bgX, bgY, bgWidth, bgHeight, 5, 0x99333333);
 
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         Minecraft.getMinecraft().getTextureManager().bindTexture(new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png"));
-        Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, coinSize, coinSize, coinSize, coinSize);
-        GlStateManager.disableBlend();
+        new Gui().drawTexturedModalRect(x, y, 0, 0, coinSize, coinSize);
+        GL11.glDisable(GL11.GL_BLEND);
         Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + coinSize + spaceBetween, y, 0xFFD700);
     }
 
@@ -133,7 +139,7 @@ public final class ModEventsClient
             ModEvents.lastDisplayedCurrency.put(playerUUID, targetCurrency);
         }
 
-        float currentDisplayed = displayedCurrencyMap.getOrDefault(playerUUID, (float) targetCurrency);
+        float currentDisplayed = displayedCurrencyMap.containsKey(playerUUID) ? displayedCurrencyMap.get(playerUUID) : (float) targetCurrency;
         float newDisplayed = currentDisplayed + (targetCurrency - currentDisplayed) * 0.14f;
         if (Math.abs(targetCurrency - newDisplayed) < 0.01f)
         {
@@ -152,17 +158,10 @@ public final class ModEventsClient
             return;
         }
 
-        mc.addScheduledTask(new Runnable()
+        if (mc.currentScreen instanceof GuiOneBlock)
         {
-            @Override
-            public void run()
-            {
-                if (mc.currentScreen instanceof GuiOneBlock)
-                {
-                    mc.currentScreen.initGui();
-                }
-            }
-        });
+            mc.currentScreen.initGui();
+        }
     }
 
     private static void drawRoundedRect(int x, int y, int width, int height, int radius, int color)
@@ -192,22 +191,23 @@ public final class ModEventsClient
     @SubscribeEvent
     public static void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event)
     {
-        if (!(event.getGui() instanceof GuiCreateWorld))
+        if (!(event.gui instanceof GuiCreateWorld))
         {
             return;
         }
 
-        GuiCreateWorld screen = (GuiCreateWorld) event.getGui();
+        GuiCreateWorld screen = (GuiCreateWorld) event.gui;
         WorldType worldType = getCreateWorldType(screen);
         if (worldType != OneBlockWorldType.ONE_BLOCK)
         {
             return;
         }
 
-        String bonusLabel = I18n.format("createWorld.customize.bonusItems");
-        String structuresLabel = I18n.format("createWorld.customize.mapFeatures");
-        for (GuiButton button : event.getButtonList())
+        String bonusLabel = StatCollector.translateToLocal("createWorld.customize.bonusItems");
+        String structuresLabel = StatCollector.translateToLocal("createWorld.customize.mapFeatures");
+        for (Object obj : event.buttonList)
         {
+            GuiButton button = (GuiButton) obj;
             if (button == null || button.displayString == null)
             {
                 continue;

@@ -23,7 +23,7 @@ public class BlockSetConfigSyncTest {
 
     private void saveAndApply(BlockSetDefinition... sets) {
         previousConfig = BlockSetConfig.get();
-        List<BlockSetDefinition> list = new ArrayList<>();
+        List<BlockSetDefinition> list = new ArrayList();
         Collections.addAll(list, sets);
         BlockSetConfig.applySets(list);
     }
@@ -283,7 +283,7 @@ public class BlockSetConfigSyncTest {
 
     @Test
     public void toJsonRoundTripPreservesMultipleSets() {
-        List<BlockSetDefinition> sets = new ArrayList<>();
+        List<BlockSetDefinition> sets = new ArrayList();
         for (int i = 0; i < 5; i++) {
             BlockSetDefinition set = new BlockSetDefinition();
             set.id = "set_" + i;
@@ -338,7 +338,7 @@ public class BlockSetConfigSyncTest {
         BlockElementDefinition block = new BlockElementDefinition();
         block.registry = "minecraft:stained_hardened_clay";
         block.meta = 0;
-        block.metas = new ArrayList<>(java.util.Arrays.asList(1, 2, 3, 4));
+        block.metas = new ArrayList(java.util.Arrays.asList(1, 2, 3, 4));
         block.baseLevel = 1;
         block.baseChance = 100;
 

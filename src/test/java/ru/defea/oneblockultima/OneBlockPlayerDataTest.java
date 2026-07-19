@@ -176,7 +176,7 @@ public class OneBlockPlayerDataTest {
     @Test
     public void setBrokenBlocksBySetClampsNegative() {
         OneBlockPlayerData data = newData();
-        Map<String, Integer> blocks = new HashMap<>();
+        Map<String, Integer> blocks = new HashMap();
         blocks.put("classic", -5);
         blocks.put("nether", 10);
         data.setBrokenBlocksBySet(blocks);

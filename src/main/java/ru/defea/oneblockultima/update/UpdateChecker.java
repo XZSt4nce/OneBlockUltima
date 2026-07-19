@@ -3,9 +3,9 @@ package ru.defea.oneblockultima.update;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraftforge.fml.common.Loader;
-import net.minecraftforge.fml.common.ModContainer;
+import net.minecraft.util.ChatComponentTranslation;
+import cpw.mods.fml.common.Loader;
+import cpw.mods.fml.common.ModContainer;
 import ru.defea.oneblockultima.OneBlockUltima;
 
 import java.io.BufferedReader;
@@ -14,22 +14,27 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 public class UpdateChecker
 {
     private static final String VERSIONS_URL = "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/0b8e367bfc036e1cec4c902b94ef2e19fe3e396e/versions.json";
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "OneBlockUltima-UpdateChecker");
-        t.setDaemon(true);
-        return t;
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory()
+    {
+        public Thread newThread(Runnable r)
+        {
+            Thread t = new Thread(r, "OneBlockUltima-UpdateChecker");
+            t.setDaemon(true);
+            return t;
+        }
     });
 
     private static String cachedRecommendedVersion;
     private static String cachedDownloadUrl;
     private static boolean checkDone = false;
 
-    public static void checkForUpdates(EntityPlayerMP player)
+    public static void checkForUpdates(final EntityPlayerMP player)
     {
         if (checkDone)
         {
@@ -40,74 +45,77 @@ public class UpdateChecker
             return;
         }
 
-        executor.submit(() ->
+        executor.submit(new Runnable()
         {
-            try
+            public void run()
             {
-                String mcVersion = Loader.instance().getMCVersionString();
-                String promoKey = mcVersion + "-recommended";
-
-                ModContainer mod = Loader.instance().getIndexedModList().get(OneBlockUltima.MODID);
-                if (mod == null) return;
-                String currentVersion = mod.getVersion();
-
-                URL url = new URL(VERSIONS_URL);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-                conn.setRequestProperty("User-Agent", "OneBlockUltima/" + currentVersion);
-
-                if (conn.getResponseCode() != 200)
+                try
                 {
-                    OneBlockUltima.getLogger().warn("[UpdateChecker] Failed to fetch versions.json: HTTP {}", conn.getResponseCode());
-                    checkDone = true;
-                    return;
-                }
+                    String mcVersion = Loader.instance().getMCVersionString();
+                    String promoKey = mcVersion + "-recommended";
 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null)
-                {
-                    sb.append(line);
-                }
-                reader.close();
-                conn.disconnect();
+                    ModContainer mod = Loader.instance().getIndexedModList().get(OneBlockUltima.MODID);
+                    if (mod == null) return;
+                    String currentVersion = mod.getVersion();
 
-                JsonObject root = new JsonParser().parse(sb.toString()).getAsJsonObject();
-                JsonObject promos = root.getAsJsonObject("promos");
-                if (promos == null || !promos.has(promoKey))
-                {
-                    OneBlockUltima.getLogger().warn("[UpdateChecker] No promo key '{}' found", promoKey);
-                    checkDone = true;
-                    return;
-                }
+                    URL url = new URL(VERSIONS_URL);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
+                    conn.setRequestProperty("User-Agent", "OneBlockUltima/" + currentVersion);
 
-                String recommendedVersion = promos.get(promoKey).getAsString();
-                String homepage = root.has("homepage") ? root.get("homepage").getAsString() : null;
-
-                cachedRecommendedVersion = recommendedVersion;
-                cachedDownloadUrl = homepage;
-                checkDone = true;
-
-                if (!currentVersion.equals(recommendedVersion))
-                {
-                    OneBlockUltima.getLogger().info("[UpdateChecker] New version available: {} (current: {})", recommendedVersion, currentVersion);
-                    if (player != null)
+                    if (conn.getResponseCode() != 200)
                     {
-                        notifyPlayer(player);
+                        OneBlockUltima.getLogger().warn("[UpdateChecker] Failed to fetch versions.json: HTTP {}", conn.getResponseCode());
+                        checkDone = true;
+                        return;
+                    }
+
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null)
+                    {
+                        sb.append(line);
+                    }
+                    reader.close();
+                    conn.disconnect();
+
+                    JsonObject root = new JsonParser().parse(sb.toString()).getAsJsonObject();
+                    JsonObject promos = root.getAsJsonObject("promos");
+                    if (promos == null || !promos.has(promoKey))
+                    {
+                        OneBlockUltima.getLogger().warn("[UpdateChecker] No promo key '{}' found", promoKey);
+                        checkDone = true;
+                        return;
+                    }
+
+                    String recommendedVersion = promos.get(promoKey).getAsString();
+                    String homepage = root.has("homepage") ? root.get("homepage").getAsString() : null;
+
+                    cachedRecommendedVersion = recommendedVersion;
+                    cachedDownloadUrl = homepage;
+                    checkDone = true;
+
+                    if (!currentVersion.equals(recommendedVersion))
+                    {
+                        OneBlockUltima.getLogger().info("[UpdateChecker] New version available: {} (current: {})", new Object[]{recommendedVersion, currentVersion});
+                        if (player != null)
+                        {
+                            notifyPlayer(player);
+                        }
+                    }
+                    else
+                    {
+                        OneBlockUltima.getLogger().info("[UpdateChecker] Mod is up to date: {}", currentVersion);
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    OneBlockUltima.getLogger().info("[UpdateChecker] Mod is up to date: {}", currentVersion);
+                    OneBlockUltima.getLogger().warn("[UpdateChecker] Failed to check for updates: {}", e.getMessage());
+                    checkDone = true;
                 }
-            }
-            catch (Exception e)
-            {
-                OneBlockUltima.getLogger().warn("[UpdateChecker] Failed to check for updates: {}", e.getMessage());
-                checkDone = true;
             }
         });
     }
@@ -125,14 +133,14 @@ public class UpdateChecker
             currentVersion = "???";
         }
 
-        player.sendMessage(new TextComponentTranslation(
+        player.addChatMessage(new ChatComponentTranslation(
                 "oneblockultima.update.available",
                 cachedRecommendedVersion,
                 currentVersion));
 
         if (cachedDownloadUrl != null)
         {
-            player.sendMessage(new TextComponentTranslation(
+            player.addChatMessage(new ChatComponentTranslation(
                     "oneblockultima.update.link",
                     cachedDownloadUrl));
         }

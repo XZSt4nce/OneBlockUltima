@@ -1,16 +1,15 @@
 package ru.defea.oneblockultima;
 
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.SidedProxy;
+import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import cpw.mods.fml.common.event.FMLServerStoppingEvent;
+import cpw.mods.fml.common.network.NetworkRegistry;
 import net.minecraft.creativetab.CreativeTabs;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
-import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.command.*;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
@@ -22,8 +21,8 @@ import ru.defea.oneblockultima.world.OneBlockWorldType;
 
 @Mod(
         modid = OneBlockUltima.MODID,
-        useMetadata = true,
-        guiFactory = "ru.defea.oneblockultima.ModGuiFactory"
+        name = OneBlockUltima.NAME,
+        version = "2.1.1"
 )
 public class OneBlockUltima
 {
@@ -54,18 +53,17 @@ public class OneBlockUltima
     {
         logger = event.getModLog();
         BlockSetConfig.load(event.getModConfigurationDirectory());
-        OneBlockPlayerDataProvider.register();
         ModTileEntities.register();
         ModMessages.register();
         OneBlockWorldType.init();
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
         proxy.preInit();
 
-        if (net.minecraftforge.fml.common.FMLCommonHandler.instance().getSide() == net.minecraftforge.fml.relauncher.Side.CLIENT)
+        if (cpw.mods.fml.common.FMLCommonHandler.instance().getSide() == cpw.mods.fml.relauncher.Side.CLIENT)
         {
             GuiSetsConfig.loadStaticCustomNames();
         }
-        logger.info("{} загружается...", NAME);
+        logger.info("{} is loading...", NAME);
     }
 
     @Mod.EventHandler

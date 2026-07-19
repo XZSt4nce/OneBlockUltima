@@ -2,13 +2,13 @@ package ru.defea.oneblockultima.capability;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
-import net.minecraftforge.common.capabilities.*;
+import net.minecraft.nbt.NBTTagList;
+import ru.defea.oneblockultima.OneBlockUltima;
 
-import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 
-public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTagCompound>
+public final class OneBlockPlayerDataProvider
 {
     private static final String PERSISTENT_TAG = "oneblockultima_player_data";
     private static final String CURRENCY_TAG = "currency";
@@ -16,28 +16,24 @@ public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTa
     private static final String SET_LEVELS_TAG = "setLevels";
     private static final String BROKEN_BLOCKS_BY_SET_TAG = "brokenBlocksBySet";
 
-    @CapabilityInject(IOneBlockPlayerData.class)
-    public static Capability<IOneBlockPlayerData> ONE_BLOCK_PLAYER_DATA = null;
-
-    private final OneBlockPlayerData instance = new OneBlockPlayerData();
+    private OneBlockPlayerDataProvider()
+    {
+    }
 
     public static void register()
     {
-        CapabilityManager.INSTANCE.register(
-                IOneBlockPlayerData.class,
-                new OneBlockPlayerDataStorage(),
-                OneBlockPlayerData.class
-        );
+        // No capability registration needed in 1.5.2
     }
 
-    public static IOneBlockPlayerData get(ICapabilityProvider provider)
+    public static IOneBlockPlayerData get(EntityPlayer player)
     {
-        if (provider != null && ONE_BLOCK_PLAYER_DATA != null && provider.hasCapability(ONE_BLOCK_PLAYER_DATA, null))
+        if (player == null)
         {
-            return provider.getCapability(ONE_BLOCK_PLAYER_DATA, null);
+            return null;
         }
-
-        return null;
+        OneBlockPlayerData data = new OneBlockPlayerData();
+        loadFromEntity(player, data);
+        return data;
     }
 
     public static void saveToEntity(EntityPlayer player, IOneBlockPlayerData data)
@@ -84,7 +80,7 @@ public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTa
         }
 
         NBTTagCompound tag = player.getEntityData().getCompoundTag(PERSISTENT_TAG);
-        if (tag == null || tag.hasNoTags())
+        if (tag == null || !tag.hasKey(CURRENCY_TAG))
         {
             return;
         }
@@ -96,80 +92,53 @@ public class OneBlockPlayerDataProvider implements ICapabilitySerializable<NBTTa
             playerData.setBrokenBlocksTotal(tag.getInteger(BROKEN_BLOCKS_TOTAL_TAG));
 
             playerData.getSetLevels().clear();
-            NBTTagCompound setLevels = tag.getCompoundTag(SET_LEVELS_TAG);
-            for (String key : setLevels.getKeySet())
+            if (tag.hasKey(SET_LEVELS_TAG))
             {
-                playerData.getSetLevels().put(key, setLevels.getInteger(key));
+                NBTTagCompound setLevels = tag.getCompoundTag(SET_LEVELS_TAG);
+                NBTTagList keyList = setLevels.getTagList("keys", 9);
+                NBTTagList valueList = setLevels.getTagList("values", 9);
+                if (keyList != null && valueList != null)
+                {
+                    for (int i = 0; i < keyList.tagCount(); i++)
+                    {
+                        String key = keyList.getStringTagAt(i);
+                        int value = (int) valueList.func_150309_d(i);
+                        playerData.getSetLevels().put(key, value);
+                    }
+                }
             }
 
             playerData.getBrokenBlocksBySet().clear();
-            NBTTagCompound brokenBlocksBySet = tag.getCompoundTag(BROKEN_BLOCKS_BY_SET_TAG);
-            for (String key : brokenBlocksBySet.getKeySet())
+            if (tag.hasKey(BROKEN_BLOCKS_BY_SET_TAG))
             {
-                playerData.getBrokenBlocksBySet().put(key, brokenBlocksBySet.getInteger(key));
+                NBTTagCompound brokenBlocks = tag.getCompoundTag(BROKEN_BLOCKS_BY_SET_TAG);
+                NBTTagList keyList = brokenBlocks.getTagList("keys", 9);
+                NBTTagList valueList = brokenBlocks.getTagList("values", 9);
+                if (keyList != null && valueList != null)
+                {
+                    for (int i = 0; i < keyList.tagCount(); i++)
+                    {
+                        String key = keyList.getStringTagAt(i);
+                        int value = (int) valueList.func_150309_d(i);
+                        playerData.getBrokenBlocksBySet().put(key, value);
+                    }
+                }
             }
         }
     }
 
-    @Override
-    public boolean hasCapability(Capability<?> capability, @Nullable EnumFacing facing)
+    private static NBTTagCompound serializeMap(Map<String, Integer> map)
     {
-        return capability == ONE_BLOCK_PLAYER_DATA;
-    }
-
-    @Nullable
-    @Override
-    public <T> T getCapability(Capability<T> capability, @Nullable EnumFacing facing)
-    {
-        if (capability == ONE_BLOCK_PLAYER_DATA)
+        NBTTagCompound compound = new NBTTagCompound();
+        NBTTagList keys = new NBTTagList();
+        NBTTagList values = new NBTTagList();
+        for (Map.Entry<String, Integer> entry : map.entrySet())
         {
-            return ONE_BLOCK_PLAYER_DATA.cast(instance);
+            keys.appendTag(new net.minecraft.nbt.NBTTagString(entry.getKey()));
+            values.appendTag(new net.minecraft.nbt.NBTTagInt(entry.getValue()));
         }
-
-        return null;
-    }
-
-    @Override
-    public NBTTagCompound serializeNBT()
-    {
-        NBTTagCompound tag = new NBTTagCompound();
-        tag.setInteger("currency", instance.getCurrency());
-        tag.setInteger("brokenBlocksTotal", instance.getBrokenBlocksCount());
-
-        NBTTagCompound setLevels = new NBTTagCompound();
-        for (Map.Entry<String, Integer> entry : instance.getSetLevels().entrySet())
-        {
-            setLevels.setInteger(entry.getKey(), entry.getValue());
-        }
-        tag.setTag("setLevels", setLevels);
-
-        NBTTagCompound brokenBlocksBySet = new NBTTagCompound();
-        for (Map.Entry<String, Integer> entry : instance.getBrokenBlocksBySet().entrySet())
-        {
-            brokenBlocksBySet.setInteger(entry.getKey(), entry.getValue());
-        }
-        tag.setTag("brokenBlocksBySet", brokenBlocksBySet);
-        return tag;
-    }
-
-    @Override
-    public void deserializeNBT(NBTTagCompound nbt)
-    {
-        instance.setCurrency(nbt.getInteger("currency"));
-        instance.setBrokenBlocksTotal(nbt.getInteger("brokenBlocksTotal"));
-
-        instance.getSetLevels().clear();
-        NBTTagCompound setLevels = nbt.getCompoundTag("setLevels");
-        for (String key : setLevels.getKeySet())
-        {
-            instance.getSetLevels().put(key, setLevels.getInteger(key));
-        }
-
-        instance.getBrokenBlocksBySet().clear();
-        NBTTagCompound brokenBlocksBySet = nbt.getCompoundTag("brokenBlocksBySet");
-        for (String key : brokenBlocksBySet.getKeySet())
-        {
-            instance.getBrokenBlocksBySet().put(key, brokenBlocksBySet.getInteger(key));
-        }
+        compound.setTag("keys", keys);
+        compound.setTag("values", values);
+        return compound;
     }
 }

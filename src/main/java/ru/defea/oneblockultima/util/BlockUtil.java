@@ -1,48 +1,32 @@
 package ru.defea.oneblockultima.util;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockCrops;
-import net.minecraft.block.BlockEndPortalFrame;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.block.BlockContainer;
 import net.minecraft.init.Blocks;
-import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.entity.Entity;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
-import net.minecraft.world.storage.loot.LootContext;
-import net.minecraft.world.storage.loot.LootTable;
-import net.minecraft.world.storage.loot.LootTableManager;
-import net.minecraftforge.common.util.Constants;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.IFluidBlock;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import cpw.mods.fml.common.registry.GameRegistry;
 import ru.defea.oneblockultima.OneBlockUltima;
-import ru.defea.oneblockultima.block.BlockCustomPortalFrame;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-
-import static net.minecraft.item.ItemStack.DECIMALFORMAT;
 
 public final class BlockUtil
 {
@@ -50,162 +34,174 @@ public final class BlockUtil
     {
     }
 
-    public static IBlockState getReplacementStateForGeneratorPlacement(IBlockState state, IBlockState belowState)
+    public static int[] getReplacementBlockForGeneratorPlacement(int blockId, int meta, int belowBlockId, int belowMeta)
     {
-        if (state == null || belowState == null || belowState.getBlock() != ModBlocks.ONE_BLOCK_GENERATOR)
+        if (belowBlockId != Block.getIdFromBlock(ModBlocks.ONE_BLOCK_GENERATOR))
         {
-            return state;
+            return null;
         }
 
-        if (state.getBlock() == Blocks.BEDROCK)
+        if (blockId == Block.getIdFromBlock(Blocks.bedrock))
         {
-            return ModBlocks.CUSTOM_BEDROCK.getDefaultState();
+            return new int[]{ Block.getIdFromBlock(ModBlocks.CUSTOM_BEDROCK), 0 };
         }
 
-        if (state.getBlock() == Blocks.END_PORTAL_FRAME)
+        if (blockId == Block.getIdFromBlock(Blocks.end_portal_frame))
         {
-            IBlockState replacement = ModBlocks.CUSTOM_PORTAL_FRAME.getDefaultState();
-            if (state.getProperties().containsKey(BlockEndPortalFrame.FACING))
-            {
-                replacement = replacement.withProperty(BlockCustomPortalFrame.FACING, state.getValue(BlockEndPortalFrame.FACING));
-            }
-            if (state.getProperties().containsKey(BlockEndPortalFrame.EYE))
-            {
-                replacement = replacement.withProperty(BlockCustomPortalFrame.EYE, state.getValue(BlockEndPortalFrame.EYE));
-            }
-            return replacement;
+            return new int[]{ Block.getIdFromBlock(ModBlocks.CUSTOM_PORTAL_FRAME), meta };
         }
 
-        return state;
+        return null;
     }
 
-    /**
-     * Размещает блок с применением NBT тегов одновременно (атомарно)
-     * Теги применяются ДО размещения блока для BlockContainer блоков
-     */
-    public static void placeBlockWithNBT(World world, BlockPos pos, IBlockState state, @javax.annotation.Nullable NBTTagCompound nbtTags)
+    public static void placeBlockWithNBT(World world, int x, int y, int z, int blockId, int meta, @Nullable NBTTagCompound nbtTags)
     {
-        if (world == null || pos == null || state == null)
+        if (world == null || blockId <= 0)
         {
             return;
         }
 
-        // Обработка жидкостей
-        if (state.getMaterial().isLiquid())
+        Block block = Block.getBlockById(blockId);
+        if (block == null)
         {
-            state = normalizeLiquidState(state);
+            return;
         }
 
-        state = getReplacementStateForGeneratorPlacement(state, world.getBlockState(pos.down()));
-        Block block = state.getBlock();
-        
-        // Для BlockContainer блоков с NBT тегами - создаем TileEntity ДО размещения
+        blockId = normalizeLiquidBlockId(blockId);
+        block = Block.getBlockById(blockId);
+        if (block == null) return;
+
+        int belowBlockId = Block.getIdFromBlock(world.getBlock(x, y - 1, z));
+        int belowMeta = world.getBlockMetadata(x, y - 1, z);
+        int[] replacement = getReplacementBlockForGeneratorPlacement(blockId, meta, belowBlockId, belowMeta);
+        if (replacement != null)
+        {
+            blockId = replacement[0];
+            meta = replacement[1];
+            block = Block.getBlockById(blockId);
+        }
+
         TileEntity preCreatedTileEntity = null;
-        if (nbtTags != null && !nbtTags.hasNoTags() && block instanceof net.minecraft.block.BlockContainer)
+        if (nbtTags != null && !nbtTags.hasNoTags() && block instanceof BlockContainer)
         {
             try
             {
-                // Создаем TileEntity с полными NBT данными ДО размещения блока
-                TileEntity tileEntity = ((net.minecraft.block.BlockContainer) block).createNewTileEntity(world, block.getMetaFromState(state));
-                
+                TileEntity tileEntity = block.createTileEntity(world, meta);
+
                 if (tileEntity != null)
                 {
-                    for (String key : nbtTags.getKeySet())
+                    NBTTagCompound tileNbt = new NBTTagCompound();
+                    tileEntity.writeToNBT(tileNbt);
+                    for (Object obj : nbtTags.func_150296_c())
                     {
+                        String key = (String) obj;
                         NBTBase tag = nbtTags.getTag(key);
-                        tileEntity.getTileData().setTag(key, tag.copy());
+                        if (tag != null)
+                        {
+                            tileNbt.setTag(key, tag.copy());
+                        }
                     }
+                    tileEntity.readFromNBT(tileNbt);
 
-                    tileEntity.setPos(pos);
-                    world.setTileEntity(pos, tileEntity);
+                    tileEntity.xCoord = x;
+                    tileEntity.yCoord = y;
+                    tileEntity.zCoord = z;
 
-                    if (tileEntity instanceof IInventory) {
+                    if (tileEntity instanceof IInventory)
+                    {
                         IInventory inv = (IInventory) tileEntity;
-                        NBTTagCompound nbt = tileEntity.getTileData();
-                        String lootTableKey = "LootTable";
+                        NBTTagCompound nbt = new NBTTagCompound();
+                        tileEntity.writeToNBT(nbt);
 
-                        if (nbt.hasKey(lootTableKey, 8)) { // 8 = TAG_String
-                            String lootTableId = nbt.getString(lootTableKey);
-                            ResourceLocation loc = new ResourceLocation(lootTableId);
-
-                            LootTableManager manager = world.getLootTableManager();
-                            LootTable table = manager.getLootTableFromLocation(loc);
-
-                            LootContext.Builder contextBuilder = new LootContext.Builder((net.minecraft.world.WorldServer) world);
-                            LootContext context = contextBuilder.build();
-
-                            table.fillInventory(inv, world.rand, context);
-                            nbt.removeTag(lootTableKey);
+                        if (nbt.hasKey("LootTable", 8))
+                        {
+                            String lootTableId = nbt.getString("LootTable");
+                            OneBlockUltima.getLogger().info("[Generator] Found LootTable tag '{}' for TileEntity, loading via loot table", lootTableId);
+                            nbt.removeTag("LootTable");
                             preCreatedTileEntity = tileEntity;
                             tileEntity.markDirty();
                         }
                     }
 
-                    OneBlockUltima.getLogger().info("[Generator] Pre-configured TileEntity at {} with NBT tags", pos);
+                    if (preCreatedTileEntity == null)
+                    {
+                        preCreatedTileEntity = tileEntity;
+                    }
+
+                    OneBlockUltima.getLogger().info("[Generator] Pre-configured TileEntity at ({},{},{}) with NBT tags", x, y, z);
                 }
                 else
                 {
-                    OneBlockUltima.getLogger().warn("[Generator] createNewTileEntity returned null for block {}", block.getRegistryName());
+                    OneBlockUltima.getLogger().warn("[Generator] createTileEntity returned null for block {}", block.getUnlocalizedName());
                 }
             }
             catch (Exception e)
             {
-                OneBlockUltima.getLogger().error("[Generator] Failed to pre-configure TileEntity for block at {}", pos, e);
+                OneBlockUltima.getLogger().error("[Generator] Failed to pre-configure TileEntity for block at ({},{},{})", x, y, z, e);
             }
         }
-        
-        // Размещаем блок
-        world.setBlockState(pos, state, 3);
+
+        world.setBlock(x, y, z, Block.getBlockById(blockId), meta, 3);
+
         if (preCreatedTileEntity != null)
         {
-            // Удаляем старый TileEntity, если есть
-            world.removeTileEntity(pos);
-            // Устанавливаем наш
-            world.setTileEntity(pos, preCreatedTileEntity);
-            preCreatedTileEntity.setPos(pos);
+            world.setTileEntity(x, y, z, preCreatedTileEntity);
+            preCreatedTileEntity.xCoord = x;
+            preCreatedTileEntity.yCoord = y;
+            preCreatedTileEntity.zCoord = z;
             preCreatedTileEntity.markDirty();
         }
 
-        // Если есть NBT теги, но блок не BlockContainer, пытаемся применить их после размещения
-        if (nbtTags != null && !nbtTags.hasNoTags() && !(block instanceof net.minecraft.block.BlockContainer))
+        if (nbtTags != null && !nbtTags.hasNoTags() && !(block instanceof BlockContainer))
         {
-            applyNbtToBlock(world, pos, nbtTags);
+            applyNbtToBlock(world, x, y, z, nbtTags);
         }
     }
 
     public static String getDisplayName(Block block, NBTTagCompound nbtTagCompound)
     {
-        NBTTagCompound nbttagcompound = nbtTagCompound != null && nbtTagCompound.hasKey("display", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getCompoundTag("display") : null;
+        NBTTagCompound displayTag = (nbtTagCompound != null && nbtTagCompound.hasKey("display", 10))
+                ? nbtTagCompound.getCompoundTag("display")
+                : null;
 
-        if (nbttagcompound != null)
+        if (displayTag != null)
         {
-            if (nbttagcompound.hasKey("Name", Constants.NBT.TAG_STRING))
+            if (displayTag.hasKey("Name", 8))
             {
-                return nbttagcompound.getString("Name");
+                return displayTag.getString("Name");
             }
 
-            if (nbttagcompound.hasKey("LocName", Constants.NBT.TAG_STRING))
+            if (displayTag.hasKey("LocName", 8))
             {
-                return net.minecraft.util.text.translation.I18n.translateToLocal(nbttagcompound.getString("LocName"));
+                return StatCollector.translateToLocal(displayTag.getString("LocName"));
             }
         }
 
-        return net.minecraft.util.text.translation.I18n.translateToLocal(net.minecraft.util.text.translation.I18n.translateToLocal(block.getUnlocalizedName()) + ".name").trim();
+        return StatCollector.translateToLocal(block.getUnlocalizedName() + ".name").trim();
     }
 
-    public static List<String> getTooltip(BlockSetConfig.BlockEntryDefinition hoveredEntry, ITooltipFlag advanced) {
-        java.util.List<String> tooltip = new java.util.ArrayList<>();
+    public static List<String> getTooltip(BlockSetConfig.BlockEntryDefinition hoveredEntry, boolean advanced)
+    {
+        List<String> tooltip = new ArrayList<String>();
         Block resolvedBlock = hoveredEntry.resolveBlock();
+        if (resolvedBlock == null)
+        {
+            return tooltip;
+        }
+
         boolean hasTagCompound = hoveredEntry.nbtTags != null;
-        NBTTagCompound nbtTagCompound = hasTagCompound && hoveredEntry.nbtTags.hasKey("display", Constants.NBT.TAG_COMPOUND) ? hoveredEntry.nbtTags.getCompoundTag("display") : null;
-        boolean hasDisplayName = nbtTagCompound != null && nbtTagCompound.hasKey("Name", Constants.NBT.TAG_STRING);
+        NBTTagCompound nbtTagCompound = (hasTagCompound && hoveredEntry.nbtTags.hasKey("display", 10))
+                ? hoveredEntry.nbtTags.getCompoundTag("display")
+                : null;
+        boolean hasDisplayName = nbtTagCompound != null && nbtTagCompound.hasKey("Name", 8);
 
         String s = getDisplayName(resolvedBlock, nbtTagCompound);
-        if (s == null || s.isEmpty()) {
+        if (s == null || s.isEmpty())
+        {
             s = hoveredEntry.registry;
         }
 
-        if (advanced.isAdvanced())
+        if (advanced)
         {
             String s1 = "";
 
@@ -236,243 +232,144 @@ public final class BlockUtil
 
         int i1 = 0;
 
-        try {
-            assert nbtTagCompound != null;
-            if (nbtTagCompound.hasKey("HideFlags", Constants.NBT.TAG_ANY_NUMERIC)) {
+        try
+        {
+            if (nbtTagCompound != null && nbtTagCompound.hasKey("HideFlags", 99))
+            {
                 i1 = nbtTagCompound.getInteger("HideFlags");
             }
-        } catch (Exception ignored) {}
+        }
+        catch (Exception ignored)
+        {
+        }
 
-        if ((i1 & 1) == 0) {
-            try {
-                NBTTagList nbttaglist = nbtTagCompound.hasKey("ench", Constants.NBT.TAG_COMPOUND) ? nbtTagCompound.getTagList("ench", Constants.NBT.TAG_COMPOUND) : new NBTTagList();
+        if ((i1 & 1) == 0)
+        {
+            try
+            {
+                NBTTagList nbttaglist = (nbtTagCompound != null && nbtTagCompound.hasKey("ench"))
+                        ? nbtTagCompound.getTagList("ench", 10)
+                        : new NBTTagList();
 
-                for (int j = 0; j < nbttaglist.tagCount(); ++j) {
-                    NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(j);
+                for (int j = 0; j < nbttaglist.tagCount(); ++j)
+                {
+                    NBTTagCompound nbttagcompound = (NBTTagCompound) nbttaglist.getCompoundTagAt(j);
                     int k = nbttagcompound.getShort("id");
                     int l = nbttagcompound.getShort("lvl");
-                    Enchantment enchantment = Enchantment.getEnchantmentByID(k);
+                    Enchantment enchantment = Enchantment.enchantmentsList[k];
 
-                    if (enchantment != null) {
+                    if (enchantment != null)
+                    {
                         tooltip.add(enchantment.getTranslatedName(l));
                     }
                 }
-            } catch (Exception ignored) {
+            }
+            catch (Exception ignored)
+            {
             }
         }
 
-        if (hasDisplayName)
+        if (hasDisplayName && nbtTagCompound != null)
         {
-            NBTTagCompound nbttagcompound1 = nbtTagCompound.getCompoundTag("display");
+            NBTTagCompound displayTag = nbtTagCompound.getCompoundTag("display");
 
-            if (nbttagcompound1.hasKey("color", Constants.NBT.TAG_INT))
+            if (displayTag.hasKey("color", 99))
             {
-                if (advanced.isAdvanced())
+                if (advanced)
                 {
-                    tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.color", String.format("#%06X", nbttagcompound1.getInteger("color"))));
+                    tooltip.add(StatCollector.translateToLocalFormatted("block.color", String.format("#%06X", displayTag.getInteger("color"))));
                 }
                 else
                 {
-                    tooltip.add(TextFormatting.ITALIC + net.minecraft.util.text.translation.I18n.translateToLocal("block.dyed"));
+                    tooltip.add(EnumChatFormatting.ITALIC + StatCollector.translateToLocal("block.dyed"));
                 }
             }
 
-            if (nbttagcompound1.getTagId("Lore") == 9)
+            if (displayTag.hasKey("Lore", 9))
             {
-                NBTTagList nbttaglist3 = nbttagcompound1.getTagList("Lore", 8);
+                NBTTagList loreList = displayTag.getTagList("Lore", 9);
 
-                if (!nbttaglist3.hasNoTags())
+                if (loreList.tagCount() > 0)
                 {
-                    for (int l1 = 0; l1 < nbttaglist3.tagCount(); ++l1)
+                    for (int l1 = 0; l1 < loreList.tagCount(); ++l1)
                     {
-                        tooltip.add(TextFormatting.DARK_PURPLE + "" + TextFormatting.ITALIC + nbttaglist3.getStringTagAt(l1));
+                        tooltip.add(EnumChatFormatting.DARK_PURPLE + "" + EnumChatFormatting.ITALIC + loreList.getStringTagAt(l1));
                     }
                 }
             }
         }
 
-        for (EntityEquipmentSlot entityequipmentslot : EntityEquipmentSlot.values())
+        if (advanced)
         {
-            Multimap<String, AttributeModifier> multimap = getAttributeModifiers(entityequipmentslot, nbtTagCompound);
+            tooltip.add(EnumChatFormatting.DARK_GRAY + resolvedBlock.getUnlocalizedName());
 
-            if (!multimap.isEmpty() && (i1 & 2) == 0)
+            if (hasDisplayName && nbtTagCompound != null)
             {
-                tooltip.add("");
-                tooltip.add(net.minecraft.util.text.translation.I18n.translateToLocal("block.modifiers." + entityequipmentslot.getName()));
-
-                for (Map.Entry<String, AttributeModifier> entry : multimap.entries())
-                {
-                    AttributeModifier attributemodifier = entry.getValue();
-                    double d0 = attributemodifier.getAmount();
-
-                    double d1;
-
-                    if (attributemodifier.getOperation() != 1 && attributemodifier.getOperation() != 2)
-                    {
-                        d1 = d0;
-                    }
-                    else
-                    {
-                        d1 = d0 * 100.0D;
-                    }
-
-                    if (d0 > 0.0D)
-                    {
-                        tooltip.add(TextFormatting.BLUE + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.plus." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + entry.getKey())));
-                    }
-                    else if (d0 < 0.0D)
-                    {
-                        d1 = d1 * -1.0D;
-                        tooltip.add(TextFormatting.RED + " " + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("attribute.modifier.take." + attributemodifier.getOperation(), DECIMALFORMAT.format(d1), net.minecraft.util.text.translation.I18n.translateToLocal("attribute.name." + entry.getKey())));
-                    }
-                }
-            }
-        }
-
-        if (advanced.isAdvanced())
-        {
-
-            tooltip.add(TextFormatting.DARK_GRAY + Block.REGISTRY.getNameForObject(resolvedBlock).toString());
-
-            if (hasDisplayName)
-            {
-                tooltip.add(TextFormatting.DARK_GRAY + net.minecraft.util.text.translation.I18n.translateToLocalFormatted("block.nbt_tags", nbtTagCompound.getKeySet().size()));
+                tooltip.add(EnumChatFormatting.DARK_GRAY + StatCollector.translateToLocalFormatted("block.nbt_tags", ((java.util.Set<?>) nbtTagCompound.func_150296_c()).size()));
             }
         }
 
         return tooltip;
     }
 
-    public static Multimap<String, AttributeModifier> getAttributeModifiers(EntityEquipmentSlot equipmentSlot, NBTTagCompound nbtTagCompound)
+    private static int normalizeLiquidBlockId(int blockId)
     {
-        Multimap<String, AttributeModifier> multimap;
-        boolean hasTagCompound = nbtTagCompound != null;
-
-        if (hasTagCompound && nbtTagCompound.hasKey("AttributeModifiers", Constants.NBT.TAG_LIST))
+        if (blockId == Block.getIdFromBlock(Blocks.water))
         {
-            multimap = HashMultimap.create();
-            NBTTagList nbttaglist = nbtTagCompound.getTagList("AttributeModifiers", Constants.NBT.TAG_LIST);
-
-            for (int i = 0; i < nbttaglist.tagCount(); ++i)
-            {
-                NBTTagCompound nbttagcompound = nbttaglist.getCompoundTagAt(i);
-                AttributeModifier attributemodifier = SharedMonsterAttributes.readAttributeModifierFromNBT(nbttagcompound);
-
-                if (attributemodifier != null && (!nbttagcompound.hasKey("Slot", Constants.NBT.TAG_STRING) || nbttagcompound.getString("Slot").equals(equipmentSlot.getName())) && attributemodifier.getID().getLeastSignificantBits() != 0L && attributemodifier.getID().getMostSignificantBits() != 0L)
-                {
-                    multimap.put(nbttagcompound.getString("AttributeName"), attributemodifier);
-                }
-            }
-        }
-        else
-        {
-            multimap = HashMultimap.create();
+            return Block.getIdFromBlock(Blocks.water);
         }
 
-        return multimap;
+        if (blockId == Block.getIdFromBlock(Blocks.lava))
+        {
+            return Block.getIdFromBlock(Blocks.lava);
+        }
+
+        return blockId;
     }
 
-    /**
-     * Нормализирует жидкости (вода и лава) в их неподвижные состояния
-     */
-    private static IBlockState normalizeLiquidState(IBlockState state)
+    public static void applyNbtToBlock(World world, int x, int y, int z, NBTTagCompound nbtTags)
     {
-        if (!state.getMaterial().isLiquid())
-        {
-            return state;
-        }
-
-        Block block = state.getBlock();
-        if (block == Blocks.FLOWING_WATER)
-        {
-            return Blocks.WATER.getDefaultState();
-        }
-
-        if (block == Blocks.FLOWING_LAVA)
-        {
-            return Blocks.LAVA.getDefaultState();
-        }
-
-        if (block instanceof IFluidBlock)
-        {
-            Fluid fluid = ((IFluidBlock) block).getFluid();
-            if (fluid != null)
-            {
-                Block stillBlock = fluid.getBlock();
-                if (stillBlock != null && stillBlock != block)
-                {
-                    return stillBlock.getDefaultState();
-                }
-            }
-        }
-
-        Fluid fluid = FluidRegistry.lookupFluidForBlock(block);
-        if (fluid != null)
-        {
-            Block stillBlock = fluid.getBlock();
-            if (stillBlock != null && stillBlock != block)
-            {
-                return stillBlock.getDefaultState();
-            }
-        }
-
-        return state;
-    }
-
-    /**
-     * Универсальное применение NBT тегов к блоку на указанной позиции
-     */
-    public static void applyNbtToBlock(World world, BlockPos pos, NBTTagCompound nbtTags)
-    {
-        if (world == null || pos == null || nbtTags == null || nbtTags.hasNoTags())
+        if (world == null || nbtTags == null || nbtTags.hasNoTags())
         {
             return;
         }
 
         try
         {
-            TileEntity tileEntity = world.getTileEntity(pos);
+            TileEntity tileEntity = world.getTileEntity(x, y, z);
             if (tileEntity != null)
             {
-                // Читаем текущее состояние TileEntity
                 NBTTagCompound tileNbt = new NBTTagCompound();
                 tileEntity.writeToNBT(tileNbt);
 
-                // Добавляем все теги из nbtTags в tileNbt (перезаписываем если уже есть)
-                for (String key : nbtTags.getKeySet())
+                for (Object obj : nbtTags.func_150296_c())
                 {
+                    String key = (String) obj;
                     NBTBase tag = nbtTags.getTag(key);
-                    // noinspection ConstantConditions
                     if (tag != null)
                     {
                         tileNbt.setTag(key, tag.copy());
                     }
                 }
 
-                // Применяем обновленные теги
                 tileEntity.readFromNBT(tileNbt);
                 tileEntity.markDirty();
 
-                // Обновляем блок
-                IBlockState state = world.getBlockState(pos);
-                world.notifyBlockUpdate(pos, state, state, 3);
+                world.markBlockForUpdate(x, y, z);
 
-                OneBlockUltima.getLogger().info("[Generator] Applied NBT tags to TileEntity at {}: {}", pos, nbtTags);
+                OneBlockUltima.getLogger().info("[Generator] Applied NBT tags to TileEntity at ({},{},{})", x, y, z);
             }
             else
             {
-                OneBlockUltima.getLogger().debug("[Generator] No TileEntity found at {} for NBT application", pos);
+                OneBlockUltima.getLogger().debug("[Generator] No TileEntity found at ({},{},{}) for NBT application", x, y, z);
             }
         }
         catch (Exception e)
         {
-            OneBlockUltima.getLogger().error("[Generator] Failed to apply NBT tags to block at {}", pos, e);
+            OneBlockUltima.getLogger().error("[Generator] Failed to apply NBT tags to block at ({},{},{})", x, y, z, e);
         }
     }
 
-    /**
-     * Рекурсивное объединение NBT тегов
-     */
     private static void mergeNbtTags(NBTTagCompound target, NBTTagCompound source)
     {
         if (source == null || source.hasNoTags())
@@ -480,16 +377,15 @@ public final class BlockUtil
             return;
         }
 
-        for (String key : source.getKeySet())
+        for (Object obj : source.func_150296_c())
         {
+            String key = (String) obj;
             NBTBase sourceTag = source.getTag(key);
-            // noinspection ConstantConditions
             if (sourceTag == null)
             {
                 continue;
             }
 
-            // Если в целевом объекте уже есть такой ключ и оба - CompoundTag, объединяем рекурсивно
             if (target.hasKey(key))
             {
                 NBTBase targetTag = target.getTag(key);
@@ -500,48 +396,60 @@ public final class BlockUtil
                 }
             }
 
-            // В остальных случаях просто копируем (заменяем)
             target.setTag(key, sourceTag.copy());
         }
     }
 
-    public static boolean canReplaceForGeneration(World world, BlockPos pos)
+    public static boolean canReplaceForGeneration(World world, int x, int y, int z)
     {
-        IBlockState state = world.getBlockState(pos);
-        if (state.getMaterial().isReplaceable())
+        int blockId = Block.getIdFromBlock(world.getBlock(x, y, z));
+        Block block = Block.getBlockById(blockId);
+
+        if (block == null || blockId == 0)
         {
             return true;
         }
 
-        return GeneratedBlockRegistry.get(world).isGenerated(pos);
+        if (block.getMaterial().isReplaceable())
+        {
+            return true;
+        }
+
+        return GeneratedBlockRegistry.get(world).isGenerated(x, y, z);
     }
 
-    public static IBlockState toState(BlockSetConfig.BlockEntryDefinition entry)
+    public static int[] toBlockAndMeta(BlockSetConfig.BlockEntryDefinition entry)
     {
         Block block = entry.resolveBlock();
-        if (block == null || block == Blocks.AIR)
+        if (block == null || Block.getIdFromBlock(block) == 0)
         {
-            // Специальная обработка для Forestry
-            if (entry.registry != null && entry.registry.toLowerCase().contains("forestry")) {
-                // Пробуем найти блок через ItemBlock
-                try {
-                    Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(entry.registry));
-                    if (item instanceof ItemBlock) {
-                        Block forestryBlock = ((ItemBlock) item).getBlock();
-                        // noinspection ConstantConditions
-                        if (forestryBlock != null && forestryBlock != Blocks.AIR) {
-                            OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry block via ItemBlock: {}", forestryBlock.getRegistryName());
+            if (entry.registry != null && entry.registry.toLowerCase().contains("forestry"))
+            {
+                try
+                {
+                    String[] parsed = parseRegistryName(entry.registry);
+                    Item item = GameRegistry.findItem(parsed[0], parsed[1]);
+                    if (item instanceof ItemBlock)
+                    {
+                        Block forestryBlock = Block.getBlockFromItem(item);
+                        if (forestryBlock != null && Block.getIdFromBlock(forestryBlock) != 0)
+                        {
+                            OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry block via ItemBlock: {}", forestryBlock.getUnlocalizedName());
                             block = forestryBlock;
                         }
                     }
-                } catch (Exception ignored) {}
+                }
+                catch (Exception ignored)
+                {
+                }
             }
 
-            if (block == null || block == Blocks.AIR) {
+            if (block == null || Block.getIdFromBlock(block) == 0)
+            {
                 block = resolveSpecialPlantBlock(entry.registry);
             }
 
-            if (block == null || block == Blocks.AIR)
+            if (block == null || Block.getIdFromBlock(block) == 0)
             {
                 OneBlockUltima.getLogger().warn("[BlockUtil] Could not resolve block for registry: {}", entry.registry);
                 return null;
@@ -550,42 +458,32 @@ public final class BlockUtil
 
         try
         {
-            IBlockState state;
+            int meta = entry.meta;
 
-            // Для Forestry саженцев всегда используем default state (meta игнорируется)
             if (entry.registry != null && entry.registry.toLowerCase().contains("forestry") &&
                     entry.registry.toLowerCase().contains("sapling"))
             {
-                state = block.getDefaultState();
-                OneBlockUltima.getLogger().info("[BlockUtil] Using default state for Forestry sapling: {}", state);
-            }
-            else
-            {
-                state = block.getStateFromMeta(entry.meta);
+                meta = 0;
+                OneBlockUltima.getLogger().info("[BlockUtil] Using meta 0 for Forestry sapling");
             }
 
-            if (state.getBlock() == Blocks.AIR)
-            {
-                state = block.getDefaultState();
-            }
-            if (state.getBlock() == Blocks.AIR)
+            if (Block.getIdFromBlock(block) == 0)
             {
                 return null;
             }
 
-            if (block instanceof BlockCrops && state.getBlock() == block)
+            if (block instanceof BlockCrops)
             {
-                return block.getDefaultState();
+                meta = 0;
             }
 
-            OneBlockUltima.getLogger().debug("[BlockUtil] Resolved block: {} -> {} with meta: {}", entry.registry, block.getRegistryName(), entry.meta);
-            return state;
+            OneBlockUltima.getLogger().debug("[BlockUtil] Resolved block: {} -> {} with meta: {}", entry.registry, block.getUnlocalizedName(), meta);
+            return new int[]{ Block.getIdFromBlock(block), meta };
         }
         catch (Exception ex)
         {
-            OneBlockUltima.getLogger().debug("[BlockUtil] Exception getting state from meta for {}, using default state", entry.registry, ex);
-            IBlockState defaultState = block.getDefaultState();
-            return defaultState.getBlock() == Blocks.AIR ? null : defaultState;
+            OneBlockUltima.getLogger().debug("[BlockUtil] Exception resolving block {}, using air", entry.registry, ex);
+            return null;
         }
     }
 
@@ -597,68 +495,83 @@ public final class BlockUtil
         }
 
         String normalized = registry.toLowerCase(Locale.ROOT);
-        switch (normalized) {
-            case "minecraft:carrot":
-            case "carrot":
-                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:carrots"));
-            case "minecraft:potato":
-            case "potato":
-                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:potatoes"));
-            case "minecraft:wheat_seeds":
-            case "wheat_seeds":
-            case "minecraft:wheat":
-            case "wheat":
-                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:wheat"));
-            case "minecraft:beetroot_seeds":
-            case "beetroot_seeds":
-            case "minecraft:beetroot":
-            case "beetroot":
-                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:beetroots"));
-            case "minecraft:reeds":
-            case "reeds":
-            case "minecraft:sugar_cane":
-            case "sugar_cane":
-                Block reeds = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:reeds"));
-                if (reeds != null) {
-                    return reeds;
-                }
-                return ForgeRegistries.BLOCKS.getValue(new ResourceLocation("minecraft:sugar_cane"));
+
+        if (normalized.equals("minecraft:carrot") || normalized.equals("carrot"))
+        {
+            return GameRegistry.findBlock("minecraft", "carrots");
+        }
+        if (normalized.equals("minecraft:potato") || normalized.equals("potato"))
+        {
+            return GameRegistry.findBlock("minecraft", "potatoes");
+        }
+        if (normalized.equals("minecraft:wheat_seeds") || normalized.equals("wheat_seeds") ||
+                normalized.equals("minecraft:wheat") || normalized.equals("wheat"))
+        {
+            return GameRegistry.findBlock("minecraft", "wheat");
+        }
+        if (normalized.equals("minecraft:reeds") || normalized.equals("reeds") ||
+                normalized.equals("minecraft:sugar_cane") || normalized.equals("sugar_cane"))
+        {
+            Block reeds = GameRegistry.findBlock("minecraft", "reeds");
+            return reeds != null ? reeds : GameRegistry.findBlock("minecraft", "sugar_cane");
         }
 
         if (normalized.contains("forestry") && normalized.contains("sapling"))
         {
             OneBlockUltima.getLogger().info("[BlockUtil] Trying to resolve Forestry sapling: {}", registry);
 
-            // Самый надежный способ - через ItemBlock
-            try {
-                Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(registry));
-                if (item instanceof ItemBlock) {
-                    Block block = ((ItemBlock) item).getBlock();
-                    if (block != Blocks.AIR) {
-                        OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via ItemBlock: {}", block.getRegistryName());
+            try
+            {
+                String[] parsed = parseRegistryName(registry);
+                Item item = GameRegistry.findItem(parsed[0], parsed[1]);
+                if (item instanceof ItemBlock)
+                {
+                    Block block = Block.getBlockFromItem(item);
+                    if (block != null && Block.getIdFromBlock(block) != 0)
+                    {
+                        OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block: {}", block.getUnlocalizedName());
                         return block;
                     }
                 }
-            } catch (Exception ignored) {}
+            }
+            catch (Exception ignored)
+            {
+            }
 
-            // Если не получилось через ItemBlock, пробуем прямой поиск
-            try {
-                Block b = ForgeRegistries.BLOCKS.getValue(new ResourceLocation("forestry:sapling"));
-                if (b != null && b != Blocks.AIR) {
-                    OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via direct lookup: {}", b.getRegistryName());
+            try
+            {
+                Block b = GameRegistry.findBlock("forestry", "sapling");
+                if (b != null && Block.getIdFromBlock(b) != 0)
+                {
+                    OneBlockUltima.getLogger().info("[BlockUtil] Found Forestry sapling block via direct lookup: {}", b.getUnlocalizedName());
                     return b;
                 }
-            } catch (Exception ignored) {}
+            }
+            catch (Exception ignored)
+            {
+            }
         }
 
         return null;
     }
 
-    /**
-     * Применяет NBT теги к сущности (мобу)
-     * Используется при спауне мобов для применения кастомных свойств
-     */
-    public static void applyNbtToEntity(net.minecraft.entity.Entity entity, @Nullable NBTTagCompound nbtTags)
+    private static String[] parseRegistryName(String registry)
+    {
+        if (registry == null || registry.isEmpty())
+        {
+            return new String[]{ "minecraft", "" };
+        }
+
+        int colonIndex = registry.indexOf(':');
+        if (colonIndex > 0)
+        {
+            return new String[]{ registry.substring(0, colonIndex), registry.substring(colonIndex + 1) };
+        }
+
+        return new String[]{ "minecraft", registry };
+    }
+
+    public static void applyNbtToEntity(Entity entity, @Nullable NBTTagCompound nbtTags)
     {
         if (entity == null || nbtTags == null || nbtTags.hasNoTags())
         {
@@ -667,21 +580,18 @@ public final class BlockUtil
 
         try
         {
-            // Получаем текущие NBT теги сущности
             NBTTagCompound entityNbt = new NBTTagCompound();
             entity.writeToNBT(entityNbt);
 
-            // Рекурсивно объединяем теги
             mergeNbtTags(entityNbt, nbtTags);
 
-            // Применяем обновленные теги
             entity.readFromNBT(entityNbt);
 
-            OneBlockUltima.getLogger().info("[Mob Spawn] Applied NBT tags to entity: {}", entity.getName());
+            OneBlockUltima.getLogger().info("[Mob Spawn] Applied NBT tags to entity: {}", entity.getCommandSenderName());
         }
         catch (Exception e)
         {
-            OneBlockUltima.getLogger().error("[Mob Spawn] Failed to apply NBT tags to entity: {}", entity.getName(), e);
+            OneBlockUltima.getLogger().error("[Mob Spawn] Failed to apply NBT tags to entity: {}", entity.getCommandSenderName(), e);
         }
     }
 }

@@ -1,12 +1,25 @@
 package ru.defea.oneblockultima.item;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.item.Item;
+import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
-public class ItemEnergyOrb extends Item {
-    public ItemEnergyOrb() {
+public class ItemEnergyOrb extends Item
+{
+    public ItemEnergyOrb()
+    {
+        super();
+        setUnlocalizedName("oneblockultima.energy_orb");
         setCreativeTab(OneBlockUltima.modTab);
-        this.setRegistryName("energy_orb");
-        this.setUnlocalizedName("energy_orb");
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void registerIcons(IIconRegister register)
+    {
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_energy_orb");
     }
 }

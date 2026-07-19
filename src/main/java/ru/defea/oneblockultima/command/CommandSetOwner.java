@@ -1,14 +1,14 @@
 package ru.defea.oneblockultima.command;
 
-import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.StatCollector;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 
 import java.util.List;
@@ -16,68 +16,64 @@ import java.util.List;
 public class CommandSetOwner extends CommandBase
 {
     @Override
-    public String getName()
+    public String getCommandName()
     {
         return "setOwner";
     }
 
     @Override
-    public String getUsage(ICommandSender sender)
+    public String getCommandUsage(ICommandSender sender)
     {
         return "/setOwner <x> <y> <z> <playerName>";
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException
+    public void processCommand(ICommandSender sender, String[] args)
     {
         if (args.length != 4)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.usage") + getUsage(sender)));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.usage") + getCommandUsage(sender)));
             return;
         }
 
-        BlockPos pos = CommandBase.parseBlockPos(sender, args, 0, false);
-        EntityPlayerMP player = server.getPlayerList().getPlayerByUsername(args[3]);
+        int x = parseInt(sender, args[0]);
+        int y = parseInt(sender, args[1]);
+        int z = parseInt(sender, args[2]);
+        EntityPlayerMP player = MinecraftServer.getServer().getConfigurationManager().func_152612_a(args[3]);
 
         if (player == null)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.player_not_found")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.player_not_found")));
             return;
         }
 
-        TileEntity tileEntity = server.getEntityWorld().getTileEntity(pos);
+        TileEntity tileEntity = MinecraftServer.getServer().getEntityWorld().getTileEntity(x, y, z);
         if (tileEntity instanceof TileEntityOneBlockGenerator) {
             TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
             generator.setOwnerId(player.getUniqueID());
-            sender.sendMessage(new TextComponentString("§a" + I18n.format("command.setOwner.success")));
+            sender.addChatMessage(new ChatComponentText("§a" + StatCollector.translateToLocal("command.setOwner.success")));
         }
         else
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.no_generator")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.no_generator")));
         }
     }
 
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos)
+    public List addTabCompletionOptions(ICommandSender sender, String[] args)
     {
-        if (args.length == 1)
+        if (args.length == 4)
         {
-            return getListOfStringsMatchingLastWord(args, "~");
-        }
-        else if (args.length == 2)
-        {
-            return getListOfStringsMatchingLastWord(args, "~");
-        }
-        else if (args.length == 3)
-        {
-            return getListOfStringsMatchingLastWord(args, "~");
-        }
-        else if (args.length == 4)
-        {
-            return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
+            List playerList = MinecraftServer.getServer().getConfigurationManager().playerEntityList;
+            String[] playerNames = new String[playerList.size()];
+            for (int i = 0; i < playerList.size(); i++)
+            {
+                playerNames[i] = ((EntityPlayerMP) playerList.get(i)).getCommandSenderName();
+            }
+            return getListOfStringsMatchingLastWord(args, playerNames);
         }
 
-        return super.getTabCompletions(server, sender, args, targetPos);
+        return getListOfStringsMatchingLastWord(args, "~");
     }
 
     @Override

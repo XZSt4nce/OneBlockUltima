@@ -1,11 +1,12 @@
 package ru.defea.oneblockultima.command;
 
-import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraft.util.ChatComponentTranslation;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.StatCollector;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.network.PacketSyncPlayerData;
@@ -13,23 +14,23 @@ import ru.defea.oneblockultima.network.PacketSyncPlayerData;
 public class CommandAddUltimaBalance extends CommandBase
 {
     @Override
-    public String getName()
+    public String getCommandName()
     {
         return "addUltimaBalance";
     }
 
     @Override
-    public String getUsage(ICommandSender sender)
+    public String getCommandUsage(ICommandSender sender)
     {
         return "/addUltimaBalance <amount>";
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args)
+    public void processCommand(ICommandSender sender, String[] args)
     {
         if (args.length != 1)
         {
-            sender.sendMessage(new TextComponentTranslation("§c" + I18n.format("command.usage"), getUsage(sender)));
+            sender.addChatMessage(new ChatComponentTranslation("§c" + StatCollector.translateToLocalFormatted("command.usage"), getCommandUsage(sender)));
             return;
         }
 
@@ -40,27 +41,27 @@ public class CommandAddUltimaBalance extends CommandBase
         }
         catch (NumberFormatException ex)
         {
-            sender.sendMessage(new TextComponentTranslation("command.addUltimaBalance.integer"));
+            sender.addChatMessage(new ChatComponentTranslation("command.addUltimaBalance.integer"));
             return;
         }
 
-        if (!(sender.getCommandSenderEntity() instanceof EntityPlayerMP))
+        if (!((Entity)sender instanceof EntityPlayerMP))
         {
-            sender.sendMessage(new TextComponentTranslation("command.addUltimaBalance.player"));
+            sender.addChatMessage(new ChatComponentTranslation("command.addUltimaBalance.player"));
             return;
         }
 
-        EntityPlayerMP player = (EntityPlayerMP)sender.getCommandSenderEntity();
+        EntityPlayerMP player = (EntityPlayerMP)(Entity)sender;
         IOneBlockPlayerData data = OneBlockPlayerDataProvider.get(player);
         if (data == null)
         {
-            sender.sendMessage(new TextComponentTranslation("command.addUltimaBalance.no_data"));
+            sender.addChatMessage(new ChatComponentTranslation("command.addUltimaBalance.no_data"));
             return;
         }
 
         data.addCurrency(amount);
         PacketSyncPlayerData.sendToPlayer(player);
-        sender.sendMessage(new TextComponentTranslation("command.addUltimaBalance.success", amount, data.getCurrency()));
+        sender.addChatMessage(new ChatComponentTranslation("command.addUltimaBalance.success", amount, data.getCurrency()));
     }
 
     @Override

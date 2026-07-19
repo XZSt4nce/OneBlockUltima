@@ -2,8 +2,7 @@ package ru.defea.oneblockultima.world;
 
 import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
-import net.minecraft.world.gen.ChunkGeneratorFlat;
-import net.minecraft.world.gen.IChunkGenerator;
+import net.minecraft.world.gen.ChunkProviderFlat;
 
 public class OneBlockWorldType extends WorldType
 {
@@ -16,8 +15,7 @@ public class OneBlockWorldType extends WorldType
 
     public static void init()
     {
-        // Force class loading / register the world type.
-        ONE_BLOCK.getName();
+        ONE_BLOCK.getWorldTypeName();
     }
 
     public String getFlatGeneratorOptions()
@@ -32,14 +30,12 @@ public class OneBlockWorldType extends WorldType
     }
 
     @Override
-    public IChunkGenerator getChunkGenerator(World world, String generatorOptions)
+    public net.minecraft.world.chunk.IChunkProvider getChunkGenerator(World world, String generatorOptions)
     {
-        // Use default flat world template if no options provided
         if (generatorOptions == null || generatorOptions.isEmpty())
         {
             generatorOptions = getFlatGeneratorOptions();
         }
-        return new ChunkGeneratorFlat(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled(), generatorOptions);
+        return new ChunkProviderFlat(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled(), generatorOptions);
     }
 }
-

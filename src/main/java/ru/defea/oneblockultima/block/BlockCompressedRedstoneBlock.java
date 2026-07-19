@@ -1,36 +1,36 @@
 package ru.defea.oneblockultima.block;
 
-import net.minecraft.block.BlockCompressedPowered;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.MapColor;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
-public class BlockCompressedRedstoneBlock extends BlockCompressedPowered {
+public class BlockCompressedRedstoneBlock extends Block {
     public BlockCompressedRedstoneBlock() {
-        super(Material.IRON, MapColor.TNT);
+        super(Material.rock);
         init("compressed_redstone_block_1x");
     }
-
     protected BlockCompressedRedstoneBlock(String name) {
-        super(Material.IRON, MapColor.TNT);
+        super(Material.rock);
         init(name);
     }
-
     @Override
     public float getExplosionResistance(Entity exploder) {
-        return Blocks.REDSTONE_BLOCK.getExplosionResistance(exploder) * 9.0F;
+        return Blocks.redstone_block.getExplosionResistance(exploder) * 9.0F;
     }
-
-    private void init(String name)
-    {
-        this.setSoundType(SoundType.METAL);
-        this.setHardness(super.blockHardness * 9.0F);
-        this.setResistance(super.blockResistance * 9.0F);
+    private void init(String name) {
+        this.setHardness(5F * 9F);
+        this.setResistance(10F * 9F);
         setCreativeTab(OneBlockUltima.modTab);
-        this.setUnlocalizedName(name);
-        this.setRegistryName(OneBlockUltima.MODID, name);
+        this.setBlockName(name);
+    }
+    @SideOnly(Side.CLIENT)
+    @Override
+    public IIcon getIcon(int side, int meta) {
+        return Blocks.redstone_block.getIcon(side, meta);
     }
 }

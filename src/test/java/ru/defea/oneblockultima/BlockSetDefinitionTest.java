@@ -27,7 +27,7 @@ public class BlockSetDefinitionTest {
 
     @Before
     public void saveConfig() {
-        originalSets = new ArrayList<>(BlockSetConfig.get().getSets());
+        originalSets = new ArrayList(BlockSetConfig.get().getSets());
     }
 
     @After
@@ -480,7 +480,7 @@ public class BlockSetDefinitionTest {
     @Test
     public void pickMobReturnsNullForEmptyMobs() {
         SetLevelDefinition lvl = new SetLevelDefinition();
-        lvl.mobs = new ArrayList<>();
+        lvl.mobs = new ArrayList();
         assertNull(lvl.pickMob(new java.util.Random()));
     }
 
@@ -557,7 +557,7 @@ public class BlockSetDefinitionTest {
     public void blockElementDefinitionGetMetaValuesEmptyMetasReturnsSingleton() {
         BlockElementDefinition block = new BlockElementDefinition();
         block.meta = 3;
-        block.metas = new ArrayList<>();
+        block.metas = new ArrayList();
         List<Integer> values = block.getMetaValues();
         assertEquals(1, values.size());
         assertEquals(Integer.valueOf(3), values.get(0));
@@ -584,7 +584,7 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsReplacesExistingSets() {
-        List<BlockSetDefinition> sets = new ArrayList<>();
+        List<BlockSetDefinition> sets = new ArrayList();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "set_a";
         sets.add(s1);
@@ -604,13 +604,13 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsReplacesPreviousSets() {
-        List<BlockSetDefinition> first = new ArrayList<>();
+        List<BlockSetDefinition> first = new ArrayList();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "first";
         first.add(s1);
         BlockSetConfig.applySets(first);
 
-        List<BlockSetDefinition> second = new ArrayList<>();
+        List<BlockSetDefinition> second = new ArrayList();
         BlockSetDefinition s2 = new BlockSetDefinition();
         s2.id = "second";
         second.add(s2);
@@ -624,7 +624,7 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsGetSetReturnsNullForUnknownId() {
-        List<BlockSetDefinition> sets = new ArrayList<>();
+        List<BlockSetDefinition> sets = new ArrayList();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "known";
         sets.add(s1);

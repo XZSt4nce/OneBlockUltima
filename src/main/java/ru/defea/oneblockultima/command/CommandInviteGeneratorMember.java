@@ -1,14 +1,14 @@
 package ru.defea.oneblockultima.command;
 
-import net.minecraft.client.resources.I18n;
 import net.minecraft.command.CommandBase;
-import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.IChatComponent;
+import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
@@ -19,83 +19,91 @@ import java.util.List;
 public class CommandInviteGeneratorMember extends CommandBase
 {
     @Override
-    public String getName()
+    public String getCommandName()
     {
         return "inviteGeneratorMember";
     }
 
     @Override
-    public String getUsage(ICommandSender sender)
+    public String getCommandUsage(ICommandSender sender)
     {
         return "/inviteGeneratorMember <playerName>";
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException
+    public void processCommand(ICommandSender sender, String[] args)
     {
-        if (!(sender.getCommandSenderEntity() instanceof EntityPlayerMP))
+        if (!((Entity)sender instanceof EntityPlayerMP))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.only_player")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.inviteGeneratorMember.only_player")));
             return;
         }
 
         if (args.length != 1)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.usage")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.inviteGeneratorMember.usage")));
             return;
         }
 
-        EntityPlayerMP owner = (EntityPlayerMP) sender.getCommandSenderEntity();
-        World world = owner.world;
-        BlockPos generatorPos = new BlockPos(owner.getPosition().getX(), owner.getPosition().getY() - 1, owner.getPosition().getZ());
+        EntityPlayerMP owner = (EntityPlayerMP) (Entity)sender;
+        World world = owner.worldObj;
+        int genX = (int) owner.posX;
+        int genY = (int) owner.posY - 1;
+        int genZ = (int) owner.posZ;
 
-        if (world.getBlockState(generatorPos).getBlock() != ModBlocks.ONE_BLOCK_GENERATOR)
+        if (world.getBlock(genX, genY, genZ) != ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.not_near_generator")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.inviteGeneratorMember.not_near_generator")));
             return;
         }
 
-        TileEntity tileEntity = world.getTileEntity(generatorPos);
+        TileEntity tileEntity = world.getTileEntity(genX, genY, genZ);
         if (!(tileEntity instanceof TileEntityOneBlockGenerator))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.no_generator")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.no_generator")));
             return;
         }
 
         TileEntityOneBlockGenerator generator = (TileEntityOneBlockGenerator) tileEntity;
         if (!generator.isOwner(owner))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.owner_only")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.inviteGeneratorMember.owner_only")));
             return;
         }
 
-        EntityPlayerMP target = server.getPlayerList().getPlayerByUsername(args[0]);
+        EntityPlayerMP target = MinecraftServer.getServer().getConfigurationManager().func_152612_a(args[0]);
         if (target == null)
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.player_not_found")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.player_not_found")));
             return;
         }
 
         if (target.getUniqueID().equals(owner.getUniqueID()))
         {
-            sender.sendMessage(new TextComponentString("§c" + I18n.format("command.inviteGeneratorMember.self_invite")));
+            sender.addChatMessage(new ChatComponentText("§c" + StatCollector.translateToLocal("command.inviteGeneratorMember.self_invite")));
             return;
         }
 
         generator.addPendingInvite(target.getUniqueID(), owner.getUniqueID(), 1200);
-        target.sendMessage(new TextComponentString("§a" + I18n.format("command.inviteGeneratorMember.invitation_received")));
-        owner.sendMessage(new TextComponentString("§a" + I18n.format("command.inviteGeneratorMember.invitation_sent", target.getName())));
+        ((ICommandSender) target).addChatMessage(new ChatComponentText("§a" + StatCollector.translateToLocal("command.inviteGeneratorMember.invitation_received")));
+        sender.addChatMessage(new ChatComponentText("§a" + StatCollector.translateToLocalFormatted("command.inviteGeneratorMember.invitation_sent", target.getCommandSenderName())));
     }
 
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos)
+    public List addTabCompletionOptions(ICommandSender sender, String[] args)
     {
         if (args.length != 1)
         {
-            return new ArrayList<>();
+            return new ArrayList();
         }
 
-        return getListOfStringsMatchingLastWord(args, server.getOnlinePlayerNames());
+        List playerList = MinecraftServer.getServer().getConfigurationManager().playerEntityList;
+        String[] playerNames = new String[playerList.size()];
+        for (int i = 0; i < playerList.size(); i++)
+        {
+            playerNames[i] = ((EntityPlayerMP) playerList.get(i)).getCommandSenderName();
+        }
+        return getListOfStringsMatchingLastWord(args, playerNames);
     }
 
     @Override
@@ -105,7 +113,7 @@ public class CommandInviteGeneratorMember extends CommandBase
     }
 
     @Override
-    public boolean checkPermission(MinecraftServer server, ICommandSender sender)
+    public boolean canCommandSenderUseCommand(ICommandSender sender)
     {
         return true;
     }

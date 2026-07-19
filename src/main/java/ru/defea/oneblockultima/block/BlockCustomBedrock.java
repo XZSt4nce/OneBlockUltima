@@ -1,76 +1,66 @@
 package ru.defea.oneblockultima.block;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
-import java.util.List;
-import java.util.Random;
+import java.util.ArrayList;
 
-public class BlockCustomBedrock extends Block {
-    public BlockCustomBedrock() {
-        super(Material.ROCK);
-
+public class BlockCustomBedrock extends Block
+{
+    public BlockCustomBedrock()
+    {
+        super(Material.rock);
         this.setHardness(50.0F);
         this.setResistance(2000.0F);
-        this.setUnlocalizedName("custom_bedrock");
-        this.setRegistryName("custom_bedrock");
+        this.setBlockName("custom_bedrock");
     }
 
     @Override
-    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player)
+    public boolean canHarvestBlock(EntityPlayer player, int meta)
     {
-        return Blocks.BEDROCK.getPickBlock(state, target, world, pos, player);
-    }
-
-    @Override
-    public boolean canHarvestBlock(IBlockAccess world, BlockPos pos, EntityPlayer player) {
         return true;
     }
 
     @Override
-    public float getExplosionResistance(Entity exploder) {
-        return Blocks.OBSIDIAN.getExplosionResistance(exploder);
+    public float getExplosionResistance(Entity exploder)
+    {
+        return Blocks.obsidian.getExplosionResistance(exploder);
     }
 
     @Override
-    public List<ItemStack> getDrops(IBlockAccess world, BlockPos pos, IBlockState state, int fortune) {
-        List<ItemStack> drops = new java.util.ArrayList<>();
-        drops.add(new ItemStack(Blocks.BEDROCK));
+    public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune)
+    {
+        ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
+        drops.add(new ItemStack(Item.getItemFromBlock(Blocks.bedrock)));
         return drops;
     }
 
     @Override
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        return Item.getItemFromBlock(Blocks.BEDROCK);
-    }
-
-    @Override
-    public int quantityDropped(Random random) {
-        return 1;
-    }
-
-    @Override
-    public int getHarvestLevel(IBlockState state) {
+    public int getHarvestLevel(int metadata)
+    {
         return 3;
     }
 
     @Override
-    public String getHarvestTool(IBlockState state) {
+    public String getHarvestTool(int metadata)
+    {
         return "pickaxe";
     }
 
+    @SideOnly(Side.CLIENT)
     @Override
-    public boolean isToolEffective(String tool, IBlockState state) {
-        return tool.equals("pickaxe");
+    public IIcon getIcon(int side, int meta)
+    {
+        return Blocks.bedrock.getIcon(side, meta);
     }
 }

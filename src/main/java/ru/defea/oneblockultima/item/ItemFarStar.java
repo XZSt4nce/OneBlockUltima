@@ -1,12 +1,25 @@
 package ru.defea.oneblockultima.item;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.item.Item;
+import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
-public class ItemFarStar extends Item {
-    public ItemFarStar() {
+public class ItemFarStar extends Item
+{
+    public ItemFarStar()
+    {
+        super();
+        setUnlocalizedName("oneblockultima.far_star");
         setCreativeTab(OneBlockUltima.modTab);
-        this.setRegistryName("far_star");
-        this.setUnlocalizedName("far_star");
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void registerIcons(IIconRegister register)
+    {
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_far_star");
     }
 }

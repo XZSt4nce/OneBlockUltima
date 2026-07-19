@@ -1,37 +1,36 @@
 package ru.defea.oneblockultima.block;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.MapColor;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
 public class BlockCompressedCoalBlock extends Block {
-    public BlockCompressedCoalBlock()
-    {
-        super(Material.ROCK, MapColor.BLACK);
+    public BlockCompressedCoalBlock() {
+        super(Material.rock);
         init("compressed_coal_block_1x");
     }
-
-    protected BlockCompressedCoalBlock(String name)
-    {
-        super(Material.ROCK, MapColor.BLACK);
+    protected BlockCompressedCoalBlock(String name) {
+        super(Material.rock);
         init(name);
     }
-
     @Override
     public float getExplosionResistance(Entity exploder) {
-        return Blocks.COAL_BLOCK.getExplosionResistance(exploder) * 9.0F;
+        return Blocks.coal_block.getExplosionResistance(exploder) * 9.0F;
     }
-
     private void init(String name) {
-        this.setSoundType(SoundType.STONE);
         this.setHardness(5F * 9F);
         this.setResistance(10F * 9F);
         setCreativeTab(OneBlockUltima.modTab);
-        this.setUnlocalizedName(name);
-        this.setRegistryName(OneBlockUltima.MODID, name);
+        this.setBlockName(name);
+    }
+    @SideOnly(Side.CLIENT)
+    @Override
+    public IIcon getIcon(int side, int meta) {
+        return Blocks.coal_block.getIcon(side, meta);
     }
 }

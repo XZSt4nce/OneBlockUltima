@@ -14,7 +14,8 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
             return JsonNull.INSTANCE;
         }
         JsonObject obj = new JsonObject();
-        for (String key : src.getKeySet()) {
+        for (Object entry : src.func_150296_c()) {
+            String key = (String) entry;
             NBTBase tag = src.getTag(key);
             obj.add(key, serializeTag(tag, context));
         }
@@ -23,39 +24,39 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
 
     private JsonElement serializeTag(NBTBase tag, JsonSerializationContext context) {
         if (tag instanceof NBTTagString) {
-            return new JsonPrimitive(((NBTTagString) tag).getString());
+            return new JsonPrimitive(((NBTTagString) tag).func_150285_a_());
         } else if (tag instanceof NBTTagInt) {
-            return new JsonPrimitive(((NBTTagInt) tag).getInt());
+            return new JsonPrimitive(((NBTTagInt) tag).func_150287_d());
         } else if (tag instanceof NBTTagByte) {
-            return new JsonPrimitive(((NBTTagByte) tag).getByte());
+            return new JsonPrimitive(((NBTTagByte) tag).func_150290_f());
         } else if (tag instanceof NBTTagShort) {
-            return new JsonPrimitive(((NBTTagShort) tag).getShort());
+            return new JsonPrimitive(((NBTTagShort) tag).func_150289_e());
         } else if (tag instanceof NBTTagLong) {
-            return new JsonPrimitive(((NBTTagLong) tag).getLong());
+            return new JsonPrimitive(((NBTTagLong) tag).func_150291_c());
         } else if (tag instanceof NBTTagFloat) {
-            return new JsonPrimitive(((NBTTagFloat) tag).getFloat());
+            return new JsonPrimitive(((NBTTagFloat) tag).func_150288_h());
         } else if (tag instanceof NBTTagDouble) {
-            return new JsonPrimitive(((NBTTagDouble) tag).getDouble());
+            return new JsonPrimitive(((NBTTagDouble) tag).func_150286_g());
         } else if (tag instanceof NBTTagCompound) {
             return serialize((NBTTagCompound) tag, NBTTagCompound.class, context);
         } else if (tag instanceof NBTTagList) {
             NBTTagList list = (NBTTagList) tag;
             JsonArray array = new JsonArray();
             for (int i = 0; i < list.tagCount(); i++) {
-                array.add(serializeTag(list.get(i), context));
+                array.add(serializeTag(list.getCompoundTagAt(i), context));
             }
             return array;
         } else if (tag instanceof NBTTagIntArray) {
             NBTTagIntArray intArray = (NBTTagIntArray) tag;
             JsonArray array = new JsonArray();
-            for (int value : intArray.getIntArray()) {
+            for (int value : intArray.func_150302_c()) {
                 array.add(new JsonPrimitive(value));
             }
             return array;
         } else if (tag instanceof NBTTagByteArray) {
             NBTTagByteArray byteArray = (NBTTagByteArray) tag;
             JsonArray array = new JsonArray();
-            for (byte value : byteArray.getByteArray()) {
+            for (byte value : byteArray.func_150292_c()) {
                 array.add(new JsonPrimitive(value));
             }
             return array;
@@ -93,7 +94,6 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
                 return new NBTTagString(primitive.getAsString());
             } else if (primitive.isNumber()) {
                 Number number = primitive.getAsNumber();
-                // Определяем тип числа
                 if (number instanceof Byte) {
                     return new NBTTagByte(number.byteValue());
                 } else if (number instanceof Short) {
@@ -107,7 +107,6 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
                 } else if (number instanceof Double) {
                     return new NBTTagDouble(number.doubleValue());
                 }
-                // По умолчанию как Integer
                 return new NBTTagInt(primitive.getAsInt());
             } else if (primitive.isBoolean()) {
                 return new NBTTagByte((byte) (primitive.getAsBoolean() ? 1 : 0));
@@ -120,7 +119,6 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
                 return new NBTTagList();
             }
 
-            // Проверяем, все ли элементы - числа одного типа
             JsonElement firstElement = array.get(0);
 
             if (firstElement.isJsonPrimitive() && firstElement.getAsJsonPrimitive().isNumber()) {
@@ -133,7 +131,6 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
                 }
 
                 if (allNumbers) {
-                    // Проверяем, все ли элементы в пределах byte
                     boolean allBytes = true;
                     for (JsonElement elem : array) {
                         int val = elem.getAsInt();
@@ -159,7 +156,6 @@ public class NBTTagCompoundAdapter implements JsonSerializer<NBTTagCompound>, Js
                 }
             }
 
-            // Иначе создаем NBTTagList с разнотипными элементами
             NBTTagList list = new NBTTagList();
             for (JsonElement elem : array) {
                 NBTBase tag = deserializeTag(elem);

@@ -1,95 +1,91 @@
 package ru.defea.oneblockultima.util;
 
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderBlocks;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.util.IIcon;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.Fluid;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL13;
 
 public final class ModelUtil {
     private ModelUtil() {}
 
-    public static void renderBlockModelToGUI(net.minecraft.block.state.IBlockState state, int x, int y, int size)
+    public static void renderBlockModelToGUI(Block block, int metadata, int x, int y, int size)
     {
+        if (block == null) return;
         try
         {
-            Minecraft mc = Minecraft.getMinecraft();
-            BlockRendererDispatcher blockRenderer = mc.getBlockRendererDispatcher();
-
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(x, y, 100.0F);
-            GlStateManager.scale(size / 16.0F, size / 16.0F, size / 16.0F);
-            GlStateManager.rotate(180F, 1F, 0F, 0F);
-            RenderHelper.enableGUIStandardItemLighting();
-            blockRenderer.renderBlockBrightness(state, 1.0F);
+            GL11.glPushMatrix();
+            GL11.glTranslatef(x, y, 100.0F);
+            GL11.glScalef(size / 16.0F, size / 16.0F, size / 16.0F);
+            GL11.glRotatef(180F, 1F, 0F, 0F);
+            RenderHelper.enableStandardItemLighting();
+            RenderBlocks renderBlocks = new RenderBlocks();
+            renderBlocks.renderBlockAsItem(block, metadata, 1.0F);
             RenderHelper.disableStandardItemLighting();
-            GlStateManager.popMatrix();
+            GL11.glPopMatrix();
         }
         catch (Exception ignored) { }
     }
 
-    public static void renderFluidSprite(net.minecraftforge.fluids.Fluid fluid, int x, int y, int w, int h)
+    public static void renderFluidSprite(Fluid fluid, int x, int y, int w, int h)
     {
         if (fluid == null) return;
         Minecraft mc = Minecraft.getMinecraft();
-        TextureAtlasSprite sprite = null;
+        IIcon icon = null;
         try
         {
-            ResourceLocation tex = fluid.getStill();
-            if (tex == null) tex = fluid.getFlowing();
-            if (tex != null)
-            {
-                TextureMap map = mc.getTextureMapBlocks();
-                sprite = map.getAtlasSprite(tex.toString());
-            }
+            icon = fluid.getStillIcon();
+            if (icon == null) icon = fluid.getFlowingIcon();
         }
         catch (Exception ignored) { }
 
-        if (sprite == null) return;
+        if (icon == null) return;
 
         try
         {
-            GlStateManager.pushMatrix();
-            mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+            GL11.glPushMatrix();
+            mc.renderEngine.bindTexture(new ResourceLocation("textures/blocks/terrain.png"));
 
-            float minU = sprite.getMinU();
-            float maxU = sprite.getMaxU();
-            float minV = sprite.getMinV();
-            float maxV = sprite.getMaxV();
+            float minU = icon.getMinU();
+            float maxU = icon.getMaxU();
+            float minV = icon.getMinV();
+            float maxV = icon.getMaxV();
 
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableBlend();
-            GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderHelper.enableStandardItemLighting();
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
-            Tessellator tess = Tessellator.getInstance();
-            BufferBuilder buf = tess.getBuffer();
-            buf.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
-            buf.pos(x, y + h, 0.0D).tex(minU, maxV).endVertex();
-            buf.pos(x + w, y + h, 0.0D).tex(maxU, maxV).endVertex();
-            buf.pos(x + w, y, 0.0D).tex(maxU, minV).endVertex();
-            buf.pos(x, y, 0.0D).tex(minU, minV).endVertex();
+            Tessellator tess = Tessellator.instance;
+            tess.startDrawingQuads();
+            tess.addVertexWithUV(x, y + h, 0.0D, minU, maxV);
+            tess.addVertexWithUV(x + w, y + h, 0.0D, maxU, maxV);
+            tess.addVertexWithUV(x + w, y, 0.0D, maxU, minV);
+            tess.addVertexWithUV(x, y, 0.0D, minU, minV);
             tess.draw();
 
-            GlStateManager.disableBlend();
-            GlStateManager.disableAlpha();
+            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glDisable(GL11.GL_ALPHA_TEST);
             RenderHelper.disableStandardItemLighting();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-            GlStateManager.popMatrix();
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+            GL11.glPopMatrix();
         }
         catch (Exception ignored) { }
     }
 
-    public static void drawEntityOnScreen(int posX, int posY, Entity entity, int baseScale)
+    public static void drawEntityOnScreen(int posX, int posY, EntityLivingBase ent, int baseScale)
     {
-        if (!(entity instanceof EntityLivingBase)) return;
-        EntityLivingBase ent = (EntityLivingBase) entity;
+        if (ent == null) return;
 
         float origRenderYawOffset = ent.renderYawOffset;
         float origPrevRotationYaw = ent.prevRotationYaw;
@@ -102,16 +98,16 @@ public final class ModelUtil {
         float origLimbSwingAmount = ent.limbSwingAmount;
         float origPrevLimbSwingAmount = ent.prevLimbSwingAmount;
 
-        GlStateManager.enableColorMaterial();
-        GlStateManager.pushMatrix();
+        GL11.glEnable(GL11.GL_COLOR_MATERIAL);
+        GL11.glPushMatrix();
         try
         {
-            GlStateManager.translate(posX, posY, 50.0F);
+            GL11.glTranslatef(posX, posY, 50.0F);
 
             float finalScale = getScale(baseScale / 2, ent);
 
-            GlStateManager.scale(-finalScale, finalScale, finalScale);
-            GlStateManager.rotate(170.0F, 0.3F, 0.0F, 1.0F);
+            GL11.glScalef(-finalScale, finalScale, finalScale);
+            GL11.glRotatef(170.0F, 0.3F, 0.0F, 1.0F);
 
             ent.renderYawOffset = 0.0F;
             ent.prevRotationYaw = 0.0F;
@@ -124,35 +120,33 @@ public final class ModelUtil {
             ent.limbSwingAmount = 0.0F;
             ent.prevLimbSwingAmount = 0.0F;
 
-            RenderHelper.enableGUIStandardItemLighting();
-            GlStateManager.enableRescaleNormal();
-            GlStateManager.enableAlpha();
-            GlStateManager.enableDepth();
-            GlStateManager.enableCull();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderHelper.enableStandardItemLighting();
+            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_CULL_FACE);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 
-            RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
+            RenderManager renderManager = RenderManager.instance;
             float prevPlayerViewY = renderManager.playerViewY;
-            renderManager.setPlayerViewY(180.0F);
-            renderManager.setRenderShadow(false);
-            renderManager.renderEntity(ent, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-            renderManager.setRenderShadow(true);
-            renderManager.setPlayerViewY(prevPlayerViewY);
+            renderManager.playerViewY = 180.0F;
+            renderManager.renderEntityWithPosYaw(ent, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
+            renderManager.playerViewY = prevPlayerViewY;
 
-            GlStateManager.disableCull();
-            GlStateManager.disableDepth();
-            GlStateManager.disableRescaleNormal();
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glDisable(GL12.GL_RESCALE_NORMAL);
         }
         catch (Exception ignored) { }
         finally
         {
-            GlStateManager.popMatrix();
+            GL11.glPopMatrix();
             RenderHelper.disableStandardItemLighting();
-            GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
-            GlStateManager.disableTexture2D();
-            GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
-            GlStateManager.disableColorMaterial();
-            GlStateManager.disableLighting();
+            GL13.glActiveTexture(OpenGlHelper.lightmapTexUnit);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL13.glActiveTexture(OpenGlHelper.defaultTexUnit);
+            GL11.glDisable(GL11.GL_COLOR_MATERIAL);
+            GL11.glDisable(GL11.GL_LIGHTING);
 
             ent.renderYawOffset = origRenderYawOffset;
             ent.prevRotationYaw = origPrevRotationYaw;
@@ -164,7 +158,7 @@ public final class ModelUtil {
             ent.limbSwing = origLimbSwing;
             ent.limbSwingAmount = origLimbSwingAmount;
             ent.prevLimbSwingAmount = origPrevLimbSwingAmount;
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         }
     }
 
