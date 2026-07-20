@@ -3,8 +3,8 @@
   "modid": "oneblockultima",
   "name": "OneBlock Ultima",
   "description": "This mod will give you a unique survival experience in a world where there is only one block.",
-  "version": "${version}",
-  "mcversion": "${mcversion}",
+  "version": "2.1.1",
+  "mcversion": "1.7.10",
   "url": "https://github.com/XZSt4nce/OneBlockUltima",
   "authorList": ["XZSt4nce"],
   "logoFile": "oneblock_logo.png"

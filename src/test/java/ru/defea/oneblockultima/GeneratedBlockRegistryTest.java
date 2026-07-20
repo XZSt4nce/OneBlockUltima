@@ -1,9 +1,6 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.BlockPos;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry;
 import ru.defea.oneblockultima.world.GeneratedBlockRegistry.GeneratedBlockEntry;
@@ -12,11 +9,6 @@ import static org.junit.Assert.*;
 
 public class GeneratedBlockRegistryTest {
 
-    @BeforeClass
-    public static void setUp() {
-        Bootstrap.register();
-    }
-
     private GeneratedBlockRegistry newRegistry() {
         return new GeneratedBlockRegistry();
     }
@@ -24,30 +16,28 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void freshRegistryIsEmpty() {
         GeneratedBlockRegistry reg = newRegistry();
-        assertFalse(reg.isGenerated(BlockPos.ORIGIN));
-        assertNull(reg.getEntry(BlockPos.ORIGIN));
+        assertFalse(reg.isGenerated(0, 0, 0));
+        assertNull(reg.getEntry(0, 0, 0));
     }
 
     @Test
     public void markGeneratedMakesBlockTracked() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(1, 64, 2);
-        BlockPos genPos = new BlockPos(1, 63, 2);
-        reg.markGenerated(pos, genPos, "classic", 10, 1, "minecraft:stone", 0);
+        reg.markGenerated(1, 64, 2, 1, 63, 2, "classic", 10, 1, "minecraft:stone", 0);
 
-        assertTrue(reg.isGenerated(pos));
+        assertTrue(reg.isGenerated(1, 64, 2));
     }
 
     @Test
     public void getEntryReturnsCorrectData() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(5, 70, 5);
-        BlockPos genPos = new BlockPos(5, 69, 5);
-        reg.markGenerated(pos, genPos, "nether", 25, 3, "minecraft:netherrack", 0);
+        reg.markGenerated(5, 70, 5, 5, 69, 5, "nether", 25, 3, "minecraft:netherrack", 0);
 
-        GeneratedBlockEntry entry = reg.getEntry(pos);
+        GeneratedBlockEntry entry = reg.getEntry(5, 70, 5);
         assertNotNull(entry);
-        assertEquals(genPos, entry.generatorPos);
+        assertEquals(5, entry.gx);
+        assertEquals(69, entry.gy);
+        assertEquals(5, entry.gz);
         assertEquals("nether", entry.setId);
         assertEquals(25, entry.currency);
         assertEquals(3, entry.level);
@@ -58,66 +48,62 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void getGeneratorPosReturnsCorrectPos() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(10, 64, 10);
-        BlockPos genPos = new BlockPos(10, 63, 10);
-        reg.markGenerated(pos, genPos, "classic", 5, 1, "minecraft:dirt", 0);
+        reg.markGenerated(10, 64, 10, 10, 63, 10, "classic", 5, 1, "minecraft:dirt", 0);
 
-        assertEquals(genPos, reg.getGeneratorPos(pos));
+        int[] genPos = reg.getGeneratorPos(10, 64, 10);
+        assertNotNull(genPos);
+        assertEquals(10, genPos[0]);
+        assertEquals(63, genPos[1]);
+        assertEquals(10, genPos[2]);
     }
 
     @Test
     public void getGeneratorPosReturnsNullForUnknown() {
         GeneratedBlockRegistry reg = newRegistry();
-        assertNull(reg.getGeneratorPos(new BlockPos(99, 99, 99)));
+        assertNull(reg.getGeneratorPos(99, 99, 99));
     }
 
     @Test
     public void removeUntracksBlock() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(0, 64, 0);
-        reg.markGenerated(pos, BlockPos.ORIGIN, "classic", 10, 1, "minecraft:stone", 0);
-        assertTrue(reg.isGenerated(pos));
+        reg.markGenerated(0, 64, 0, 0, 0, 0, "classic", 10, 1, "minecraft:stone", 0);
+        assertTrue(reg.isGenerated(0, 64, 0));
 
-        reg.remove(pos);
-        assertFalse(reg.isGenerated(pos));
-        assertNull(reg.getEntry(pos));
+        reg.remove(0, 64, 0);
+        assertFalse(reg.isGenerated(0, 64, 0));
+        assertNull(reg.getEntry(0, 64, 0));
     }
 
     @Test
     public void removeUnknownPosIsNoOp() {
         GeneratedBlockRegistry reg = newRegistry();
-        reg.remove(new BlockPos(99, 99, 99));
-        assertFalse(reg.isGenerated(new BlockPos(99, 99, 99)));
+        reg.remove(99, 99, 99);
+        assertFalse(reg.isGenerated(99, 99, 99));
     }
 
     @Test
     public void multipleEntriesAreIndependent() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos1 = new BlockPos(1, 64, 1);
-        BlockPos pos2 = new BlockPos(2, 64, 2);
-        BlockPos genPos = BlockPos.ORIGIN;
 
-        reg.markGenerated(pos1, genPos, "classic", 10, 1, "minecraft:stone", 0);
-        reg.markGenerated(pos2, genPos, "nether", 20, 2, "minecraft:netherrack", 0);
+        reg.markGenerated(1, 64, 1, 0, 0, 0, "classic", 10, 1, "minecraft:stone", 0);
+        reg.markGenerated(2, 64, 2, 0, 0, 0, "nether", 20, 2, "minecraft:netherrack", 0);
 
-        assertEquals("classic", reg.getEntry(pos1).setId);
-        assertEquals("nether", reg.getEntry(pos2).setId);
+        assertEquals("classic", reg.getEntry(1, 64, 1).setId);
+        assertEquals("nether", reg.getEntry(2, 64, 2).setId);
 
-        reg.remove(pos1);
-        assertFalse(reg.isGenerated(pos1));
-        assertTrue(reg.isGenerated(pos2));
+        reg.remove(1, 64, 1);
+        assertFalse(reg.isGenerated(1, 64, 1));
+        assertTrue(reg.isGenerated(2, 64, 2));
     }
 
     @Test
     public void markGeneratedOverwritesExistingEntry() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(1, 64, 1);
-        BlockPos genPos = BlockPos.ORIGIN;
 
-        reg.markGenerated(pos, genPos, "classic", 10, 1, "minecraft:stone", 0);
-        reg.markGenerated(pos, genPos, "nether", 30, 5, "minecraft:diamond_block", 0);
+        reg.markGenerated(1, 64, 1, 0, 0, 0, "classic", 10, 1, "minecraft:stone", 0);
+        reg.markGenerated(1, 64, 1, 0, 0, 0, "nether", 30, 5, "minecraft:diamond_block", 0);
 
-        GeneratedBlockEntry entry = reg.getEntry(pos);
+        GeneratedBlockEntry entry = reg.getEntry(1, 64, 1);
         assertEquals("nether", entry.setId);
         assertEquals(30, entry.currency);
         assertEquals(5, entry.level);
@@ -127,23 +113,20 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void nbtRoundtripPreservesAllEntries() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos genPos = BlockPos.ORIGIN;
-        BlockPos pos1 = new BlockPos(1, 64, 1);
-        BlockPos pos2 = new BlockPos(2, 65, 2);
-        BlockPos pos3 = new BlockPos(3, 66, 3);
-        reg.markGenerated(pos1, genPos, "classic", 10, 1, "minecraft:stone", 0);
-        reg.markGenerated(pos2, genPos, "nether", 25, 3, "minecraft:netherrack", 2);
-        reg.markGenerated(pos3, genPos, "end", 0, 1, null, 0);
+        reg.markGenerated(1, 64, 1, 0, 0, 0, "classic", 10, 1, "minecraft:stone", 0);
+        reg.markGenerated(2, 65, 2, 0, 0, 0, "nether", 25, 3, "minecraft:netherrack", 2);
+        reg.markGenerated(3, 66, 3, 0, 0, 0, "end", 0, 1, null, 0);
 
-        NBTTagCompound nbt = reg.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        reg.writeToNBT(nbt);
         GeneratedBlockRegistry loaded = newRegistry();
         loaded.readFromNBT(nbt);
 
-        assertTrue(loaded.isGenerated(pos1));
-        assertTrue(loaded.isGenerated(pos2));
-        assertTrue(loaded.isGenerated(pos3));
+        assertTrue(loaded.isGenerated(1, 64, 1));
+        assertTrue(loaded.isGenerated(2, 65, 2));
+        assertTrue(loaded.isGenerated(3, 66, 3));
 
-        GeneratedBlockEntry e1 = loaded.getEntry(pos1);
+        GeneratedBlockEntry e1 = loaded.getEntry(1, 64, 1);
         assertNotNull(e1);
         assertEquals("classic", e1.setId);
         assertEquals(10, e1.currency);
@@ -151,14 +134,14 @@ public class GeneratedBlockRegistryTest {
         assertEquals("minecraft:stone", e1.blockRegistry);
         assertEquals(0, e1.blockMeta);
 
-        GeneratedBlockEntry e2 = loaded.getEntry(pos2);
+        GeneratedBlockEntry e2 = loaded.getEntry(2, 65, 2);
         assertNotNull(e2);
         assertEquals("nether", e2.setId);
         assertEquals(25, e2.currency);
         assertEquals(3, e2.level);
         assertEquals(2, e2.blockMeta);
 
-        GeneratedBlockEntry e3 = loaded.getEntry(pos3);
+        GeneratedBlockEntry e3 = loaded.getEntry(3, 66, 3);
         assertNotNull(e3);
         assertEquals("end", e3.setId);
         assertNull(e3.blockRegistry);
@@ -167,30 +150,32 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void nbtRoundtripWithEmptyRegistry() {
         GeneratedBlockRegistry reg = newRegistry();
-        NBTTagCompound nbt = reg.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        reg.writeToNBT(nbt);
         GeneratedBlockRegistry loaded = newRegistry();
         loaded.readFromNBT(nbt);
 
-        assertFalse(loaded.isGenerated(BlockPos.ORIGIN));
+        assertFalse(loaded.isGenerated(0, 0, 0));
     }
 
     @Test
     public void readFromNbtClearsExistingEntries() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos pos = new BlockPos(1, 64, 1);
-        reg.markGenerated(pos, BlockPos.ORIGIN, "classic", 10, 1, "minecraft:stone", 0);
-        assertTrue(reg.isGenerated(pos));
+        reg.markGenerated(1, 64, 1, 0, 0, 0, "classic", 10, 1, "minecraft:stone", 0);
+        assertTrue(reg.isGenerated(1, 64, 1));
 
         NBTTagCompound nbt = new NBTTagCompound();
         reg.readFromNBT(nbt);
 
-        assertFalse(reg.isGenerated(pos));
+        assertFalse(reg.isGenerated(1, 64, 1));
     }
 
     @Test
     public void entryDefaultConstructorSetsDefaults() {
-        GeneratedBlockEntry entry = new GeneratedBlockEntry(BlockPos.ORIGIN, "classic", 10, 1);
-        assertEquals(BlockPos.ORIGIN, entry.generatorPos);
+        GeneratedBlockEntry entry = new GeneratedBlockEntry(0, 0, 0, "classic", 10, 1);
+        assertEquals(0, entry.gx);
+        assertEquals(0, entry.gy);
+        assertEquals(0, entry.gz);
         assertEquals("classic", entry.setId);
         assertEquals(10, entry.currency);
         assertEquals(1, entry.level);
@@ -201,9 +186,11 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void entryFullConstructorSetsAllFields() {
         GeneratedBlockEntry entry = new GeneratedBlockEntry(
-                new BlockPos(5, 63, 5), "nether", 50, 7, "minecraft:obsidian", 3
+                5, 63, 5, "nether", 50, 7, "minecraft:obsidian", 3
         );
-        assertEquals(new BlockPos(5, 63, 5), entry.generatorPos);
+        assertEquals(5, entry.gx);
+        assertEquals(63, entry.gy);
+        assertEquals(5, entry.gz);
         assertEquals("nether", entry.setId);
         assertEquals(50, entry.currency);
         assertEquals(7, entry.level);
@@ -214,15 +201,18 @@ public class GeneratedBlockRegistryTest {
     @Test
     public void nbtRoundtripPreservesGeneratorPos() {
         GeneratedBlockRegistry reg = newRegistry();
-        BlockPos genPos = new BlockPos(10, 63, 10);
-        BlockPos blockPos = new BlockPos(10, 64, 10);
-        reg.markGenerated(blockPos, genPos, "classic", 5, 1, "minecraft:stone", 0);
+        reg.markGenerated(10, 64, 10, 10, 63, 10, "classic", 5, 1, "minecraft:stone", 0);
 
-        NBTTagCompound nbt = reg.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        reg.writeToNBT(nbt);
         GeneratedBlockRegistry loaded = newRegistry();
         loaded.readFromNBT(nbt);
 
-        assertEquals(genPos, loaded.getGeneratorPos(blockPos));
+        int[] result = loaded.getGeneratorPos(10, 64, 10);
+        assertNotNull(result);
+        assertEquals(10, result[0]);
+        assertEquals(63, result[1]);
+        assertEquals(10, result[2]);
     }
 
 }

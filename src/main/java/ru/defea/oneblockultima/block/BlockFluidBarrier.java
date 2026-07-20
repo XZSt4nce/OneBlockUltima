@@ -8,6 +8,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.IIcon;
+import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import ru.defea.oneblockultima.OneBlockUltima;
@@ -36,9 +38,9 @@ public class BlockFluidBarrier extends Block
     }
 
     @Override
-    public AxisAlignedBB getSelectedBoundingBoxFromPool(World world, int x, int y, int z)
+    public MovingObjectPosition collisionRayTrace(World world, int x, int y, int z, Vec3 start, Vec3 end)
     {
-        return AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1);
+        return null;
     }
 
     @Override

@@ -27,8 +27,8 @@ public class TileEntityOneBlockGenerator extends TileEntity
     private static final int NON_PLAYER_BREAK_COOLDOWN_TICKS = 20;
 
     private String selectedSetId;
-    private int ownerIdMost;
-    private int ownerIdLeast;
+    private long ownerIdMsb;
+    private long ownerIdLsb;
     private boolean hasOwnerId = false;
     private final List<int[]> memberIds = new ArrayList<int[]>();
     private final List<PendingInvite> pendingInvites = new ArrayList<PendingInvite>();
@@ -482,7 +482,7 @@ public class TileEntityOneBlockGenerator extends TileEntity
     public UUID getOwnerId()
     {
         if (!hasOwnerId) return null;
-        return mostLeastToUUID(ownerIdMost, ownerIdLeast);
+        return new UUID(ownerIdMsb, ownerIdLsb);
     }
 
     public void setOwnerId(UUID ownerId)
@@ -493,8 +493,8 @@ public class TileEntityOneBlockGenerator extends TileEntity
         }
         else
         {
-            this.ownerIdMost = (int)(ownerId.getMostSignificantBits() >> 32);
-            this.ownerIdLeast = (int)(ownerId.getLeastSignificantBits() >> 32);
+            this.ownerIdMsb = ownerId.getMostSignificantBits();
+            this.ownerIdLsb = ownerId.getLeastSignificantBits();
             this.hasOwnerId = true;
         }
         this.memberIds.clear();
@@ -504,8 +504,8 @@ public class TileEntityOneBlockGenerator extends TileEntity
     private void clearOwnerId()
     {
         this.hasOwnerId = false;
-        this.ownerIdMost = 0;
-        this.ownerIdLeast = 0;
+        this.ownerIdMsb = 0;
+        this.ownerIdLsb = 0;
         markDirty();
     }
 
@@ -519,8 +519,8 @@ public class TileEntityOneBlockGenerator extends TileEntity
         compound.setBoolean("disableChestGeneration", disableChestGeneration);
         compound.setBoolean("disableSaplingGeneration", disableSaplingGeneration);
         compound.setBoolean("hasOwnerId", hasOwnerId);
-        compound.setInteger("ownerIdMost", ownerIdMost);
-        compound.setInteger("ownerIdLeast", ownerIdLeast);
+        compound.setLong("ownerIdMsb", ownerIdMsb);
+        compound.setLong("ownerIdLsb", ownerIdLsb);
         compound.setBoolean("placedByPlayer", placedByPlayer);
         compound.setLong("lastNonPlayerBreakTick", lastNonPlayerBreakTick);
 
@@ -575,8 +575,8 @@ public class TileEntityOneBlockGenerator extends TileEntity
         disableChestGeneration = compound.getBoolean("disableChestGeneration");
         disableSaplingGeneration = compound.getBoolean("disableSaplingGeneration");
         hasOwnerId = compound.getBoolean("hasOwnerId");
-        ownerIdMost = compound.getInteger("ownerIdMost");
-        ownerIdLeast = compound.getInteger("ownerIdLeast");
+        ownerIdMsb = compound.getLong("ownerIdMsb");
+        ownerIdLsb = compound.getLong("ownerIdLsb");
         placedByPlayer = compound.getBoolean("placedByPlayer");
         lastNonPlayerBreakTick = compound.hasKey("lastNonPlayerBreakTick") ? compound.getLong("lastNonPlayerBreakTick") : Long.MIN_VALUE;
 

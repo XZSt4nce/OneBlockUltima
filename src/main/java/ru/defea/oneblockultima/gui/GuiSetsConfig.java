@@ -4,9 +4,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
@@ -191,6 +192,7 @@ public class GuiSetsConfig extends GuiScreen
     private int formFieldWidth;
     private int iconSize;
     private int entryHeight;
+    private final RenderItem itemRender = new RenderItem();
 
     private enum SearchType { BLOCKS, MOBS }
     private enum EntryType { BLOCK, MOB }
@@ -386,8 +388,8 @@ public class GuiSetsConfig extends GuiScreen
         List<Integer> metas = new ArrayList<Integer>();
         try
         {
-            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(new ResourceLocation(registry));
-            if (block != null)
+            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(registry);
+            if (block != null && block != net.minecraft.init.Blocks.air)
             {
                 if (getFluidForRegistry(registry) != null)
                 {
@@ -1243,8 +1245,8 @@ public class GuiSetsConfig extends GuiScreen
     {
         try
         {
-            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(new ResourceLocation(registry));
-            if (block == null)
+            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(registry);
+            if (block == null || block == net.minecraft.init.Blocks.air)
             {
                 return null;
             }
@@ -1806,6 +1808,8 @@ public class GuiSetsConfig extends GuiScreen
                 if (modFilter != null && !modId.toLowerCase(Locale.ROOT).contains(modFilter)) continue;
                 if (idFilter != null && !registryId.toLowerCase(Locale.ROOT).contains(idFilter)) continue;
 
+                if (modId.equals(OneBlockUltima.MODID) && ("fluid_barrier".equals(registryId) || "custom_bedrock".equals(registryId) || "custom_end_portal_frame".equals(registryId))) continue;
+
                 Fluid fluid = block instanceof IFluidBlock ? ((IFluidBlock) block).getFluid() : FluidRegistry.lookupFluidForBlock(block);
                 if (fluid != null)
                 {
@@ -1846,6 +1850,7 @@ public class GuiSetsConfig extends GuiScreen
 
                     String name = "";
                     try { name = subStack.getDisplayName(); } catch (Exception ignored) {}
+                    if (name == null || name.isEmpty() || name.contains(".name")) name = registry;
 
                     if (!emptyQuery && !searchTerms.isEmpty() && !matchesSearchTerms(name, searchTerms))
                     {
@@ -1874,6 +1879,7 @@ public class GuiSetsConfig extends GuiScreen
 
                 String name = "";
                 try { name = new ItemStack(item, 1).getDisplayName(); } catch (Exception ignored) {}
+                if (name == null || name.isEmpty() || name.contains(".name")) name = registry;
 
                 if (!emptyQuery && !searchTerms.isEmpty() && !matchesSearchTerms(name, searchTerms))
                 {
@@ -1948,8 +1954,8 @@ public class GuiSetsConfig extends GuiScreen
     {
         ItemStack stack = null;
         try {
-            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(new ResourceLocation(entry.registry));
-            if (block != null) {
+            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(entry.registry);
+            if (block != null && block != net.minecraft.init.Blocks.air) {
                 Fluid fluid = getFluidForRegistry(entry.registry);
                 if (fluid != null) {
                     return null;
@@ -1960,7 +1966,7 @@ public class GuiSetsConfig extends GuiScreen
                 }
             }
             if (stack == null) {
-                net.minecraft.item.Item item = (net.minecraft.item.Item) Item.itemRegistry.getObject(new ResourceLocation(entry.registry));
+                net.minecraft.item.Item item = (net.minecraft.item.Item) Item.itemRegistry.getObject(entry.registry);
                 if (item != null) {
                     stack = new ItemStack(item, 1, meta);
                 }
@@ -1977,8 +1983,8 @@ public class GuiSetsConfig extends GuiScreen
     private String getLocalizedNameForBlock(BlockSetConfig.BlockElementDefinition entry, int meta)
     {
         try {
-            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(new ResourceLocation(entry.registry));
-            if (block != null) {
+            net.minecraft.block.Block block = (net.minecraft.block.Block) Block.blockRegistry.getObject(entry.registry);
+            if (block != null && block != net.minecraft.init.Blocks.air) {
                 if (block instanceof IFluidBlock || FluidRegistry.lookupFluidForBlock(block) != null) {
                     Fluid fluid = block instanceof IFluidBlock ? ((IFluidBlock) block).getFluid() : FluidRegistry.lookupFluidForBlock(block);
                     if (fluid != null) {
@@ -1987,7 +1993,10 @@ public class GuiSetsConfig extends GuiScreen
                     }
                 }
                 ItemStack stack = getItemStackFromEntry(entry, meta);
-                if (stack != null) return stack.getDisplayName();
+                if (stack != null) {
+                    String name = stack.getDisplayName();
+                    if (name != null && !name.isEmpty() && !name.contains(".name")) return name;
+                }
             }
         } catch (Exception ignored) {}
         return entry.registry + ":" + meta;
@@ -2956,11 +2965,15 @@ public class GuiSetsConfig extends GuiScreen
                 {
                     renderFluidIcon(entryFluid, entryX + innerPadding, entryY + innerPadding, iconSize);
                 }
+                else if (stack != null && isInvisibleBlock(stack))
+                {
+                    renderBlockIconAs2D(((net.minecraft.item.ItemBlock) stack.getItem()).field_150939_a, stack.getItemDamage(), entryX + innerPadding, entryY + innerPadding, iconSize);
+                }
                 else if (stack != null)
                 {
                     RenderHelper.enableGUIStandardItemLighting();
                     GL11.glEnable(GL11.GL_DEPTH_TEST);
-                    new RenderItem().renderItemAndEffectIntoGUI(fontRendererObj, mc.getTextureManager(), stack, entryX + innerPadding, entryY + innerPadding);
+                    itemRender.renderItemAndEffectIntoGUI(fontRendererObj, mc.getTextureManager(), stack, entryX + innerPadding, entryY + innerPadding);
                     GL11.glDisable(GL11.GL_DEPTH_TEST);
                     RenderHelper.disableStandardItemLighting();
                 }
@@ -3258,11 +3271,15 @@ public class GuiSetsConfig extends GuiScreen
                 int bgColor = isHovered ? 0xFF3F5060 : (i % 2 == 0 ? 0xFF2A2F34 : 0xFF22272E);
                 drawRect(entryX, entryY, entryX + entryWidth, entryY + entryHeight, bgColor);
 
-                if (result.stack != null)
+                if (result.stack != null && isInvisibleBlock(result.stack))
+                {
+                    renderBlockIconAs2D(((net.minecraft.item.ItemBlock) result.stack.getItem()).field_150939_a, result.stack.getItemDamage(), entryX + innerPadding, entryY + innerPadding, iconSize);
+                }
+                else if (result.stack != null)
                 {
                     RenderHelper.enableGUIStandardItemLighting();
                     GL11.glEnable(GL11.GL_DEPTH_TEST);
-                    new RenderItem().renderItemAndEffectIntoGUI(fontRendererObj, mc.getTextureManager(), result.stack, entryX + innerPadding, entryY + innerPadding);
+                    itemRender.renderItemAndEffectIntoGUI(fontRendererObj, mc.getTextureManager(), result.stack, entryX + innerPadding, entryY + innerPadding);
                     GL11.glDisable(GL11.GL_DEPTH_TEST);
                     RenderHelper.disableStandardItemLighting();
                 }
@@ -3950,6 +3967,39 @@ public class GuiSetsConfig extends GuiScreen
             statusTimer--;
             if (statusTimer == 0) statusMessage = "";
         }
+    }
+
+    private void renderBlockIconAs2D(net.minecraft.block.Block block, int meta, int x, int y, int size)
+    {
+        if (block == null) return;
+        net.minecraft.util.IIcon icon = block.getIcon(2, meta);
+        if (icon == null) return;
+
+        mc.getTextureManager().bindTexture(net.minecraft.client.renderer.texture.TextureMap.locationBlocksTexture);
+        float minU = icon.getMinU();
+        float maxU = icon.getMaxU();
+        float minV = icon.getMinV();
+        float maxV = icon.getMaxV();
+
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+        tessellator.addVertexWithUV(x, y + size, 0.0D, minU, maxV);
+        tessellator.addVertexWithUV(x + size, y + size, 0.0D, maxU, maxV);
+        tessellator.addVertexWithUV(x + size, y, 0.0D, maxU, minV);
+        tessellator.addVertexWithUV(x, y, 0.0D, minU, minV);
+        tessellator.draw();
+    }
+
+
+    private boolean isInvisibleBlock(ItemStack stack)
+    {
+        if (stack == null || stack.getItem() == null) return false;
+        if (stack.getItem() instanceof net.minecraft.item.ItemBlock)
+        {
+            net.minecraft.block.Block block = ((net.minecraft.item.ItemBlock) stack.getItem()).field_150939_a;
+            return block != null && block.getRenderType() < 0;
+        }
+        return false;
     }
 
     protected void drawModalRectWithCustomSizedTexture(int x, int y, float u, float v, int width, int height, float textureWidth, float textureHeight)

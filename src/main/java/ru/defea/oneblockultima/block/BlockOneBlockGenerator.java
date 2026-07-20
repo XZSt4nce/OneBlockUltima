@@ -1,5 +1,6 @@
 package ru.defea.oneblockultima.block;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
@@ -7,15 +8,16 @@ import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import net.minecraftforge.common.IPlantable;
 import net.minecraftforge.common.util.ForgeDirection;
+import ru.defea.oneblockultima.ClientProxy;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.event.ModEvents;
 import ru.defea.oneblockultima.gui.GuiHandler;
@@ -88,6 +90,10 @@ public class BlockOneBlockGenerator extends BlockContainer
     @Override
     public int getRenderType()
     {
+        if (FMLCommonHandler.instance().getEffectiveSide().isClient())
+        {
+            return ClientProxy.oneBlockRenderId;
+        }
         return -1;
     }
 
@@ -195,8 +201,15 @@ public class BlockOneBlockGenerator extends BlockContainer
 
     @SideOnly(Side.CLIENT)
     @Override
+    public void registerBlockIcons(IIconRegister register)
+    {
+        this.blockIcon = register.registerIcon(OneBlockUltima.MODID + ":one_block_generator");
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
     public IIcon getIcon(int side, int meta)
     {
-        return Blocks.planks.getIcon(side, meta);
+        return this.blockIcon;
     }
 }

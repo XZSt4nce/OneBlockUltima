@@ -1,7 +1,5 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
 
@@ -11,11 +9,6 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class OneBlockPlayerDataTest {
-
-    @BeforeClass
-    public static void setUp() {
-        Bootstrap.register();
-    }
 
     private OneBlockPlayerData newData() {
         return new OneBlockPlayerData();
@@ -176,7 +169,7 @@ public class OneBlockPlayerDataTest {
     @Test
     public void setBrokenBlocksBySetClampsNegative() {
         OneBlockPlayerData data = newData();
-        Map<String, Integer> blocks = new HashMap();
+        Map<String, Integer> blocks = new HashMap<String, Integer>();
         blocks.put("classic", -5);
         blocks.put("nether", 10);
         data.setBrokenBlocksBySet(blocks);

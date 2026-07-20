@@ -116,6 +116,7 @@ public class PacketSyncPlayerData implements IMessage
                     playerData.getSetLevels().putAll(message.setLevels);
                     playerData.getBrokenBlocksBySet().clear();
                     playerData.getBrokenBlocksBySet().putAll(message.brokenBlocksBySet);
+                    OneBlockPlayerDataProvider.saveToEntity(localPlayer, playerData);
                     ModEvents.syncDisplayedCurrency(localPlayer, playerData.getCurrency());
                 }
             }

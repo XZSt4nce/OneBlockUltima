@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.config.BlockSetConfig;
@@ -18,7 +17,6 @@ public class BlockSetConfigSyncTest {
 
     @BeforeClass
     public static void initMinecraftBootstrap() {
-        Bootstrap.register();
     }
 
     private void saveAndApply(BlockSetDefinition... sets) {

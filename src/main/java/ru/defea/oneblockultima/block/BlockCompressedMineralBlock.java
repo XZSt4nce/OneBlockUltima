@@ -12,7 +12,7 @@ import ru.defea.oneblockultima.OneBlockUltima;
 public class BlockCompressedMineralBlock extends Block {
     public BlockCompressedMineralBlock() {
         super(Material.rock);
-        init("compressed_mineral_1x");
+        init("compressed_mineral_block");
     }
     protected BlockCompressedMineralBlock(String name) {
         super(Material.rock);

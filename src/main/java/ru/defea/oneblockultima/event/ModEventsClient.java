@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiCreateWorld;
+import net.minecraft.client.renderer.Tessellator;
 import org.lwjgl.opengl.GL11;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
@@ -31,18 +32,20 @@ import java.util.UUID;
 
 public final class ModEventsClient
 {
-    private ModEventsClient()
+    public ModEventsClient()
     {
     }
 
     public static void register()
     {
-        MinecraftForge.EVENT_BUS.register(ModEventsClient.class);
-        FMLCommonHandler.instance().bus().register(ModEventsClient.class);
+        ModEventsClient instance = new ModEventsClient();
+        MinecraftForge.EVENT_BUS.register(instance);
+        FMLCommonHandler.instance().bus().register(instance);
+        OneBlockUltima.getLogger().info("[Events] ModEventsClient registered");
     }
 
     @SubscribeEvent
-    public static void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event)
+    public void onDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event)
     {
         BlockSetConfig.reload();
     }
@@ -50,7 +53,7 @@ public final class ModEventsClient
     private static final Map<UUID, Float> displayedCurrencyMap = new HashMap<UUID, Float>();
 
     @SubscribeEvent
-    public static void onRenderGameOverlay(RenderGameOverlayEvent.Post event)
+    public void onRenderGameOverlay(RenderGameOverlayEvent.Post event)
     {
         if (event.type != RenderGameOverlayEvent.ElementType.TEXT)
         {
@@ -110,7 +113,14 @@ public final class ModEventsClient
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         Minecraft.getMinecraft().getTextureManager().bindTexture(new ResourceLocation(OneBlockUltima.MODID, "textures/gui/coin.png"));
-        new Gui().drawTexturedModalRect(x, y, 0, 0, coinSize, coinSize);
+        float f = 1.0F / coinSize;
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+        tessellator.addVertexWithUV(x, y + coinSize, 0, 0, coinSize * f);
+        tessellator.addVertexWithUV(x + coinSize, y + coinSize, 0, coinSize * f, coinSize * f);
+        tessellator.addVertexWithUV(x + coinSize, y, 0, coinSize * f, 0);
+        tessellator.addVertexWithUV(x, y, 0, 0, 0);
+        tessellator.draw();
         GL11.glDisable(GL11.GL_BLEND);
         Minecraft.getMinecraft().fontRenderer.drawString(balanceValue, x + coinSize + spaceBetween, y, 0xFFD700);
     }
@@ -189,7 +199,7 @@ public final class ModEventsClient
     }
 
     @SubscribeEvent
-    public static void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event)
+    public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event)
     {
         if (!(event.gui instanceof GuiCreateWorld))
         {
@@ -198,10 +208,14 @@ public final class ModEventsClient
 
         GuiCreateWorld screen = (GuiCreateWorld) event.gui;
         WorldType worldType = getCreateWorldType(screen);
+        OneBlockUltima.getLogger().info("[GUI] onGuiInit: worldType={}, expected={}",
+                worldType != null ? worldType.getWorldTypeName() : "null",
+                OneBlockWorldType.ONE_BLOCK.getWorldTypeName());
         if (worldType != OneBlockWorldType.ONE_BLOCK)
         {
             return;
         }
+        OneBlockUltima.getLogger().info("[GUI] OneBlock world type detected, hiding buttons");
 
         String bonusLabel = StatCollector.translateToLocal("createWorld.customize.bonusItems");
         String structuresLabel = StatCollector.translateToLocal("createWorld.customize.mapFeatures");
@@ -220,30 +234,50 @@ public final class ModEventsClient
         }
     }
 
-    private static Field createWorldTypeField;
+    private static Field createWorldTypeIdxField;
 
     private static WorldType getCreateWorldType(GuiCreateWorld screen)
     {
-        if (createWorldTypeField == null)
+        if (createWorldTypeIdxField == null)
         {
-            createWorldTypeField = findFieldByNames(GuiCreateWorld.class, "worldType", "field_146336_f", "field_146335_a");
-            if (createWorldTypeField != null)
+            createWorldTypeIdxField = findFieldByNames(GuiCreateWorld.class, "field_146331_K", "worldType", "selectedWorldType");
+            if (createWorldTypeIdxField != null)
             {
-                createWorldTypeField.setAccessible(true);
+                createWorldTypeIdxField.setAccessible(true);
             }
         }
 
-        if (createWorldTypeField == null)
+        if (createWorldTypeIdxField == null)
         {
             return null;
         }
 
         try
         {
-            Object value = createWorldTypeField.get(screen);
-            if (value instanceof WorldType)
+            int idx;
+            if (createWorldTypeIdxField.getType() == int.class)
             {
-                return (WorldType) value;
+                idx = createWorldTypeIdxField.getInt(screen);
+            }
+            else
+            {
+                Object value = createWorldTypeIdxField.get(screen);
+                if (value instanceof WorldType)
+                {
+                    return (WorldType) value;
+                }
+                if (value instanceof Number)
+                {
+                    idx = ((Number) value).intValue();
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            if (idx >= 0 && idx < WorldType.worldTypes.length)
+            {
+                return WorldType.worldTypes[idx];
             }
         }
         catch (IllegalAccessException ignored)

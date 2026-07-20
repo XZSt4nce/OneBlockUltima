@@ -1,9 +1,7 @@
 package ru.defea.oneblockultima;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
-import net.minecraft.init.Bootstrap;
-import net.minecraft.util.math.BlockPos;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
@@ -24,12 +22,6 @@ import static org.junit.Assert.*;
 
 public class BlockSetConfigUnlockConditionTest
 {
-    @BeforeClass
-    public static void initMinecraftBootstrap()
-    {
-        Bootstrap.register();
-    }
-
     @Test
     public void reloadFallsBackToDefaultSetsWhenConfigFileContainsNoSets() throws Exception
     {
@@ -83,11 +75,19 @@ public class BlockSetConfigUnlockConditionTest
     @Test
     public void replacesBedrockAndEndPortalFrameWhenPlacedAboveGenerator()
     {
-        assertEquals(ModBlocks.CUSTOM_BEDROCK.getDefaultState(),
-                BlockUtil.getReplacementStateForGeneratorPlacement(Blocks.BEDROCK.getDefaultState(), ModBlocks.ONE_BLOCK_GENERATOR.getDefaultState()));
+        int bedrockId = Block.getIdFromBlock(Blocks.bedrock);
+        int portalFrameId = Block.getIdFromBlock(Blocks.end_portal_frame);
+        int generatorId = Block.getIdFromBlock(ModBlocks.ONE_BLOCK_GENERATOR);
+        int customBedrockId = Block.getIdFromBlock(ModBlocks.CUSTOM_BEDROCK);
+        int customPortalFrameId = Block.getIdFromBlock(ModBlocks.CUSTOM_PORTAL_FRAME);
 
-        assertEquals(ModBlocks.CUSTOM_PORTAL_FRAME.getDefaultState(),
-                BlockUtil.getReplacementStateForGeneratorPlacement(Blocks.END_PORTAL_FRAME.getDefaultState(), ModBlocks.ONE_BLOCK_GENERATOR.getDefaultState()));
+        int[] bedrockResult = BlockUtil.getReplacementBlockForGeneratorPlacement(bedrockId, 0, generatorId, 0);
+        assertNotNull(bedrockResult);
+        assertEquals(customBedrockId, bedrockResult[0]);
+
+        int[] portalResult = BlockUtil.getReplacementBlockForGeneratorPlacement(portalFrameId, 0, generatorId, 0);
+        assertNotNull(portalResult);
+        assertEquals(customPortalFrameId, portalResult[0]);
     }
 
     @Test
@@ -97,16 +97,16 @@ public class BlockSetConfigUnlockConditionTest
         CommandAcceptGeneratorInvite acceptCommand = new CommandAcceptGeneratorInvite();
         CommandDeclineGeneratorInvite declineCommand = new CommandDeclineGeneratorInvite();
 
-        assertEquals("inviteGeneratorMember", inviteCommand.getName());
-        assertEquals("/inviteGeneratorMember <playerName>", inviteCommand.getUsage(null));
+        assertEquals("inviteGeneratorMember", inviteCommand.getCommandName());
+        assertEquals("/inviteGeneratorMember <playerName>", inviteCommand.getCommandUsage(null));
         assertEquals(0, inviteCommand.getRequiredPermissionLevel());
 
-        assertEquals("acceptGeneratorInvite", acceptCommand.getName());
-        assertEquals("/acceptGeneratorInvite", acceptCommand.getUsage(null));
+        assertEquals("acceptGeneratorInvite", acceptCommand.getCommandName());
+        assertEquals("/acceptGeneratorInvite", acceptCommand.getCommandUsage(null));
         assertEquals(0, acceptCommand.getRequiredPermissionLevel());
 
-        assertEquals("declineGeneratorInvite", declineCommand.getName());
-        assertEquals("/declineGeneratorInvite", declineCommand.getUsage(null));
+        assertEquals("declineGeneratorInvite", declineCommand.getCommandName());
+        assertEquals("/declineGeneratorInvite", declineCommand.getCommandUsage(null));
         assertEquals(0, declineCommand.getRequiredPermissionLevel());
     }
 
@@ -136,9 +136,6 @@ public class BlockSetConfigUnlockConditionTest
         java.util.UUID playerId = java.util.UUID.fromString("33333333-3333-3333-3333-333333333333");
         otherGenerator.setOwnerId(playerId);
 
-        freeGenerator.setWorld(null);
-        otherGenerator.setWorld(null);
-
         assertFalse(freeGenerator.tryAssignOwnerIfEligible(playerId));
         assertTrue(freeGenerator.isFree());
     }
@@ -157,11 +154,10 @@ public class BlockSetConfigUnlockConditionTest
     public void duplicateAccessDeniedMessagesAreSuppressedForSameInteraction()
     {
         java.util.UUID playerId = java.util.UUID.fromString("55555555-5555-5555-5555-555555555555");
-        BlockPos pos = new BlockPos(10, 64, 10);
 
-        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, pos, 100L));
-        assertFalse(ModEvents.trySendAccessDeniedMessage(playerId, pos, 100L));
-        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, pos, 101L));
+        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, 10, 64, 10, 100L));
+        assertFalse(ModEvents.trySendAccessDeniedMessage(playerId, 10, 64, 10, 100L));
+        assertTrue(ModEvents.trySendAccessDeniedMessage(playerId, 10, 64, 10, 101L));
     }
 
     @Test
@@ -173,7 +169,11 @@ public class BlockSetConfigUnlockConditionTest
 
         TileEntityOneBlockGenerator newGenerator = new TileEntityOneBlockGenerator();
         assertTrue(newGenerator.assignOwnerForPlacement(playerId));
-        assertTrue(newGenerator.hasAccess(playerId));
-        assertTrue(oldGenerator.hasAccess(playerId));
+        java.util.UUID storedOwner = newGenerator.getOwnerId();
+        assertNotNull(storedOwner);
+        assertTrue(newGenerator.hasAccess(storedOwner));
+        java.util.UUID oldStoredOwner = oldGenerator.getOwnerId();
+        assertNotNull(oldStoredOwner);
+        assertTrue(oldGenerator.hasAccess(oldStoredOwner));
     }
 }

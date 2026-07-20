@@ -2,8 +2,6 @@ package ru.defea.oneblockultima.block;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import ru.defea.oneblockultima.OneBlockUltima;
 
 public final class ModBlocks
 {
@@ -21,7 +19,7 @@ public final class ModBlocks
     public static final BlockCompressedLapisBlock COMPRESSED_LAPIS_1X = new BlockCompressedLapisBlock();
     public static final BlockCompressedNetherrack COMPRESSED_NETHERRACK_1X = new BlockCompressedNetherrack();
     public static final BlockCompressedRedstoneBlock COMPRESSED_REDSTONE_1X = new BlockCompressedRedstoneBlock();
-    public static final BlockCompressedMineralBlock COMPRESSED_MINERAL_1X = new BlockCompressedMineralBlock();
+    public static final BlockCompressedMineralBlock BLOCK_COMPRESSED_MINERAL_BLOCK = new BlockCompressedMineralBlock();
 
     public static final BlockCompressedDoubleBedrock COMPRESSED_BEDROCK_2X = new BlockCompressedDoubleBedrock();
     public static final BlockCompressedDoubleCoalBlock COMPRESSED_COAL_2X = new BlockCompressedDoubleCoalBlock();
@@ -89,7 +87,7 @@ public final class ModBlocks
         registerCompressed(COMPRESSED_LAPIS_1X);
         registerCompressed(COMPRESSED_NETHERRACK_1X);
         registerCompressed(COMPRESSED_REDSTONE_1X);
-        registerCompressed(COMPRESSED_MINERAL_1X);
+        registerCompressed(BLOCK_COMPRESSED_MINERAL_BLOCK);
         registerCompressed(COMPRESSED_BEDROCK_2X);
         registerCompressed(COMPRESSED_COAL_2X);
         registerCompressed(COMPRESSED_DIAMOND_2X);

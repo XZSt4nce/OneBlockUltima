@@ -20,7 +20,7 @@ public class OneBlockWorldType extends WorldType
 
     public String getFlatGeneratorOptions()
     {
-        return "3;minecraft:air;127";
+        return "0";
     }
 
     @Override

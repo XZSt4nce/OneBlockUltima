@@ -1,6 +1,6 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
+import net.minecraft.entity.EntityList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -21,13 +21,112 @@ public class BlockSetDefinitionTest {
     private List<BlockSetConfig.BlockSetDefinition> originalSets;
 
     @BeforeClass
-    public static void setUp() {
-        Bootstrap.register();
+    public static void initRegistries() {
+        try {
+            // Force Block class loading first (triggers GameData static init, creates blockRegistry)
+            @SuppressWarnings("unused")
+            Object registry = net.minecraft.block.Block.blockRegistry;
+
+            // Get the underlying registryObjects map from Block.blockRegistry via reflection
+            java.lang.reflect.Field registryObjectsField = net.minecraft.util.RegistrySimple.class.getDeclaredField("registryObjects");
+            registryObjectsField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> blockRegistryObjects =
+                    (java.util.Map<String, Object>) registryObjectsField.get(net.minecraft.block.Block.blockRegistry);
+
+            // Create block instances via reflection (Block(Material) is protected)
+            java.lang.reflect.Constructor<net.minecraft.block.Block> blockCtor =
+                    net.minecraft.block.Block.class.getDeclaredConstructor(net.minecraft.block.material.Material.class);
+            blockCtor.setAccessible(true);
+
+            net.minecraft.block.Block stoneBlock = blockCtor.newInstance(net.minecraft.block.material.Material.rock);
+            blockRegistryObjects.put("minecraft:stone", stoneBlock);
+
+            net.minecraft.block.Block waterBlock = blockCtor.newInstance(net.minecraft.block.material.Material.water);
+            blockRegistryObjects.put("minecraft:water", waterBlock);
+
+            net.minecraft.block.Block dirtBlock = blockCtor.newInstance(net.minecraft.block.material.Material.ground);
+            blockRegistryObjects.put("minecraft:dirt", dirtBlock);
+
+            // Now trigger Blocks class loading — its <clinit> reads from the populated registry
+            setStaticFinalField(net.minecraft.init.Blocks.class, "stone", stoneBlock);
+            setStaticFinalField(net.minecraft.init.Blocks.class, "water", waterBlock);
+
+            // Populate item registry similarly
+            try {
+                Object gd = cpw.mods.fml.common.registry.GameData.class
+                        .getDeclaredMethod("getMain").invoke(null);
+                java.lang.reflect.Field itemRegField = cpw.mods.fml.common.registry.GameData.class
+                        .getDeclaredField("iItemRegistry");
+                itemRegField.setAccessible(true);
+                Object itemRegistry = itemRegField.get(gd);
+                if (itemRegistry != null) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> itemRegistryObjects =
+                            (java.util.Map<String, Object>) registryObjectsField.get(itemRegistry);
+
+                    net.minecraft.item.Item diamondItem = new net.minecraft.item.Item();
+                    itemRegistryObjects.put("minecraft:diamond", diamondItem);
+
+                    net.minecraft.item.Item goldIngotItem = new net.minecraft.item.Item();
+                    itemRegistryObjects.put("minecraft:gold_ingot", goldIngotItem);
+
+                    // Set Items static fields
+                    setStaticFinalField(net.minecraft.init.Items.class, "diamond", diamondItem);
+                    setStaticFinalField(net.minecraft.init.Items.class, "gold_ingot", goldIngotItem);
+                }
+            } catch (Exception ignored) {
+            }
+
+            // Populate EntityList for mob lookups (keys must match parseRegistryName output: lowercase)
+            net.minecraft.entity.EntityList.stringToClassMapping.put("pig",
+                    net.minecraft.entity.passive.EntityPig.class);
+            net.minecraft.entity.EntityList.classToStringMapping.put(
+                    net.minecraft.entity.passive.EntityPig.class, "pig");
+            net.minecraft.entity.EntityList.stringToClassMapping.put("cow",
+                    net.minecraft.entity.passive.EntityCow.class);
+            net.minecraft.entity.EntityList.classToStringMapping.put(
+                    net.minecraft.entity.passive.EntityCow.class, "cow");
+
+        } catch (Throwable t) {
+            t.printStackTrace(System.out);
+        }
+    }
+
+    private static void setStaticFieldIfNull(Class<?> clazz, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field f = clazz.getDeclaredField(fieldName);
+            f.setAccessible(true);
+            if (f.get(null) == null) {
+                f.set(null, value);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void setStaticFinalField(Class<?> clazz, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field f = clazz.getDeclaredField(fieldName);
+            // Try Unsafe first for static final fields
+            try {
+                java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                unsafeField.setAccessible(true);
+                sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+                long offset = unsafe.staticFieldOffset(f);
+                Object base = unsafe.staticFieldBase(f);
+                unsafe.putObject(base, offset, value);
+            } catch (Throwable t) {
+                // Fallback to Field.set
+                f.setAccessible(true);
+                f.set(null, value);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     @Before
     public void saveConfig() {
-        originalSets = new ArrayList(BlockSetConfig.get().getSets());
+        originalSets = new ArrayList<BlockSetConfig.BlockSetDefinition>(BlockSetConfig.get().getSets());
     }
 
     @After
@@ -414,8 +513,8 @@ public class BlockSetDefinitionTest {
         entry.registry = "minecraft:stone";
         entry.dropItem = "minecraft:diamond";
         net.minecraft.item.ItemStack stack = entry.getPickBlock();
-        assertFalse(stack.isEmpty());
-        assertEquals(net.minecraft.init.Items.DIAMOND, stack.getItem());
+        assertTrue(stack != null && stack.stackSize > 0);
+        assertEquals(net.minecraft.init.Items.diamond, stack.getItem());
     }
 
     @Test
@@ -425,7 +524,7 @@ public class BlockSetDefinitionTest {
         entry.dropItem = null;
         entry.meta = 0;
         net.minecraft.item.ItemStack stack = entry.getPickBlock();
-        assertFalse(stack.isEmpty());
+        assertTrue(stack != null && stack.stackSize > 0);
     }
 
     @Test
@@ -435,7 +534,7 @@ public class BlockSetDefinitionTest {
         entry.dropItem = "nonexistent:item";
         entry.meta = 0;
         net.minecraft.item.ItemStack stack = entry.getPickBlock();
-        assertFalse(stack.isEmpty());
+        assertTrue(stack != null && stack.stackSize > 0);
     }
 
     @Test
@@ -444,7 +543,7 @@ public class BlockSetDefinitionTest {
         entry.registry = null;
         entry.dropItem = null;
         net.minecraft.item.ItemStack stack = entry.getPickBlock();
-        assertTrue(stack.isEmpty());
+        assertTrue(stack == null || stack.stackSize <= 0);
     }
 
     @Test
@@ -454,7 +553,8 @@ public class BlockSetDefinitionTest {
         entry.dropItem = "minecraft:gold_ingot";
         entry.meta = 0;
         net.minecraft.item.ItemStack stack = entry.getPickBlock();
-        assertEquals(net.minecraft.init.Items.GOLD_INGOT, stack.getItem());
+        assertNotNull(stack);
+        assertEquals(net.minecraft.init.Items.gold_ingot, stack.getItem());
     }
 
     @Test
@@ -480,7 +580,7 @@ public class BlockSetDefinitionTest {
     @Test
     public void pickMobReturnsNullForEmptyMobs() {
         SetLevelDefinition lvl = new SetLevelDefinition();
-        lvl.mobs = new ArrayList();
+        lvl.mobs = new ArrayList<MobEntryDefinition>();
         assertNull(lvl.pickMob(new java.util.Random()));
     }
 
@@ -557,7 +657,7 @@ public class BlockSetDefinitionTest {
     public void blockElementDefinitionGetMetaValuesEmptyMetasReturnsSingleton() {
         BlockElementDefinition block = new BlockElementDefinition();
         block.meta = 3;
-        block.metas = new ArrayList();
+        block.metas = new ArrayList<Integer>();
         List<Integer> values = block.getMetaValues();
         assertEquals(1, values.size());
         assertEquals(Integer.valueOf(3), values.get(0));
@@ -584,7 +684,7 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsReplacesExistingSets() {
-        List<BlockSetDefinition> sets = new ArrayList();
+        List<BlockSetDefinition> sets = new ArrayList<BlockSetDefinition>();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "set_a";
         sets.add(s1);
@@ -604,13 +704,13 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsReplacesPreviousSets() {
-        List<BlockSetDefinition> first = new ArrayList();
+        List<BlockSetDefinition> first = new ArrayList<BlockSetDefinition>();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "first";
         first.add(s1);
         BlockSetConfig.applySets(first);
 
-        List<BlockSetDefinition> second = new ArrayList();
+        List<BlockSetDefinition> second = new ArrayList<BlockSetDefinition>();
         BlockSetDefinition s2 = new BlockSetDefinition();
         s2.id = "second";
         second.add(s2);
@@ -624,7 +724,7 @@ public class BlockSetDefinitionTest {
 
     @Test
     public void applySetsGetSetReturnsNullForUnknownId() {
-        List<BlockSetDefinition> sets = new ArrayList();
+        List<BlockSetDefinition> sets = new ArrayList<BlockSetDefinition>();
         BlockSetDefinition s1 = new BlockSetDefinition();
         s1.id = "known";
         sets.add(s1);

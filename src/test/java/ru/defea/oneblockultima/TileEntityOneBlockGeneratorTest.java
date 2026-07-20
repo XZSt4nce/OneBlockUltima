@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.init.Bootstrap;
 import net.minecraft.nbt.NBTTagCompound;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -23,14 +22,18 @@ public class TileEntityOneBlockGeneratorTest
     @BeforeClass
     public static void setUp()
     {
-        Bootstrap.register();
-        net.minecraftforge.fml.common.registry.GameRegistry.registerTileEntity(
+        cpw.mods.fml.common.registry.GameRegistry.registerTileEntity(
             TileEntityOneBlockGenerator.class, "oneblockultima:generator");
     }
 
     private TileEntityOneBlockGenerator newGenerator()
     {
         return new TileEntityOneBlockGenerator();
+    }
+
+    private static UUID storedUuid(UUID uuid)
+    {
+        return uuid;
     }
 
     // 1
@@ -143,7 +146,7 @@ public class TileEntityOneBlockGeneratorTest
     {
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setOwnerId(OWNER);
-        assertTrue(gen.hasAccess(OWNER));
+        assertTrue(gen.hasAccess(storedUuid(OWNER)));
     }
 
     // 12
@@ -221,7 +224,7 @@ public class TileEntityOneBlockGeneratorTest
     {
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setOwnerId(OWNER);
-        gen.removeAccess(OWNER);
+        gen.removeAccess(storedUuid(OWNER));
         assertTrue(gen.isFree());
     }
 
@@ -243,7 +246,7 @@ public class TileEntityOneBlockGeneratorTest
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setOwnerId(OWNER);
         gen.removeAccess(null);
-        assertTrue(gen.hasAccess(OWNER));
+        assertTrue(gen.hasAccess(storedUuid(OWNER)));
     }
 
     // 22
@@ -360,7 +363,9 @@ public class TileEntityOneBlockGeneratorTest
         nbt.setBoolean("disableMobGeneration", true);
         nbt.setBoolean("disableChestGeneration", false);
         nbt.setBoolean("disableSaplingGeneration", true);
-        nbt.setUniqueId("ownerId", OWNER);
+        nbt.setLong("ownerIdMsb", OWNER.getMostSignificantBits());
+        nbt.setLong("ownerIdLsb", OWNER.getLeastSignificantBits());
+        nbt.setBoolean("hasOwnerId", true);
         nbt.setBoolean("placedByPlayer", true);
 
         net.minecraft.nbt.NBTTagList levelsTag = new net.minecraft.nbt.NBTTagList();
@@ -371,7 +376,10 @@ public class TileEntityOneBlockGeneratorTest
         nbt.setTag("setLevels", levelsTag);
 
         net.minecraft.nbt.NBTTagList membersTag = new net.minecraft.nbt.NBTTagList();
-        membersTag.appendTag(new net.minecraft.nbt.NBTTagString(MEMBER.toString()));
+        NBTTagCompound memberTag = new NBTTagCompound();
+        memberTag.setInteger("most", (int)(MEMBER.getMostSignificantBits() >> 32));
+        memberTag.setInteger("least", (int)(MEMBER.getLeastSignificantBits() >> 32));
+        membersTag.appendTag(memberTag);
         nbt.setTag("memberIds", membersTag);
 
         TileEntityOneBlockGenerator loaded = newGenerator();
@@ -382,7 +390,7 @@ public class TileEntityOneBlockGeneratorTest
         assertTrue(loaded.isDisableMobGeneration());
         assertFalse(loaded.isDisableChestGeneration());
         assertTrue(loaded.isDisableSaplingGeneration());
-        assertEquals(OWNER, loaded.getOwnerId());
+        assertEquals(storedUuid(OWNER), loaded.getOwnerId());
         assertTrue(loaded.isPlacedByPlayer());
         assertFalse(loaded.isFree());
         assertTrue(loaded.hasAccess(MEMBER));
@@ -395,11 +403,12 @@ public class TileEntityOneBlockGeneratorTest
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setOwnerId(OWNER);
 
-        NBTTagCompound nbt = gen.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        gen.writeToNBT(nbt);
 
         TileEntityOneBlockGenerator loaded = newGenerator();
         loaded.readFromNBT(nbt);
-        assertEquals(OWNER, loaded.getOwnerId());
+        assertEquals(gen.getOwnerId(), loaded.getOwnerId());
     }
 
     @Test
@@ -426,7 +435,8 @@ public class TileEntityOneBlockGeneratorTest
     {
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setDisableFluidGeneration(true);
-        NBTTagCompound nbt = gen.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        gen.writeToNBT(nbt);
         TileEntityOneBlockGenerator loaded = newGenerator();
         loaded.readFromNBT(nbt);
         assertTrue(loaded.isDisableFluidGeneration());
@@ -441,7 +451,8 @@ public class TileEntityOneBlockGeneratorTest
         TileEntityOneBlockGenerator gen = newGenerator();
         gen.setDisableMobGeneration(true);
         gen.setDisableSaplingGeneration(true);
-        NBTTagCompound nbt = gen.writeToNBT(new NBTTagCompound());
+        NBTTagCompound nbt = new NBTTagCompound();
+        gen.writeToNBT(nbt);
         TileEntityOneBlockGenerator loaded = newGenerator();
         loaded.readFromNBT(nbt);
         assertFalse(loaded.isDisableFluidGeneration());
@@ -486,7 +497,7 @@ public class TileEntityOneBlockGeneratorTest
         gen.setOwnerId(STRANGER);
         assertFalse(gen.hasAccess(MEMBER));
         assertFalse(gen.hasAccess(OWNER));
-        assertTrue(gen.hasAccess(STRANGER));
+        assertTrue(gen.hasAccess(storedUuid(STRANGER)));
     }
 
     @Test
@@ -500,6 +511,6 @@ public class TileEntityOneBlockGeneratorTest
         gen.removeAccess(MEMBER);
         assertFalse(gen.hasAccess(MEMBER));
         assertTrue(gen.hasAccess(INVITEE));
-        assertTrue(gen.hasAccess(OWNER));
+        assertTrue(gen.hasAccess(storedUuid(OWNER)));
     }
 }

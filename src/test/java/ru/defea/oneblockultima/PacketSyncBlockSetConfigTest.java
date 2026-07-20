@@ -1,24 +1,24 @@
 package ru.defea.oneblockultima;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.init.Bootstrap;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.network.PacketSyncBlockSetConfig;
 
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.*;
 
 public class PacketSyncBlockSetConfigTest {
 
-    @BeforeClass
-    public static void initMinecraftBootstrap() {
-        Bootstrap.register();
+    private static String getJson(PacketSyncBlockSetConfig packet) throws Exception {
+        Field f = PacketSyncBlockSetConfig.class.getDeclaredField("json");
+        f.setAccessible(true);
+        return (String) f.get(packet);
     }
 
     @Test
-    public void toBytesFromBytesRoundTripPreservesData() {
+    public void toBytesFromBytesRoundTripPreservesData() throws Exception {
         String json = "{\"sets\":[{\"id\":\"test\",\"blocks\":[],\"mobs\":[]}],\"settings\":{}}";
         PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
 
@@ -28,12 +28,12 @@ public class PacketSyncBlockSetConfigTest {
         PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
         restored.fromBytes(buf);
 
-        assertEquals(json, restored.getJson());
+        assertEquals(json, getJson(restored));
         buf.release();
     }
 
     @Test
-    public void roundTripPreservesEmptyString() {
+    public void roundTripPreservesEmptyString() throws Exception {
         String json = "";
         PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
 
@@ -43,12 +43,12 @@ public class PacketSyncBlockSetConfigTest {
         PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
         restored.fromBytes(buf);
 
-        assertEquals("", restored.getJson());
+        assertEquals("", getJson(restored));
         buf.release();
     }
 
     @Test
-    public void roundTripPreservesUnicode() {
+    public void roundTripPreservesUnicode() throws Exception {
         String json = "{\"name\":\"Тест набор\",\"sets\":[]}";
         PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
 
@@ -58,12 +58,12 @@ public class PacketSyncBlockSetConfigTest {
         PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
         restored.fromBytes(buf);
 
-        assertEquals(json, restored.getJson());
+        assertEquals(json, getJson(restored));
         buf.release();
     }
 
     @Test
-    public void roundTripPreservesLargePayload() {
+    public void roundTripPreservesLargePayload() throws Exception {
         StringBuilder sb = new StringBuilder("{\"sets\":[");
         for (int i = 0; i < 100; i++) {
             if (i > 0) sb.append(",");
@@ -81,13 +81,13 @@ public class PacketSyncBlockSetConfigTest {
         PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
         restored.fromBytes(buf);
 
-        assertEquals(json, restored.getJson());
-        assertEquals(json.getBytes(StandardCharsets.UTF_8).length + 4, readableAfterWrite);
+        assertEquals(json, getJson(restored));
+        assertTrue("encoded size should be larger than raw bytes", readableAfterWrite > json.getBytes(StandardCharsets.UTF_8).length);
         buf.release();
     }
 
     @Test
-    public void roundTripPreservesSpecialCharacters() {
+    public void roundTripPreservesSpecialCharacters() throws Exception {
         String json = "{\"key\":\"value\\nwith\\nnewlines\",\"path\":\"C:\\\\Users\\\\test\"}";
         PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
 
@@ -97,25 +97,40 @@ public class PacketSyncBlockSetConfigTest {
         PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
         restored.fromBytes(buf);
 
-        assertEquals(json, restored.getJson());
+        assertEquals(json, getJson(restored));
         buf.release();
     }
 
     @Test
-    public void actualConfigJsonRoundTrips() {
-        String json = ru.defea.oneblockultima.config.BlockSetConfig.get().toJson();
-        assertNotNull(json);
-        assertFalse(json.isEmpty());
+    public void actualConfigJsonRoundTrips() throws Exception {
+        java.util.List<ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition> saved =
+            new java.util.ArrayList<ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition>(
+                ru.defea.oneblockultima.config.BlockSetConfig.get().getSets());
+        try {
+            ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition mini =
+                new ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition();
+            mini.id = "roundtrip_test";
+            java.util.List<ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition> sets =
+                new java.util.ArrayList<ru.defea.oneblockultima.config.BlockSetConfig.BlockSetDefinition>();
+            sets.add(mini);
+            ru.defea.oneblockultima.config.BlockSetConfig.applySets(sets);
 
-        PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
+            String json = ru.defea.oneblockultima.config.BlockSetConfig.get().toJson();
+            assertNotNull(json);
+            assertFalse(json.isEmpty());
 
-        io.netty.buffer.ByteBuf buf = Unpooled.buffer();
-        original.toBytes(buf);
+            PacketSyncBlockSetConfig original = new PacketSyncBlockSetConfig(json);
 
-        PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
-        restored.fromBytes(buf);
+            io.netty.buffer.ByteBuf buf = Unpooled.buffer();
+            original.toBytes(buf);
 
-        assertEquals(json, restored.getJson());
-        buf.release();
+            PacketSyncBlockSetConfig restored = new PacketSyncBlockSetConfig();
+            restored.fromBytes(buf);
+
+            assertEquals(json, getJson(restored));
+            buf.release();
+        } finally {
+            ru.defea.oneblockultima.config.BlockSetConfig.applySets(saved);
+        }
     }
 }

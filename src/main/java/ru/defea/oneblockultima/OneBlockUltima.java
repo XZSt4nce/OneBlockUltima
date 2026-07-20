@@ -7,9 +7,11 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.event.FMLServerStoppingEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
+import cpw.mods.fml.common.registry.LanguageRegistry;
 import net.minecraft.creativetab.CreativeTabs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.command.*;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.gui.GuiHandler;
@@ -53,6 +55,7 @@ public class OneBlockUltima
     {
         logger = event.getModLog();
         BlockSetConfig.load(event.getModConfigurationDirectory());
+        ModBlocks.register();
         ModTileEntities.register();
         ModMessages.register();
         OneBlockWorldType.init();
@@ -63,13 +66,20 @@ public class OneBlockUltima
         {
             GuiSetsConfig.loadStaticCustomNames();
         }
+
+        LanguageRegistry.instance().addStringLocalization("generator.one_block", "en_US", "One Block");
+        LanguageRegistry.instance().addStringLocalization("generator.one_block", "ru_RU", "Один Блок");
+        LanguageRegistry.instance().addStringLocalization("generator.one_block_info", "en_US", "One Block Ultima - single block survival!");
+        LanguageRegistry.instance().addStringLocalization("generator.one_block_info", "ru_RU", "One Block Ultima - выживание на одном блоке!");
         logger.info("{} is loading...", NAME);
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent ignoredEvent)
     {
+        logger.info("[Init] OneBlockUltima.init() called, proxy={}", proxy.getClass().getName());
         proxy.init();
+        logger.info("[Init] OneBlockUltima.init() complete");
     }
 
     @Mod.EventHandler

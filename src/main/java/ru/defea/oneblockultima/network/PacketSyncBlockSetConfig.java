@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima.network;
 
-import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
@@ -9,6 +8,8 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.config.BlockSetConfig;
+
+import java.nio.charset.StandardCharsets;
 
 public class PacketSyncBlockSetConfig implements IMessage
 {
@@ -26,13 +27,18 @@ public class PacketSyncBlockSetConfig implements IMessage
     @Override
     public void fromBytes(ByteBuf buf)
     {
-        json = ByteBufUtils.readUTF8String(buf);
+        int length = buf.readInt();
+        byte[] bytes = new byte[length];
+        buf.readBytes(bytes);
+        json = new String(bytes, StandardCharsets.UTF_8);
     }
 
     @Override
     public void toBytes(ByteBuf buf)
     {
-        ByteBufUtils.writeUTF8String(buf, json);
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        buf.writeInt(bytes.length);
+        buf.writeBytes(bytes);
     }
 
     public static void sendToPlayer(String json, EntityPlayer player)
