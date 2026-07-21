@@ -225,7 +225,14 @@ public class BlockOneBlockGenerator extends Block implements ITileEntityProvider
             TileEntity tileEntity = world.getTileEntity(pos);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
-                ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
+                if (net.minecraftforge.fml.common.Loader.isModLoaded("multimine"))
+                {
+                    world.scheduleUpdate(pos, this, 7);
+                }
+                else
+                {
+                    ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
+                }
             }
         }
         else if (world.getBlockState(fromPos.down(2)).getBlock() == ModBlocks.ONE_BLOCK_GENERATOR)
