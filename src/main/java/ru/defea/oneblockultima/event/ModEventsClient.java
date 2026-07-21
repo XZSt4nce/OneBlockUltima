@@ -19,6 +19,7 @@ import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;
 import ru.defea.oneblockultima.config.BlockSetConfig;
+import ru.defea.oneblockultima.config.ModSettings;
 import ru.defea.oneblockultima.gui.GuiOneBlock;
 import ru.defea.oneblockultima.gui.GuiSetsConfig;
 import ru.defea.oneblockultima.world.OneBlockWorldType;
@@ -90,13 +91,64 @@ public final class ModEventsClient
         int vMargin = 5 + radius;
         int hMargin = 8 + radius;
 
-        int x = event.getResolution().getScaledWidth() - 70 - textWidth;
-        int y = coinSize + 12;
-
+        int screenWidth = event.getResolution().getScaledWidth();
+        int screenHeight = event.getResolution().getScaledHeight();
         int bgWidth = coinSize + textWidth + spaceBetween + hMargin * 2;
         int bgHeight = coinSize + vMargin * 2;
-        int bgX = x - hMargin;
-        int bgY = y - vMargin;
+
+        ModSettings settings = ModSettings.get();
+        ModSettings.BalancePosition pos = settings.getBalancePosition();
+        int hOffset = settings.getHOffset();
+        int vOffset = settings.getVOffset();
+
+        int hOffsetPx = screenWidth * hOffset / 100;
+        int vOffsetPx = screenHeight * vOffset / 100;
+
+        int bgX;
+        int bgY;
+
+        switch (pos)
+        {
+            case TOP_LEFT:
+                bgX = hOffsetPx;
+                bgY = vOffsetPx;
+                break;
+            case TOP:
+                bgX = screenWidth / 2 - bgWidth / 2 + hOffsetPx;
+                bgY = vOffsetPx;
+                break;
+            case TOP_RIGHT:
+                bgX = screenWidth - bgWidth - hOffsetPx;
+                bgY = vOffsetPx;
+                break;
+            case LEFT:
+                bgX = hOffsetPx;
+                bgY = screenHeight / 2 - bgHeight / 2 + vOffsetPx;
+                break;
+            case RIGHT:
+                bgX = screenWidth - bgWidth - hOffsetPx;
+                bgY = screenHeight / 2 - bgHeight / 2 + vOffsetPx;
+                break;
+            case BOTTOM_LEFT:
+                bgX = hOffsetPx;
+                bgY = screenHeight - bgHeight - vOffsetPx;
+                break;
+            case BOTTOM:
+                bgX = screenWidth / 2 - bgWidth / 2 + hOffsetPx;
+                bgY = screenHeight - bgHeight - vOffsetPx;
+                break;
+            case BOTTOM_RIGHT:
+                bgX = screenWidth - bgWidth - hOffsetPx;
+                bgY = screenHeight - bgHeight - vOffsetPx;
+                break;
+            default:
+                bgX = screenWidth - bgWidth - hOffset;
+                bgY = vOffset;
+                break;
+        }
+
+        int x = bgX + hMargin;
+        int y = bgY + vMargin;
 
         drawRoundedRect(bgX, bgY, bgWidth, bgHeight, 5, 0x99333333);
 
@@ -144,27 +196,7 @@ public final class ModEventsClient
         return Math.round(newDisplayed);
     }
 
-    public static void refreshOpenGui()
-    {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null || mc.currentScreen == null)
-        {
-            return;
-        }
-
-        mc.addScheduledTask(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                if (mc.currentScreen instanceof GuiOneBlock)
-                {
-                    mc.currentScreen.initGui();
-                }
-            }
-        });
-    }
-
+    @SuppressWarnings("SameParameterValue")
     private static void drawRoundedRect(int x, int y, int width, int height, int radius, int color)
     {
         Gui.drawRect(x + radius, y, x + width - radius, y + height, color);
@@ -253,17 +285,14 @@ public final class ModEventsClient
         return null;
     }
 
+    @SuppressWarnings("SameParameterValue")
     private static Field findFieldByNames(Class<?> clazz, String... names)
     {
         for (String name : names)
         {
             try
             {
-                Field field = clazz.getDeclaredField(name);
-                if (field != null)
-                {
-                    return field;
-                }
+                return clazz.getDeclaredField(name);
             }
             catch (NoSuchFieldException ignored)
             {
