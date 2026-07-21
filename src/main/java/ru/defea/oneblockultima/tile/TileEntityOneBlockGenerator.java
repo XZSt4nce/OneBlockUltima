@@ -84,11 +84,6 @@ public class TileEntityOneBlockGenerator extends TileEntity
 
     public void tryGenerateBlock()
     {
-        tryGenerateBlock(false);
-    }
-
-    public void tryGenerateBlock(boolean fromNonPlayerBreak)
-    {
         if (world != null && !world.isRemote && isNonPlayerBreakCooldownActive(world.getTotalWorldTime()))
         {
             OneBlockUltima.getLogger().info("[BreakDebug] Skipping generation for generator {} because non-player cooldown is active", pos);

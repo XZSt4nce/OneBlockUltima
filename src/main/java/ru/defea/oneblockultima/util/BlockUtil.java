@@ -124,7 +124,7 @@ public final class BlockUtil
                         NBTTagCompound nbt = tileEntity.getTileData();
                         String lootTableKey = "LootTable";
 
-                        if (nbt.hasKey(lootTableKey, 8)) { // 8 = TAG_String
+                        if (nbt.hasKey(lootTableKey, Constants.NBT.TAG_STRING)) {
                             String lootTableId = nbt.getString(lootTableKey);
                             ResourceLocation loc = new ResourceLocation(lootTableId);
 
