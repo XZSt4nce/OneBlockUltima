@@ -163,7 +163,7 @@ command.declineGeneratorInvite.declined=Вы отклонили приглаше
 command.setOwner.success=Владелец генератора изменен
 
 oneblockultima.update.available=§6[OneBlockUltima] §eДоступна новая версия: §a%s §e(текущая: §c%s§e)
-oneblockultima.update.link=§b%s
+oneblockultima.update.link=§aНажмите, чтобы скачать §e%s
 generator.access.denied=У вас нет доступа к этому генератору.
 
 item.graviton.name=Гравитон

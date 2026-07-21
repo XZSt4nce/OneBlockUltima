@@ -163,7 +163,7 @@ command.declineGeneratorInvite.declined=You declined the invitation.
 command.setOwner.success=Generator owner changed
 
 oneblockultima.update.available=§6[OneBlockUltima] §eNew version available: §a%s §e(current: §c%s§e)
-oneblockultima.update.link=§b%s
+oneblockultima.update.link=§aClick here to download §e%s
 generator.access.denied=You don't have access to this generator.
 
 item.graviton.name=Graviton

@@ -3,7 +3,9 @@ package ru.defea.oneblockultima.update;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.util.text.Style;
 import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraft.util.text.event.ClickEvent;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
 import ru.defea.oneblockultima.OneBlockUltima;
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class UpdateChecker
 {
-    private static final String VERSIONS_URL = "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/0b8e367bfc036e1cec4c902b94ef2e19fe3e396e/versions.json";
+    private static final String VERSIONS_URL = "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/main/versions.json";
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "OneBlockUltima-UpdateChecker");
         t.setDaemon(true);
@@ -26,7 +28,7 @@ public class UpdateChecker
     });
 
     private static String cachedRecommendedVersion;
-    private static String cachedDownloadUrl;
+    private static String cachedReleaseUrl;
     private static boolean checkDone = false;
 
     public static void checkForUpdates(EntityPlayerMP player)
@@ -44,8 +46,9 @@ public class UpdateChecker
         {
             try
             {
-                String mcVersion = Loader.instance().getMCVersionString();
-                String promoKey = mcVersion + "-recommended";
+                String mcVersion = Loader.instance().getMCVersionString().substring(10);
+                String versionKey = mcVersion + "-recommended";
+                String releaseKey = mcVersion + "-recommended_release";
 
                 ModContainer mod = Loader.instance().getIndexedModList().get(OneBlockUltima.MODID);
                 if (mod == null) return;
@@ -77,18 +80,19 @@ public class UpdateChecker
 
                 JsonObject root = new JsonParser().parse(sb.toString()).getAsJsonObject();
                 JsonObject promos = root.getAsJsonObject("promos");
-                if (promos == null || !promos.has(promoKey))
+                if (promos == null || !promos.has(versionKey))
                 {
-                    OneBlockUltima.getLogger().warn("[UpdateChecker] No promo key '{}' found", promoKey);
+                    OneBlockUltima.getLogger().warn("[UpdateChecker] No promo key '{}' found", versionKey);
                     checkDone = true;
                     return;
                 }
 
-                String recommendedVersion = promos.get(promoKey).getAsString();
-                String homepage = root.has("homepage") ? root.get("homepage").getAsString() : null;
+                String recommendedVersion = promos.get(versionKey).getAsString();
+                String releaseUrl = promos.has(releaseKey) ? promos.get(releaseKey).getAsString() :
+                        root.has("homepage") ? root.get("homepage").getAsString() : null;
 
                 cachedRecommendedVersion = recommendedVersion;
-                cachedDownloadUrl = homepage;
+                cachedReleaseUrl = releaseUrl;
                 checkDone = true;
 
                 if (!currentVersion.equals(recommendedVersion))
@@ -130,11 +134,16 @@ public class UpdateChecker
                 cachedRecommendedVersion,
                 currentVersion));
 
-        if (cachedDownloadUrl != null)
+        if (cachedReleaseUrl != null)
         {
-            player.sendMessage(new TextComponentTranslation(
+            TextComponentTranslation linkMessage = new TextComponentTranslation(
                     "oneblockultima.update.link",
-                    cachedDownloadUrl));
+                    cachedRecommendedVersion);
+
+            linkMessage.setStyle(new Style()
+                    .setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, cachedReleaseUrl)));
+
+            player.sendMessage(linkMessage);
         }
     }
 
