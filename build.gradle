@@ -1,16 +1,13 @@
 plugins {
     id 'java-library'
-    id 'com.gtnewhorizons.retrofuturagradle' version '2.0.2'
+    id 'com.gtnewhorizons.retrofuturagradle' version '1.4.9'
 }
 
 group = 'ru.defea.oneblockultima'
 version = '2.1.1'
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
-    }
-}
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 
 minecraft {
     mcVersion = '1.7.10'
@@ -41,3 +38,18 @@ jar {
         attributes 'FMLModType': 'FMLMod'
     }
 }
+
+task writeServerProperties {
+    doLast {
+        def props = new Properties()
+        def propsFile = file("${projectDir}/run/server.properties")
+        if (propsFile.exists()) {
+            propsFile.withInputStream { props.load(it) }
+        }
+        props.setProperty('level-type', 'one_block')
+        props.setProperty('online-mode', 'false')
+        propsFile.withOutputStream { props.store(it, null) }
+    }
+}
+
+runServer.dependsOn writeServerProperties
