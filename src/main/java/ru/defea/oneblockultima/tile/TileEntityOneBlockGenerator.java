@@ -1,20 +1,12 @@
 package ru.defea.oneblockultima.tile;
 
-import cpw.mods.fml.common.network.NetworkRegistry;
-import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemBlock;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTTagString;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
-import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;
 import ru.defea.oneblockultima.util.BlockUtil;

@@ -5,7 +5,6 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChatComponentTranslation;
-import net.minecraft.util.IChatComponent;
 import net.minecraft.util.StatCollector;
 import ru.defea.oneblockultima.capability.IOneBlockPlayerData;
 import ru.defea.oneblockultima.capability.OneBlockPlayerDataProvider;

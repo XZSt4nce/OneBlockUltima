@@ -2,10 +2,10 @@ package ru.defea.oneblockultima.update;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.util.ChatComponentTranslation;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.ModContainer;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.util.ChatComponentTranslation;
 import ru.defea.oneblockultima.OneBlockUltima;
 
 import java.io.BufferedReader;

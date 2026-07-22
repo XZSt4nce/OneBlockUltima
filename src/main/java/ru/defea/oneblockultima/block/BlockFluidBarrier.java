@@ -12,7 +12,6 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
-import ru.defea.oneblockultima.OneBlockUltima;
 
 public class BlockFluidBarrier extends Block
 {

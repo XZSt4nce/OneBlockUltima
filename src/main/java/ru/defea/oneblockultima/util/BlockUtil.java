@@ -1,15 +1,15 @@
 package ru.defea.oneblockultima.util;
 
+import cpw.mods.fml.common.registry.GameRegistry;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockCrops;
 import net.minecraft.block.BlockContainer;
-import net.minecraft.init.Blocks;
+import net.minecraft.block.BlockCrops;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.entity.Entity;
+import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -17,7 +17,6 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
-import cpw.mods.fml.common.registry.GameRegistry;
 import ru.defea.oneblockultima.OneBlockUltima;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.config.BlockSetConfig;

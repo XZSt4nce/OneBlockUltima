@@ -2,12 +2,10 @@ package ru.defea.oneblockultima.command;
 
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.IChatComponent;
 import net.minecraft.util.StatCollector;
 import ru.defea.oneblockultima.tile.TileEntityOneBlockGenerator;
 
