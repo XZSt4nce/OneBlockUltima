@@ -58,5 +58,5 @@ The latest versions of the mod for specific versions of Minecraft are separated 
 Branches:
 <ul>
     <li><a href="https://github.com/XZSt4nce/OneBlockUltima/tree/forge_1.7.10">Forge 1.7.10</a></li>
-    <li><a href="https://github.com/XZSt4nce/OneBlockUltima/tree/forge_1.12.x">Forge 1.12.2</a></li>
+    <li><a href="https://github.com/XZSt4nce/OneBlockUltima/tree/forge_1.12.x">Forge 1.12.x</a></li>
 </ul>
