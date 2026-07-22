@@ -18,9 +18,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ChunkCoordinates;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
@@ -46,14 +44,7 @@ import ru.defea.oneblockultima.world.SpawnConfigData;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static ru.defea.oneblockultima.block.BlockOneBlockGenerator.*;
 
@@ -785,8 +776,38 @@ public final class ModEvents
             return;
         }
 
-        if (event.world.isRemote || event.entityPlayer == null)
+        if (event.entityPlayer == null)
         {
+            return;
+        }
+
+        if (event.world.isRemote)
+        {
+            int bx = event.x;
+            int by = event.y;
+            int bz = event.z;
+            int genX = -1;
+            int genY = -1;
+            int genZ = -1;
+            if (event.world.getBlock(bx, by, bz) == ModBlocks.ONE_BLOCK_GENERATOR)
+            {
+                genX = bx;
+                genY = by;
+                genZ = bz;
+            }
+            else if (event.world.getBlock(bx, by - 1, bz) == ModBlocks.ONE_BLOCK_GENERATOR)
+            {
+                genX = bx;
+                genY = by - 1;
+                genZ = bz;
+            }
+
+            if (genX >= 0 && !event.entityPlayer.isSneaking())
+            {
+                event.setCanceled(true);
+                ru.defea.oneblockultima.network.ModMessages.sendToServer(
+                        new ru.defea.oneblockultima.network.PacketRequestGuiOpen(genX, genY, genZ));
+            }
             return;
         }
 
@@ -923,11 +944,6 @@ public final class ModEvents
         World world = event.world;
         EntityPlayer breaker = event.getPlayer();
 
-        if (breaker != null && world.provider.dimensionId == 0 && world.getWorldInfo().getTerrainType() == OneBlockWorldType.ONE_BLOCK)
-        {
-            lastBreakPlayers.put(posToLong(x, y, z), breaker.getUniqueID());
-        }
-
         if (world.getBlock(x, y, z) == ModBlocks.ONE_BLOCK_GENERATOR)
         {
             event.setCanceled(true);
@@ -967,6 +983,11 @@ public final class ModEvents
         {
             OneBlockUltima.getLogger().warn("[BreakDebug] No generated entry found for broken block ({},{},{})", x, y, z);
             return;
+        }
+
+        if (breaker != null && world.provider.dimensionId == 0 && world.getWorldInfo().getTerrainType() == OneBlockWorldType.ONE_BLOCK)
+        {
+            lastBreakPlayers.put(posToLong(x, y, z), breaker.getUniqueID());
         }
 
         if (breaker != null)

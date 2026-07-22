@@ -3,9 +3,7 @@ package ru.defea.oneblockultima.capability;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import ru.defea.oneblockultima.OneBlockUltima;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public final class OneBlockPlayerDataProvider

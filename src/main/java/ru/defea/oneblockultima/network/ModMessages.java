@@ -25,6 +25,7 @@ public final class ModMessages
         network = NetworkRegistry.INSTANCE.newSimpleChannel(CHANNEL);
         int id = 0;
         network.registerMessage(PacketOneBlockAction.Handler.class, PacketOneBlockAction.class, id++, Side.SERVER);
+        network.registerMessage(PacketRequestGuiOpen.Handler.class, PacketRequestGuiOpen.class, id++, Side.SERVER);
 
         if (FMLCommonHandler.instance().getSide() == Side.CLIENT)
         {
@@ -42,7 +43,7 @@ public final class ModMessages
         }
     }
 
-    public static void sendToServer(PacketOneBlockAction message)
+    public static void sendToServer(IMessage message)
     {
         network.sendToServer(message);
     }

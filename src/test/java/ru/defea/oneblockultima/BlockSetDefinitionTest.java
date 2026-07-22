@@ -1,6 +1,5 @@
 package ru.defea.oneblockultima;
 
-import net.minecraft.entity.EntityList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
