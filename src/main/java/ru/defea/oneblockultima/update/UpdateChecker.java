@@ -30,12 +30,13 @@ public class UpdateChecker
     private static String cachedRecommendedVersion;
     private static String cachedReleaseUrl;
     private static boolean checkDone = false;
+    private static boolean updateAvailable = false;
 
     public static void checkForUpdates(EntityPlayerMP player)
     {
         if (checkDone)
         {
-            if (cachedRecommendedVersion != null && player != null)
+            if (updateAvailable && player != null)
             {
                 notifyPlayer(player);
             }
@@ -98,6 +99,7 @@ public class UpdateChecker
                 if (!currentVersion.equals(recommendedVersion))
                 {
                     OneBlockUltima.getLogger().info("[UpdateChecker] New version available: {} (current: {})", recommendedVersion, currentVersion);
+                    updateAvailable = true;
                     if (player != null)
                     {
                         notifyPlayer(player);
