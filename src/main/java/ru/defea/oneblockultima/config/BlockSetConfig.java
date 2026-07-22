@@ -388,7 +388,7 @@ public final class BlockSetConfig
         }
         catch (Exception e)
         {
-            OneBlockUltima.getLogger().error("Failed to load server blockset config", e);
+            OneBlockUltima.getLogger().warn("Failed to load server blockset config");
         }
     }
 
