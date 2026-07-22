@@ -1,5 +1,8 @@
 {
   "homepage": "https://github.com/XZSt4nce/OneBlockUltima/releases/latest",
+  "1.7.10": {
+    "2.1.1": "Ported mc1.12.2-2.1.1 to 1.7.10"
+  }
   "1.12": {
     "1.1.0": "First beta version", 
     "1.1.1": "Second beta version (bugs fixed)",
@@ -31,6 +34,9 @@
     "2.1.2": "Fixed using for server; fixed bug with MultiMine mod and added new setting for balance position"
   },
   "promos": {
+    "1.7.10-latest": "2.1.1",
+    "1.7.10-recommended": "2.1.1",
+    "1.7.10-recommended_release": "https://github.com/XZSt4nce/OneBlockUltima/releases/tag/forge-mc1.7.10-2.1.1",
     "1.12-latest": "2.1.2",
     "1.12-recommended": "2.1.2",
     "1.12-recommended_release": "https://github.com/XZSt4nce/OneBlockUltima/releases/tag/forge-1.12.x-2.1.2",
