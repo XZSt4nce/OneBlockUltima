@@ -6,9 +6,6 @@ plugins {
 group = 'ru.defea.oneblockultima'
 version = '2.1.1'
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
-
 minecraft {
     mcVersion = '1.7.10'
     username = 'Developer'
@@ -34,6 +31,7 @@ processResources {
 }
 
 jar {
+    archiveBaseName = 'OneBlockUltima-forge-1.7.10'
     manifest {
         attributes 'FMLModType': 'FMLMod'
     }
