@@ -133,8 +133,6 @@ public class GuiModSettings extends GuiScreen
 
         buttonList.add(new GuiButton(BUTTON_SAVE, centerX - bottomBtnWidth - 4, bottomY, bottomBtnWidth, 20, I18n.format("gui.oneblockultima.save")));
         buttonList.add(new GuiButton(BUTTON_BACK, centerX + 4, bottomY, bottomBtnWidth, 20, I18n.format("gui.oneblockultima.cancel")));
-
-        refreshButtonStates();
     }
 
     @Override
@@ -174,17 +172,6 @@ public class GuiModSettings extends GuiScreen
         }
     }
 
-    private void refreshButtonStates()
-    {
-        boolean hDisabled = currentPos.isHorizontal();
-        boolean vDisabled = currentPos.isVertical();
-        for (GuiButton btn : buttonList)
-        {
-            if (btn.id == BUTTON_H_OFFSET_DEC || btn.id == BUTTON_H_OFFSET_INC) btn.enabled = !hDisabled;
-            if (btn.id == BUTTON_V_OFFSET_DEC || btn.id == BUTTON_V_OFFSET_INC) btn.enabled = !vDisabled;
-        }
-    }
-
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException
     {
@@ -196,7 +183,6 @@ public class GuiModSettings extends GuiScreen
                 if (mouseX >= cx && mouseX < cx + cellSize && mouseY >= cy && mouseY < cy + cellSize)
                 {
                     currentPos = ModSettings.BalancePosition.values()[ordinal];
-                    refreshButtonStates();
                     return;
                 }
             }
@@ -259,13 +245,8 @@ public class GuiModSettings extends GuiScreen
 
         drawPreview();
 
-        boolean hDisabled = currentPos.isHorizontal();
-        boolean vDisabled = currentPos.isVertical();
-        int hColor = hDisabled ? 0x555555 : 0xC0C0C0;
-        int vColor = vDisabled ? 0x555555 : 0xC0C0C0;
-
-        fontRenderer.drawString(I18n.format("gui.oneblockultima.mod_settings.h_offset"), hLabelX, hFieldY + 3, hColor);
-        fontRenderer.drawString(I18n.format("gui.oneblockultima.mod_settings.v_offset"), vLabelX, vFieldY + 3, vColor);
+        fontRenderer.drawString(I18n.format("gui.oneblockultima.mod_settings.h_offset"), hLabelX, hFieldY + 3, 0xC0C0C0);
+        fontRenderer.drawString(I18n.format("gui.oneblockultima.mod_settings.v_offset"), vLabelX, vFieldY + 3, 0xC0C0C0);
 
         drawTextFieldBackground(hOffsetField);
         hOffsetField.drawTextBox();

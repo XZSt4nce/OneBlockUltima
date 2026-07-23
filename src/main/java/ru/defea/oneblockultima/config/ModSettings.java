@@ -21,9 +21,6 @@ public final class ModSettings
         BOTTOM,
         BOTTOM_LEFT,
         LEFT;
-
-        public boolean isHorizontal() { return this == LEFT || this == RIGHT; }
-        public boolean isVertical() { return this == TOP || this == BOTTOM; }
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
