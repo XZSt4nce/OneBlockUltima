@@ -26,7 +26,7 @@ import ru.defea.oneblockultima.world.OneBlockWorldType;
 @Mod(
         modid = OneBlockUltima.MODID,
         name = OneBlockUltima.NAME,
-        version = "2.1.1",
+        version = BuildConfig.VERSION,
         guiFactory = "ru.defea.oneblockultima.ModGuiFactory"
 )
 public class OneBlockUltima
