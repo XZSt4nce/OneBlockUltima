@@ -1,6 +1,7 @@
 package ru.defea.oneblockultima.block;
 
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
@@ -166,24 +167,30 @@ public class BlockOneBlockGenerator extends BlockContainer
         super.onNeighborBlockChange(world, x, y, z, block);
         if (world.isRemote) return;
 
-        int fromY = y;
-        if (!world.isAirBlock(x, fromY, z)) return;
+        if (!world.isAirBlock(x, y, z)) return;
 
-        if (world.getBlock(x, fromY - 1, z) == ModBlocks.ONE_BLOCK_GENERATOR)
+        if (world.getBlock(x, y - 1, z) == ModBlocks.ONE_BLOCK_GENERATOR)
         {
             TileEntity tileEntity = world.getTileEntity(x, y, z);
             if (tileEntity instanceof TileEntityOneBlockGenerator)
             {
-                ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
+                if (Loader.isModLoaded("multimine"))
+                {
+                    world.scheduleBlockUpdate(x, y, z, this, 7);
+                }
+                else
+                {
+                    ((TileEntityOneBlockGenerator) tileEntity).tryGenerateBlock();
+                }
             }
         }
-        else if (world.getBlock(x, fromY - 2, z) == ModBlocks.ONE_BLOCK_GENERATOR)
+        else if (world.getBlock(x, y - 2, z) == ModBlocks.ONE_BLOCK_GENERATOR)
         {
-            if (world.getBlock(x, fromY, z) == ModBlocks.FLUID_BARRIER)
+            if (world.getBlock(x, y, z) == ModBlocks.FLUID_BARRIER)
             {
-                world.setBlockToAir(x, fromY, z);
+                world.setBlockToAir(x, y, z);
             }
-            world.setBlock(x, fromY, z, ModBlocks.FLUID_BARRIER, 0, 2);
+            world.setBlock(x, y, z, ModBlocks.FLUID_BARRIER, 0, 2);
         }
     }
 
