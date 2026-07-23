@@ -43,17 +43,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
-          cache-read-only: true
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Clean stale caches
+        run: rm -rf ~/.gradle/gradle.properties .gradle
+
       - name: Run tests
-        run: ./gradlew runTests -Dorg.gradle.java.installations.paths=""
+        run: ./gradlew runTests
 
       - name: Build mod
         if: steps.check.outputs.exists == 'false'
-        run: ./gradlew build -Dorg.gradle.java.installations.paths=""
+        run: ./gradlew build
 
       - name: Find jar
         if: steps.check.outputs.exists == 'false'
