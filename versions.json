@@ -2,7 +2,7 @@
   "homepage": "https://github.com/XZSt4nce/OneBlockUltima/releases/latest",
   "1.7.10": {
     "2.1.1": "Ported mc1.12.2-2.1.1 to 1.7.10"
-  }
+  },
   "1.12": {
     "1.1.0": "First beta version", 
     "1.1.1": "Second beta version (bugs fixed)",
