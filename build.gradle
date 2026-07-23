@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'ru.defea.oneblockultima'
-version = '2.1.1'
+version = '2.1.2'
 
 minecraft {
     mcVersion = '1.7.10'
