@@ -43,23 +43,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
+          gradle-home-cache-includes: |
+            caches
+            wrapper
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Fix cached gradle.properties
-        run: rm -rf ~/.gradle/gradle.properties .gradle
-
       - name: Run tests
         run: ./gradlew runTests
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.java.installations.paths="
 
       - name: Build mod
         if: steps.check.outputs.exists == 'false'
         run: ./gradlew build
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.java.installations.paths="
 
       - name: Find jar
         if: steps.check.outputs.exists == 'false'
