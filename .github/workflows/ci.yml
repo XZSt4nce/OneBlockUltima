@@ -16,6 +16,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+
       - name: Read mod version and java version
         id: version
         run: |
@@ -73,6 +74,7 @@ jobs:
           prerelease: false
 
       - name: Auto-approve and merge
+
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
