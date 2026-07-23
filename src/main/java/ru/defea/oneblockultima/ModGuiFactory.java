@@ -3,7 +3,7 @@ package ru.defea.oneblockultima;
 import cpw.mods.fml.client.IModGuiFactory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
-import ru.defea.oneblockultima.gui.GuiSetsConfig;
+import ru.defea.oneblockultima.gui.ModMainSettings;
 
 import java.util.Set;
 
@@ -17,7 +17,7 @@ public class ModGuiFactory implements IModGuiFactory
     @Override
     public Class<? extends GuiScreen> mainConfigGuiClass()
     {
-        return GuiSetsConfig.class;
+        return ModMainSettings.class;
     }
 
     @Override
@@ -34,6 +34,6 @@ public class ModGuiFactory implements IModGuiFactory
 
     public GuiScreen createConfigGui(GuiScreen parentScreen)
     {
-        return new GuiSetsConfig(parentScreen);
+        return new ModMainSettings(parentScreen);
     }
 }

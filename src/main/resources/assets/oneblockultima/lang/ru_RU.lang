@@ -114,9 +114,24 @@ gui.oneblockultima.settings.mobs=Генерация мобов
 gui.oneblockultima.settings.chests=Генерация сундуков
 gui.oneblockultima.settings.saplings=Генерация саженцев
 gui.oneblockultima.settings.open_editor=Управление конфигом
+gui.oneblockultima.settings.mod_settings=Настройки UI
 gui.oneblockultima.settings.back=Назад
 gui.oneblockultima.settings.enabled=вкл.
 gui.oneblockultima.settings.disabled=выкл.
+
+gui.oneblockultima.mod_settings.title=Настройки UI
+gui.oneblockultima.mod_settings.balance_position=Позиция баланса
+gui.oneblockultima.mod_settings.h_offset=Гор. (%):
+gui.oneblockultima.mod_settings.v_offset=Верт. (%):
+gui.oneblockultima.mod_settings.preview=Превью
+gui.oneblockultima.mod_settings.pos.top_left=Слева вверху
+gui.oneblockultima.mod_settings.pos.top=Сверху
+gui.oneblockultima.mod_settings.pos.top_right=Справа вверху
+gui.oneblockultima.mod_settings.pos.left=Слева
+gui.oneblockultima.mod_settings.pos.right=Справа
+gui.oneblockultima.mod_settings.pos.bottom_left=Слева внизу
+gui.oneblockultima.mod_settings.pos.bottom=Снизу
+gui.oneblockultima.mod_settings.pos.bottom_right=Справа внизу
 
 gui.oneblockultima.unlock_conditions=Условия разблокировки
 gui.oneblockultima.condition.set_level=%s уровень %d/%d

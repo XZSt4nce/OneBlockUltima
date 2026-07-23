@@ -114,9 +114,24 @@ gui.oneblockultima.settings.mobs=Mob generation
 gui.oneblockultima.settings.chests=Chest generation
 gui.oneblockultima.settings.saplings=Sapling generation
 gui.oneblockultima.settings.open_editor=Manage config
+gui.oneblockultima.settings.mod_settings=UI Settings
 gui.oneblockultima.settings.back=Back
 gui.oneblockultima.settings.enabled=enabled
 gui.oneblockultima.settings.disabled=disabled
+
+gui.oneblockultima.mod_settings.title=UI Settings
+gui.oneblockultima.mod_settings.balance_position=Balance Position
+gui.oneblockultima.mod_settings.h_offset=H (%):
+gui.oneblockultima.mod_settings.v_offset=V (%):
+gui.oneblockultima.mod_settings.preview=Preview
+gui.oneblockultima.mod_settings.pos.top_left=Top Left
+gui.oneblockultima.mod_settings.pos.top=Top
+gui.oneblockultima.mod_settings.pos.top_right=Top Right
+gui.oneblockultima.mod_settings.pos.left=Left
+gui.oneblockultima.mod_settings.pos.right=Right
+gui.oneblockultima.mod_settings.pos.bottom_left=Bottom Left
+gui.oneblockultima.mod_settings.pos.bottom=Bottom
+gui.oneblockultima.mod_settings.pos.bottom_right=Bottom Right
 
 gui.oneblockultima.unlock_conditions=Unlock Conditions
 gui.oneblockultima.condition.set_level=%s level %d/%d
