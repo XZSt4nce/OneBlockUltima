@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.zip.GZIPInputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -33,12 +34,13 @@ public class UpdateChecker
     private static String cachedRecommendedVersion;
     private static String cachedDownloadUrl;
     private static boolean checkDone = false;
+    private static boolean updateAvailable = false;
 
     public static void checkForUpdates(final EntityPlayerMP player)
     {
         if (checkDone)
         {
-            if (cachedRecommendedVersion != null && player != null)
+            if (updateAvailable && player != null)
             {
                 notifyPlayer(player);
             }
@@ -72,7 +74,13 @@ public class UpdateChecker
                         return;
                     }
 
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    java.io.InputStream is = conn.getInputStream();
+                    String encoding = conn.getContentEncoding();
+                    if ("gzip".equalsIgnoreCase(encoding))
+                    {
+                        is = new GZIPInputStream(is);
+                    }
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = reader.readLine()) != null)
@@ -101,6 +109,7 @@ public class UpdateChecker
                     if (!currentVersion.equals(recommendedVersion))
                     {
                         OneBlockUltima.getLogger().info("[UpdateChecker] New version available: {} (current: {})", new Object[]{recommendedVersion, currentVersion});
+                        updateAvailable = true;
                         if (player != null)
                         {
                             notifyPlayer(player);
