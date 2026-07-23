@@ -73,7 +73,6 @@ jobs:
           prerelease: false
 
       - name: Auto-approve and merge
-        if: steps.check.outputs.exists == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
