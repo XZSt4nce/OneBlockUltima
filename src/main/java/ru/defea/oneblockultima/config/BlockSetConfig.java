@@ -43,6 +43,12 @@ public final class BlockSetConfig
     private static BlockSetConfig instance;
     static File configFile;
 
+    public static void reset()
+    {
+        instance = null;
+        configFile = null;
+    }
+
     private List<BlockSetDefinition> sets = new ArrayList<>();
     private SettingsDefinition settings = new SettingsDefinition();
 

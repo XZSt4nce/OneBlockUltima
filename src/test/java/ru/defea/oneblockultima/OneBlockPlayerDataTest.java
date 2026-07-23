@@ -4,6 +4,7 @@ import net.minecraft.init.Bootstrap;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
+import ru.defea.oneblockultima.config.BlockSetConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ public class OneBlockPlayerDataTest {
     @BeforeClass
     public static void setUp() {
         Bootstrap.register();
+        BlockSetConfig.reset();
     }
 
     private OneBlockPlayerData newData() {
