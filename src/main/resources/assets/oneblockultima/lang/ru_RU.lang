@@ -166,25 +166,25 @@ oneblockultima.update.available=§6[OneBlockUltima] §eДоступна нова
 oneblockultima.update.link=§b%s
 generator.access.denied=У вас нет доступа к этому генератору.
 
-item.graviton.name=Гравитон
-item.dark_matter.name=Тёмная материя
-item.energy_orb.name=Энергетический шар
-item.far_star.name=Далёкая звезда
-item.compressed_mineral.name=Сжатый минерал
-item.higgs_boson.name=Бозон Хиггса
-item.space_soup.name=Космический суп
+item.oneblockultima.graviton.name=Гравитон
+item.oneblockultima.dark_matter.name=Тёмная материя
+item.oneblockultima.energy_orb.name=Энергетический шар
+item.oneblockultima.far_star.name=Далёкая звезда
+item.oneblockultima.compressed_mineral.name=Сжатый минерал
+item.oneblockultima.higgs_boson.name=Бозон Хиггса
+item.oneblockultima.space_soup.name=Космический суп
 
-item.protein.name=Протеин
-item.super_protein.name=Супер протеин
-item.ultimate_protein.name=Ультимативный протеин
+item.oneblockultima.protein.name=Протеин
+item.oneblockultima.super_protein.name=Супер протеин
+item.oneblockultima.ultimate_protein.name=Ультимативный протеин
 
-item.mashed_vegetables.name=Растительное пюре
-item.super_mashed_vegetables.name=Супер растительное пюре
-item.ultimate_mashed_vegetables.name=Ультимативное растительное пюре
+item.oneblockultima.mashed_vegetables.name=Растительное пюре
+item.oneblockultima.super_mashed_vegetables.name=Супер растительное пюре
+item.oneblockultima.ultimate_mashed_vegetables.name=Ультимативное растительное пюре
 
-item.natural_poison.name=Природный яд
-item.super_poison.name=Супер яд
-item.liquid_death.name=Жидкая смерть
+item.oneblockultima.natural_poison.name=Природный яд
+item.oneblockultima.super_poison.name=Супер яд
+item.oneblockultima.liquid_death.name=Жидкая смерть
 
 tile.compressed_bedrock_1x.name=Сжатый бедрок
 tile.compressed_bedrock_2x.name=Двукратно сжатый бедрок

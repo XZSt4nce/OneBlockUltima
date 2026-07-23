@@ -1,10 +1,6 @@
 package ru.defea.oneblockultima.block;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.Entity;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.IIcon;
 
 public class BlockCompressedDoubleCoalBlock extends BlockCompressedCoalBlock {
     public BlockCompressedDoubleCoalBlock() {
@@ -18,10 +14,5 @@ public class BlockCompressedDoubleCoalBlock extends BlockCompressedCoalBlock {
     @Override
     public float getExplosionResistance(Entity exploder) {
         return super.getExplosionResistance(exploder) * 9.0F;
-    }
-    @SideOnly(Side.CLIENT)
-    @Override
-    public IIcon getIcon(int side, int meta) {
-        return Blocks.coal_block.getIcon(side, meta);
     }
 }

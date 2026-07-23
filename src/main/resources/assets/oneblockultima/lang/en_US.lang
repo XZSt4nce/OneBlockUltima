@@ -166,25 +166,25 @@ oneblockultima.update.available=§6[OneBlockUltima] §eNew version available: §
 oneblockultima.update.link=§b%s
 generator.access.denied=You don't have access to this generator.
 
-item.graviton.name=Graviton
-item.dark_matter.name=Dark matter
-item.energy_orb.name=Energy orb
-item.far_star.name=Far star
-item.compressed_mineral.name=Compressed mineral
-item.higgs_boson.name=Higgs boson
-item.space_soup.name=Space soup
+item.oneblockultima.graviton.name=Graviton
+item.oneblockultima.dark_matter.name=Dark matter
+item.oneblockultima.energy_orb.name=Energy orb
+item.oneblockultima.far_star.name=Far star
+item.oneblockultima.compressed_mineral.name=Compressed mineral
+item.oneblockultima.higgs_boson.name=Higgs boson
+item.oneblockultima.space_soup.name=Space soup
 
-item.protein.name=Protein
-item.super_protein.name=Super protein
-item.ultimate_protein.name=Ultimate protein
+item.oneblockultima.protein.name=Protein
+item.oneblockultima.super_protein.name=Super protein
+item.oneblockultima.ultimate_protein.name=Ultimate protein
 
-item.mashed_vegetables.name=Mashed vegetables
-item.super_mashed_vegetables.name=Super mashed vegetables
-item.ultimate_mashed_vegetables.name=Ultimate mashed vegetables
+item.oneblockultima.mashed_vegetables.name=Mashed vegetables
+item.oneblockultima.super_mashed_vegetables.name=Super mashed vegetables
+item.oneblockultima.ultimate_mashed_vegetables.name=Ultimate mashed vegetables
 
-item.natural_poison.name=Natural poison
-item.super_poison.name=Super poison
-item.liquid_death.name=Liquid death
+item.oneblockultima.natural_poison.name=Natural poison
+item.oneblockultima.super_poison.name=Super poison
+item.oneblockultima.liquid_death.name=Liquid death
 
 tile.compressed_bedrock_1x.name=Compressed bedrock
 tile.compressed_bedrock_2x.name=Double compressed bedrock

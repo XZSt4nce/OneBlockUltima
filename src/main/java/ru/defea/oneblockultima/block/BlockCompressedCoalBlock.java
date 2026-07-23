@@ -27,10 +27,6 @@ public class BlockCompressedCoalBlock extends Block {
         this.setResistance(10F * 9F);
         setCreativeTab(OneBlockUltima.modTab);
         this.setBlockName(name);
-    }
-    @SideOnly(Side.CLIENT)
-    @Override
-    public IIcon getIcon(int side, int meta) {
-        return Blocks.coal_block.getIcon(side, meta);
+        this.setBlockTextureName(OneBlockUltima.MODID + ":" + name);
     }
 }

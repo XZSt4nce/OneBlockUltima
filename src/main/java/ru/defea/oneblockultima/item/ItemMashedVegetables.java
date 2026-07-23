@@ -19,6 +19,6 @@ public class ItemMashedVegetables extends ItemFood
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_mashed_vegetables");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":mashed_vegetables");
     }
 }

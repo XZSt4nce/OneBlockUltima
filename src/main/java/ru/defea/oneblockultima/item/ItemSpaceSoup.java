@@ -19,6 +19,6 @@ public class ItemSpaceSoup extends ItemFood
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_space_soup");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":space_soup");
     }
 }

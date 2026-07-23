@@ -19,6 +19,6 @@ public class ItemCompressedMineral extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_compressed_mineral");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":compressed_mineral");
     }
 }

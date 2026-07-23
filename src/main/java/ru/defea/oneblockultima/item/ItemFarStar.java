@@ -19,6 +19,6 @@ public class ItemFarStar extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_far_star");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":far_star");
     }
 }

@@ -53,6 +53,6 @@ public abstract class CustomPotion extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_" + name);
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":" + name);
     }
 }

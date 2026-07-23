@@ -27,10 +27,6 @@ public class BlockCompressedGoldBlock extends Block {
         this.setResistance(10F * 9F);
         setCreativeTab(OneBlockUltima.modTab);
         this.setBlockName(name);
-    }
-    @SideOnly(Side.CLIENT)
-    @Override
-    public IIcon getIcon(int side, int meta) {
-        return Blocks.gold_block.getIcon(side, meta);
+        this.setBlockTextureName(OneBlockUltima.MODID + ":" + name);
     }
 }
