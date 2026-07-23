@@ -16,7 +16,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-
       - name: Read mod version and java version
         id: version
         run: |
@@ -44,9 +43,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
+          cache-read-only: true
 
       - name: Make gradlew executable
         run: chmod +x gradlew
+
+      - name: Clean old caches
+        run: rm -rf ~/.gradle/caches
 
       - name: Run tests
         run: ./gradlew runTests
@@ -74,7 +77,7 @@ jobs:
           prerelease: false
 
       - name: Auto-approve and merge
-
+        if: steps.check.outputs.exists == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
