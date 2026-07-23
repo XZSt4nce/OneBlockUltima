@@ -48,15 +48,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Clean old caches
-        run: rm -rf ~/.gradle/caches
-
       - name: Run tests
-        run: ./gradlew runTests
+        run: ./gradlew runTests -Dorg.gradle.java.installations.paths=""
 
       - name: Build mod
         if: steps.check.outputs.exists == 'false'
-        run: ./gradlew build
+        run: ./gradlew build -Dorg.gradle.java.installations.paths=""
 
       - name: Find jar
         if: steps.check.outputs.exists == 'false'
