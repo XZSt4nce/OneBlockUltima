@@ -11,6 +11,30 @@ minecraft {
     username = 'Developer'
 }
 
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+def generatedSrcDir = file("${buildDir}/generated/sources/oneblockultima")
+
+task generateBuildConfig {
+    def outputDir = file("${generatedSrcDir}/ru/defea/oneblockultima")
+    outputs.dir outputDir
+    doLast {
+        outputDir.mkdirs()
+        file("${outputDir}/BuildConfig.java").text = """\
+package ru.defea.oneblockultima;
+
+public final class BuildConfig {
+    public static final String VERSION = "${project.version}";
+    private BuildConfig() {}
+}
+"""
+    }
+}
+
+sourceSets.main.java.srcDir generatedSrcDir
+compileJava.dependsOn generateBuildConfig
+
 dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
@@ -49,5 +73,26 @@ task writeServerProperties {
         propsFile.withOutputStream { props.store(it, null) }
     }
 }
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.register('runTests', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.junit.runner.JUnitCore'
+    args = [
+            'ru.defea.oneblockultima.BlockSetConfigSyncTest',
+            'ru.defea.oneblockultima.BlockSetConfigUnlockConditionTest',
+            'ru.defea.oneblockultima.BlockSetDefinitionTest',
+            'ru.defea.oneblockultima.DonateMethodTest',
+            'ru.defea.oneblockultima.GeneratedBlockRegistryTest',
+            'ru.defea.oneblockultima.OneBlockPlayerDataTest',
+            'ru.defea.oneblockultima.PacketSyncBlockSetConfigTest',
+            'ru.defea.oneblockultima.TileEntityOneBlockGeneratorTest'
+    ]
+}
+
+check.dependsOn runTests
 
 runServer.dependsOn writeServerProperties

@@ -19,6 +19,6 @@ public class ItemSuperProtein extends ItemFood
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_super_protein");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":super_protein");
     }
 }

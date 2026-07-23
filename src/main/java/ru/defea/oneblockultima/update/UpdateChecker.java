@@ -12,6 +12,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.zip.GZIPInputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -19,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class UpdateChecker
 {
-    private static final String VERSIONS_URL = "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/0b8e367bfc036e1cec4c902b94ef2e19fe3e396e/versions.json";
+    private static final String VERSIONS_URL = "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/main/versions.json";
     private static final ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactory()
     {
         public Thread newThread(Runnable r)
@@ -33,12 +34,13 @@ public class UpdateChecker
     private static String cachedRecommendedVersion;
     private static String cachedDownloadUrl;
     private static boolean checkDone = false;
+    private static boolean updateAvailable = false;
 
     public static void checkForUpdates(final EntityPlayerMP player)
     {
         if (checkDone)
         {
-            if (cachedRecommendedVersion != null && player != null)
+            if (updateAvailable && player != null)
             {
                 notifyPlayer(player);
             }
@@ -51,7 +53,7 @@ public class UpdateChecker
             {
                 try
                 {
-                    String mcVersion = Loader.instance().getMCVersionString();
+                    String mcVersion = Loader.instance().getMCVersionString().substring(10);
                     String promoKey = mcVersion + "-recommended";
 
                     ModContainer mod = Loader.instance().getIndexedModList().get(OneBlockUltima.MODID);
@@ -72,7 +74,13 @@ public class UpdateChecker
                         return;
                     }
 
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    java.io.InputStream is = conn.getInputStream();
+                    String encoding = conn.getContentEncoding();
+                    if ("gzip".equalsIgnoreCase(encoding))
+                    {
+                        is = new GZIPInputStream(is);
+                    }
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = reader.readLine()) != null)
@@ -101,6 +109,7 @@ public class UpdateChecker
                     if (!currentVersion.equals(recommendedVersion))
                     {
                         OneBlockUltima.getLogger().info("[UpdateChecker] New version available: {} (current: {})", new Object[]{recommendedVersion, currentVersion});
+                        updateAvailable = true;
                         if (player != null)
                         {
                             notifyPlayer(player);

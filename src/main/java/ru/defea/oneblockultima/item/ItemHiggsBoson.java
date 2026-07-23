@@ -19,6 +19,6 @@ public class ItemHiggsBoson extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_higgs_boson");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":higgs_boson");
     }
 }

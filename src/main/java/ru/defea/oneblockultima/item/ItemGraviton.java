@@ -19,6 +19,6 @@ public class ItemGraviton extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_graviton");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":graviton");
     }
 }

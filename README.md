@@ -34,6 +34,9 @@ If JDK 17 is installed elsewhere, update `org.gradle.java.installations.paths` t
 # Build the mod JAR
 ./gradlew build
 
+# Run the tests
+./gradlew runTests
+
 # Run the client
 ./gradlew runClient
 

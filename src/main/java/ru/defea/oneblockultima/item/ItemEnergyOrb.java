@@ -19,6 +19,6 @@ public class ItemEnergyOrb extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_energy_orb");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":energy_orb");
     }
 }

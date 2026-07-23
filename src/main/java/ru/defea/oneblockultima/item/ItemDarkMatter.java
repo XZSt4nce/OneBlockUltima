@@ -19,6 +19,6 @@ public class ItemDarkMatter extends Item
     @Override
     public void registerIcons(IIconRegister register)
     {
-        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":item_dark_matter");
+        this.itemIcon = register.registerIcon(OneBlockUltima.MODID + ":dark_matter");
     }
 }

@@ -7,7 +7,6 @@ import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
 public class BlockCompressedBedrock extends Block
@@ -43,12 +42,6 @@ public class BlockCompressedBedrock extends Block
         this.setResistance(6000000.0F * 9F);
         setCreativeTab(OneBlockUltima.modTab);
         this.setBlockName(name);
-    }
-
-    @SideOnly(Side.CLIENT)
-    @Override
-    public IIcon getIcon(int side, int meta)
-    {
-        return Blocks.bedrock.getIcon(side, meta);
+        this.setBlockTextureName(OneBlockUltima.MODID + ":" + name);
     }
 }
