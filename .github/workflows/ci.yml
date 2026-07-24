@@ -28,10 +28,19 @@ jobs:
         id: check
         run: |
           VERSION="${{ steps.version.outputs.mod_version }}"
+          BASE="${{ github.base_ref }}"
           RESPONSE=$(curl -sf "https://raw.githubusercontent.com/XZSt4nce/OneBlockUltima/main/versions.json" || echo '{}')
-          EXISTS=$(echo "$RESPONSE" | jq --arg v "$VERSION" '[.[] | objects | has($v)] | any')
+
+          if [ "$BASE" = "forge_1.7.10" ]; then
+            EXISTS=$(echo "$RESPONSE" | jq --arg v "$VERSION" '.["1.7.10"] // {} | has($v)')
+          elif [ "$BASE" = "forge_1.12.x" ]; then
+            EXISTS=$(echo "$RESPONSE" | jq --arg v "$VERSION" '[.["1.12"] // {}, .["1.12.1"] // {}, .["1.12.2"] // {}] | [.[] | has($v)] | any')
+          else
+            EXISTS="false"
+          fi
+
           echo "exists=$EXISTS" >> "$GITHUB_OUTPUT"
-          echo "Version $VERSION exists in versions.json: $EXISTS"
+          echo "Version $VERSION exists in versions.json for $BASE: $EXISTS"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
