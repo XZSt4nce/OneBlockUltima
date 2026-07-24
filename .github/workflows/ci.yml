@@ -74,7 +74,7 @@ jobs:
           echo "path=$JAR" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false' && github.event.action == 'opened'
+        if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: forge-${{ github.base_ref }}-${{ steps.version.outputs.mod_version }}
