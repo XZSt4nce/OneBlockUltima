@@ -65,9 +65,13 @@ sourceSets.each {
     it.java.outputDir = dir
 }
 
+tasks.named('test') {
+    enabled = false
+}
+
 tasks.register('runTests', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
-    main = 'org.junit.runner.JUnitCore'
+    mainClass = 'org.junit.runner.JUnitCore'
     args = [
             'ru.defea.oneblockultima.BlockSetConfigSyncTest',
             'ru.defea.oneblockultima.BlockSetConfigUnlockConditionTest',
