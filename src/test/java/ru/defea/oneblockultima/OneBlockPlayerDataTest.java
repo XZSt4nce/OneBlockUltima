@@ -1,7 +1,9 @@
 package ru.defea.oneblockultima;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.defea.oneblockultima.capability.OneBlockPlayerData;
+import ru.defea.oneblockultima.config.BlockSetConfig;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +11,11 @@ import java.util.Map;
 import static org.junit.Assert.*;
 
 public class OneBlockPlayerDataTest {
+
+    @BeforeClass
+    public static void setUp() {
+        BlockSetConfig.reset();
+    }
 
     private OneBlockPlayerData newData() {
         return new OneBlockPlayerData();

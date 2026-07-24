@@ -1,12 +1,11 @@
 package ru.defea.oneblockultima.recipe;
 
 import cpw.mods.fml.common.registry.GameRegistry;
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.Item;
-import net.minecraft.block.Block;
-import ru.defea.oneblockultima.OneBlockUltima;
+import net.minecraft.item.ItemStack;
 import ru.defea.oneblockultima.block.ModBlocks;
 import ru.defea.oneblockultima.item.ModItems;
 

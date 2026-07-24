@@ -1,12 +1,9 @@
 package ru.defea.oneblockultima.block;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.IIcon;
 import ru.defea.oneblockultima.OneBlockUltima;
 
 public class BlockCompressedEndStone extends Block {
