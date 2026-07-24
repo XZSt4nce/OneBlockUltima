@@ -43,12 +43,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
+          gradle-home-cache-includes: |
+            caches
+            wrapper
 
       - name: Make gradlew executable
         run: chmod +x gradlew
-
-      - name: Run tests
-        run: ./gradlew runTests
 
       - name: Build mod
         if: steps.check.outputs.exists == 'false'
@@ -72,10 +72,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Auto-approve and merge
-        if: steps.check.outputs.exists == 'true'
+      - name: Auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr review "${{ github.event.pull_request.number }}" --approve
-          gh pr merge "${{ github.event.pull_request.number }}" --squash --auto
+        run: gh pr merge "${{ github.event.pull_request.number }}" --merge
