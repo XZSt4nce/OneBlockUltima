@@ -64,24 +64,3 @@ sourceSets.each {
     it.output.resourcesDir = dir
     it.java.outputDir = dir
 }
-
-tasks.named('test') {
-    enabled = false
-}
-
-tasks.register('runTests', JavaExec) {
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'org.junit.runner.JUnitCore'
-    args = [
-            'ru.defea.oneblockultima.BlockSetConfigSyncTest',
-            'ru.defea.oneblockultima.BlockSetConfigUnlockConditionTest',
-            'ru.defea.oneblockultima.BlockSetDefinitionTest',
-            'ru.defea.oneblockultima.DonateMethodTest',
-            'ru.defea.oneblockultima.GeneratedBlockRegistryTest',
-            'ru.defea.oneblockultima.OneBlockPlayerDataTest',
-            'ru.defea.oneblockultima.PacketSyncBlockSetConfigTest',
-            'ru.defea.oneblockultima.TileEntityOneBlockGeneratorTest'
-    ]
-}
-
-check.dependsOn runTests
