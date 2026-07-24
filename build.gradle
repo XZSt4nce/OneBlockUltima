@@ -74,4 +74,8 @@ task writeServerProperties {
     }
 }
 
+tasks.named('test') {
+    useJUnit()
+}
+
 runServer.dependsOn writeServerProperties

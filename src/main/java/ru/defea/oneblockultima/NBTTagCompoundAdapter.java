@@ -1,5 +1,8 @@
 package ru.defea.oneblockultima;
 
+import com.google.gson.*;
+import net.minecraft.nbt.*;
+
 import java.lang.reflect.Type;
 import java.util.Map;
 
