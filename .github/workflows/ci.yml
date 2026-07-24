@@ -50,9 +50,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Run tests
+        run: ./gradlew test
+
       - name: Build mod
         if: steps.check.outputs.exists == 'false'
-        run: ./gradlew build
+        run: ./gradlew build -x test -x check
 
       - name: Find jar
         if: steps.check.outputs.exists == 'false'

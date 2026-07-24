@@ -75,10 +75,7 @@ task writeServerProperties {
 }
 
 tasks.named('test') {
-    enabled = true
     useJUnit()
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
 }
 
 runServer.dependsOn writeServerProperties
